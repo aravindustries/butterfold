@@ -76,10 +76,7 @@ DFT-s-OFDM TX:
 Image placeholder:
 
 ```text
-[Insert DFT-s-OFDM block diagram here]
-
-Suggested diagram:
-QAM → k-point DFT → resource mapping → m-point IFFT → CP insertion → DAC/RF
+![DFT-s-OFDM Diagram](download.png)
 ```
 
 The key idea is that the DFT spreads each data symbol across the allocated subcarriers before the OFDM IFFT. This gives the transmitted waveform a more single-carrier-like structure while retaining many OFDM benefits, such as frequency-domain equalization and flexible resource allocation.
