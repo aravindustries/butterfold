@@ -73,11 +73,7 @@ DFT-s-OFDM TX:
   time-domain waveform
 ```
 
-Image placeholder:
-
-```text
 ![DFT-s-OFDM Diagram](download.png)
-```
 
 The key idea is that the DFT spreads each data symbol across the allocated subcarriers before the OFDM IFFT. This gives the transmitted waveform a more single-carrier-like structure while retaining many OFDM benefits, such as frequency-domain equalization and flexible resource allocation.
 
