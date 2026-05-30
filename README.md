@@ -787,6 +787,32 @@ The goal is a reproducible, open-source workflow that shows how LLMs can assist 
 ---
 
 ---
+## Agentic Verilog Design Workflow
+
+![Multi-Agent VerilogCoder Workflow](assets/verilogcoder-workflow.png)
+
+This project follows a multi-agent LLM workflow inspired by VerilogCoder, where different LLM agents cooperate to convert a natural-language hardware specification into verified Verilog RTL. Instead of relying on a single model to directly generate the full design, the workflow separates planning, code generation, verification, and debugging into specialized agent roles.
+
+The input to the system is a module-level natural-language problem description. A **Task Planning Agent** first breaks the specification into smaller hardware subtasks, such as identifying module inputs/outputs, extracting circuit signals, understanding state transitions, and building a task-driven circuit relation graph. This planning stage helps the system reason about the design structure before producing RTL.
+
+After the task plan is generated, a **Verilog Code Agent** implements each subtask step by step. For example, it may first define the module interface, then implement combinational logic, then sequential state-transition logic, and finally integrate the complete module. This makes the RTL generation process more controlled and easier to debug.
+
+A separate **Verification and Debug Agent** checks the generated Verilog using syntax checking, simulation, waveform tracing, and testbench-based validation. If errors are found, the debug agent sends feedback to the code agent, which revises the RTL until the design becomes functionally correct.
+
+For our chip-design workflow, this approach is useful because it creates a structured loop:
+
+```text
+Natural-language hardware spec
+        ↓
+Task planning and circuit-relation extraction
+        ↓
+Subtask-wise Verilog generation
+        ↓
+Syntax checking and simulation
+        ↓
+Waveform/debug feedback
+        ↓
+Corrected Verilog RTL
 
 ## Why this is a strong Chipathon project
 
