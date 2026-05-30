@@ -789,7 +789,7 @@ The goal is a reproducible, open-source workflow that shows how LLMs can assist 
 ---
 ## Agentic Verilog Design Workflow
 
-![Multi-Agent VerilogCoder Workflow](assets/verilogcoder-workflow.png)
+![Multi-Agent VerilogCoder Workflow](assets/verilogcoder-workflow.png.png)
 
 This project follows a multi-agent LLM workflow inspired by VerilogCoder, where different LLM agents cooperate to convert a natural-language hardware specification into verified Verilog RTL. Instead of relying on a single model to directly generate the full design, the workflow separates planning, code generation, verification, and debugging into specialized agent roles.
 
