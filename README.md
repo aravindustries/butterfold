@@ -964,5 +964,8 @@ The strongest initial target is likely a workshop or implementation-oriented ven
 
 **ButterFold is a minimum-area OFDM / DFT-s-OFDM RX/TX core that reuses a single mixed-radix transform engine across the entire modem datapath.**
 
+## Project Proposal Slides
+[Link](https://docs.google.com/presentation/d/12YHsz3fL3GioYTrYc7dnYmyBNs4tJ8O9/edit?usp=sharing&ouid=107724128803018110331&rtpof=true&sd=true)
+
 
 ---
