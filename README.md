@@ -813,6 +813,268 @@ Syntax checking and simulation
 Waveform/debug feedback
         ↓
 Corrected Verilog RTL
+```
+
+---
+
+---
+
+## Running the Agentic Workflow
+
+This is the step-by-step guide to running the four-agent pipeline on the ButterFold spec inside the IIC-OSIC-TOOLS Docker environment.
+
+### Prerequisites
+
+| Requirement | Where to get it |
+|---|---|
+| IIC-OSIC-TOOLS Docker container running | VNC at `http://localhost:80` |
+| Terminal inside Docker | Open terminal from the VNC desktop |
+| Anthropic API key | `https://console.anthropic.com` |
+| Python 3.10+ | Already in the Docker container |
+| `iverilog` / `vvp` | Already in the Docker container |
+| `yosys` | Already in the Docker container |
+
+### Writing your own module spec
+
+The agents read `modular_description.md` as their hardware specification.
+A filled-in template is provided to make this easy:
+
+```bash
+cp modular_description.template.md modular_description.md
+# open modular_description.md and fill in every section
+```
+
+The template covers: module name, ports, operating modes, processing steps,
+key parameters, architecture constraints, timing model, exclusions, and
+verification hints. The more precise you are, the fewer debug iterations
+the agents need.
+
+---
+
+### Step 0 — One-time setup (run inside Docker terminal)
+
+**0a. Place the project in the Docker-accessible designs folder**
+
+The Docker container mounts `C:\Users\ashar\eda\designs` (your Windows host) as `/foss/designs` inside the container. Clone or copy the `butterfold` folder there:
+
+```bash
+cd /foss/designs
+git clone <your-butterfold-repo-url> butterfold
+cd butterfold
+```
+
+**0b. Install Python dependencies**
+
+```bash
+pip install -r requirements.txt
+```
+
+**0c. Set your Anthropic API key**
+
+Open `.env` and replace the placeholder:
+
+```
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+```
+
+---
+
+### Option A — Run everything automatically (recommended)
+
+`agents/orchestrator.py` uses LangGraph to wire all four agents into a single automated pipeline with a built-in debug loop and a final summary:
+
+```bash
+python agents/orchestrator.py
+```
+
+The graph runs: **planner → code\_agent → verify → (debug loop if needed) → summarize**
+
+- Loops the verify → debug cycle up to 5 times automatically
+- Prints a bullet-point summary to the terminal when done
+- Saves `generated/summary.md` with the run report
+
+### Option B — Run agents individually (for debugging)
+
+All commands run from the `butterfold/` directory inside the Docker terminal.
+
+```
+python agents/planner.py          # Step 1 — create task plan
+python agents/code_agent.py       # Step 2 — generate RTL
+python agents/verify.agent.py     # Step 3 — syntax check + simulate
+python agents/debug_agent.py      # Step 4 — fix errors (only if Step 3 failed)
+```
+
+Repeat Steps 3 and 4 until `verify_result.json` shows `"syntax_ok": true`.
+
+---
+
+### What each agent does
+
+#### Step 1 — Planner (`agents/planner.py`)
+
+**Reads:** `modular_description.md`  
+**Writes:** `generated/plan.json`
+
+Sends the full `butterfold_top` module specification to Claude and receives a structured JSON task plan. The plan breaks the design into ordered subtasks — module interface, address generator, radix-2 butterfly, 3×4 mixed-radix kernel, FSM scheduler, subcarrier mapper, CP logic, and I/O integration.
+
+```bash
+python agents/planner.py
+```
+
+Expected output:
+```
+[planner] Plan written to generated/plan.json
+[planner] 8 subtasks generated
+```
+
+---
+
+#### Step 2 — Code Agent (`agents/code_agent.py`)
+
+**Reads:** `generated/plan.json` + `modular_description.md`  
+**Writes:** `generated/rtl/<subtask_id>.v` for each subtask, then `generated/rtl/butterfold_top.v` (combined)
+
+Iterates through each subtask in the plan. For each one, it sends the spec, the full plan, and all previously generated RTL as context, then asks Claude to generate synthesizable Verilog for that specific subtask. Accumulates the subtasks into a single `butterfold_top.v`.
+
+```bash
+python agents/code_agent.py
+```
+
+Expected output:
+```
+[code_agent] Generating subtask: module_interface
+[code_agent]  -> generated/rtl/module_interface.v
+[code_agent] Generating subtask: radix2_butterfly
+[code_agent]  -> generated/rtl/radix2_butterfly.v
+...
+[code_agent] Combined RTL written to generated/rtl/butterfold_top.v
+```
+
+---
+
+#### Step 3 — Verify Agent (`agents/verify.agent.py`)
+
+**Reads:** `generated/rtl/butterfold_top.v`  
+**Writes:** `generated/verify_result.json`, `generated/logs/syntax.log`, `generated/logs/sim.log`
+
+Runs `iverilog -g2012 -Wall -t null` for a syntax-only check. If a testbench exists at `generated/rtl/tb_butterfold_top.v`, also compiles and runs simulation with `vvp`. Writes a JSON result file that the debug agent reads.
+
+```bash
+python agents/verify.agent.py
+```
+
+Passing output:
+```
+[verify] Syntax OK
+[verify] Simulation PASSED
+```
+
+Failing output:
+```
+[verify] Syntax FAILED:
+generated/rtl/butterfold_top.v:42: error: ...
+```
+
+---
+
+#### Step 4 — Debug Agent (`agents/debug_agent.py`)
+
+**Reads:** `generated/verify_result.json` + `generated/rtl/butterfold_top.v`  
+**Writes:** updated `generated/rtl/butterfold_top.v` (overwritten in place)
+
+Reads the error log, sends the failing RTL + errors + original spec to Claude, and applies the returned fix. Re-runs the verify agent after each patch. Loops up to 5 times automatically.
+
+```bash
+python agents/debug_agent.py
+```
+
+Expected output:
+```
+[debug] Iteration 1 — sending errors to LLM
+[debug] RTL updated — re-running verification
+[debug] Fixed after 1 iteration(s).
+```
+
+---
+
+### Post-verification: EDA tool steps inside Docker
+
+Once `verify_result.json` shows `"syntax_ok": true`, proceed with the EDA tools.
+
+#### Synthesis with Yosys
+
+```bash
+cd /foss/designs/butterfold
+yosys << 'EOF'
+read_verilog generated/rtl/butterfold_top.v
+synth -top butterfold_top
+stat
+write_verilog generated/synth/butterfold_top_synth.v
+EOF
+```
+
+This gives you gate count, estimated area, and a gate-level netlist.
+
+#### Waveform inspection with GTKWave
+
+If the verify agent produced a `.vcd` file during simulation:
+
+```bash
+gtkwave generated/logs/sim.vcd &
+```
+
+#### RTL-to-GDS with LibreLane
+
+Follow the chipathon-provided tutorial:
+
+```bash
+# See: sscs-chipathon-2026/examples/librelane_rtl2gds_gf180
+# Copy the config template, point it at generated/rtl/butterfold_top.v,
+# then run the LibreLane flow to get a GDS.
+```
+
+---
+
+### Directory layout after running
+
+```
+butterfold/
+├── .env                              ← your API key (never commit)
+├── requirements.txt
+├── modular_description.md            ← hardware spec (the agent input)
+├── agents/
+│   ├── planner.py                    ← Step 1
+│   ├── code_agent.py                 ← Step 2
+│   ├── verify.agent.py               ← Step 3
+│   └── debug_agent.py                ← Step 4
+└── generated/                        ← all agent outputs (gitignored logs)
+    ├── plan.json                     ← planner output
+    ├── verify_result.json            ← verify agent output
+    ├── rtl/
+    │   ├── butterfold_top.v          ← combined synthesizable RTL
+    │   ├── tb_butterfold_top.v       ← testbench (if generated)
+    │   └── <subtask_id>.v            ← per-subtask modules
+    └── logs/
+        ├── syntax.log
+        └── sim.log
+```
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `ANTHROPIC_API_KEY` not set | Edit `.env` and set your key from `console.anthropic.com` |
+| `iverilog: command not found` | You are outside Docker — open VNC at `http://localhost:80` and run from the Docker terminal |
+| `ModuleNotFoundError: anthropic` | Run `pip install -r requirements.txt` inside Docker |
+| `generated/plan.json not found` | Run `python agents/planner.py` first |
+| Debug loops 5 times without fixing | Review `generated/rtl/butterfold_top.v` and `generated/logs/` manually, adjust `modular_description.md` if the spec is ambiguous, then re-run from Step 1 |
+| VCD file too large for GTKWave | Limit waveform dump to the specific signals you need in the testbench |
+
+---
+
+---
 
 ## Why this is a strong Chipathon project
 
