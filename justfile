@@ -1,3 +1,7 @@
+create:
+    mkdir -p $PROJ_DIR/tools/vivado
+    just _vivado "-mode batch -notrace -source $PROJ_DIR/scripts/create_project.tcl"
+
 launch:
     just _vivado "-mode gui -notrace -source $PROJ_DIR/scripts/init.tcl > /dev/null 2>&1 &"
 

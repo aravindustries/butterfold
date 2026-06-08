@@ -127,7 +127,7 @@ endmodule: zynq_top
         );
 
         initial forever begin: sim_clk_generator
-            #(8/2)ns zynq_fclk = ~zynq_fclk; // 125MHz Clk
+            #4ns zynq_fclk = ~zynq_fclk; // 8ns - 125MHz Clk
         end
 
         initial begin: reset_sequence

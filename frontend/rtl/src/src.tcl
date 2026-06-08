@@ -7,8 +7,8 @@ set src_files {}
 
 #################### Begin ##############################
 
+lappend src_files "core_periph/mac_interface.sv"
 # lappend src_files "counter.sv"
-
 # # Default Top File
 # lappend src_files "board_top/zynq_top.sv"
 

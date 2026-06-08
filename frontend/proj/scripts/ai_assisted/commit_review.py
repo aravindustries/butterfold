@@ -1,14 +1,13 @@
 import os
-import sys
 import subprocess
 from pathlib import Path
-import readchar
 
 import asyncio
+from aioconsole import ainput
 from copilot import CopilotClient
 from copilot.session import PermissionHandler
 
-# NOTE: It only works with lazygit as the git cli to add a message also commits it
+# NOTE: It only works with lazygit as the git cli to add a message also commits the repo
 
 def system_prompt():
     return """
@@ -59,9 +58,7 @@ async def main():
         print(response.data.content)
 
         try:
-            print("Press any key to re-try...", end="", flush=True)
-            if readchar.readchar() == '\x03': raise KeyboardInterrupt
-            print("running")
+            await ainput("Press enter to re-try")
         except KeyboardInterrupt:
             print("\nThank you for trying our services, come back soon!")
             break

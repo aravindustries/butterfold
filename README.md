@@ -1,5 +1,9 @@
 # 🦋 ButterFold
 
+## Setting up the Dev Env
+- source `frontend/proj/launch_dev_session.zsh` to load all env vars & open zellij session
+- to just source env vars, manually source `frontend/proj/init/*.zsh`
+
 **A minimum-area 5G NR proof-of-concept DFT-s-OFDM + OFDM RX/TX core built around hyper-aggressive FFT butterfly reuse.**
 
 > **One folded transform engine. Full RX/TX waveform path. Minimum area.**
