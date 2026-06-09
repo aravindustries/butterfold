@@ -27,9 +27,9 @@ Welcome to the coding side of building a digital circuit.
 **Prerequisites:**
 - Vivado (for linting, simulation & synthesis)
 - Vitis/VitisHLS (for CPU firmware and HLS blocks)
+- Python 3.x (for scripts)
 - just 2.x (for easy tool access)
 - mask 1.x (for markdown scripts thta can be executed)
-- Python 3.x (for scripts)
 - Zellij (optinal, for launching a terminal-multiplexed developer workspace layout)
 - Verilator (optional, for editor linting)
 
