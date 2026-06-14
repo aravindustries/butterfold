@@ -86,8 +86,7 @@ def node_code_agent(state: State) -> dict:
 def node_verify(state: State) -> dict:
     print("\n[orchestrator] ── Step 3: Verify ───────────────────────────")
     result = verify_mod.run()
-    sim    = result.get("sim_ok")
-    passed = result.get("syntax_ok", False) and (sim is True or sim is None)
+    passed = _compute_passed(result)
     return {"verify_result": result, "passed": passed}
 
 
@@ -99,7 +98,13 @@ def node_debug(state: State) -> dict:
     iteration = state["debug_iterations"] + 1
     print(f"\n[orchestrator] ── Step 4: Debug (iteration {iteration}/{MAX_DEBUG_ITERATIONS}) ──")
 
-    errors   = "\n".join(state["verify_result"].get("errors", []) or ["unknown error"])
+    errors     = "\n".join(state["verify_result"].get("errors", [])    or ["unknown error"])
+    fix_hints  = "\n".join(state["verify_result"].get("fix_hints", []) or [])
+    spec_issues = "\n".join(
+        f"[{i.get('severity','?').upper()}] {i.get('description','')}"
+        for i in state["verify_result"].get("spec_issues", [])
+        if i.get("severity") == "error"
+    )
     rtl_file = ROOT / "generated" / "rtl" / "butterfold_top.v"
     spec     = (ROOT / "modular_description.md").read_text()
     rtl      = rtl_file.read_text()
@@ -122,7 +127,9 @@ def node_debug(state: State) -> dict:
                 f"Original specification:\n{spec}\n\n"
                 f"Current RTL:\n{rtl}\n\n"
                 f"Verification errors:\n{errors}\n\n"
-                "Return the corrected Verilog."
+                + (f"Spec compliance issues:\n{spec_issues}\n\n" if spec_issues else "")
+                + (f"Suggested fix hints:\n{fix_hints}\n\n" if fix_hints else "")
+                + "Return the corrected Verilog."
             ),
         }],
     )
@@ -226,6 +233,18 @@ def route_after_verify(state: State) -> str:
         print(f"\n[orchestrator] Max debug iterations ({MAX_DEBUG_ITERATIONS}) reached.")
         return "summarize"
     return "debug"
+
+
+# Update the passed flag to require all four verify stages
+def _compute_passed(result: dict) -> bool:
+    syntax_ok = result.get("syntax_ok", False)
+    spec_ok   = result.get("spec_ok",   True)   # None = not run
+    synth_ok  = result.get("synth_ok",  True)
+    sim_ok    = result.get("sim_ok")             # None = no TB
+    return (syntax_ok
+            and (spec_ok  is None or spec_ok)
+            and (synth_ok is None or synth_ok)
+            and (sim_ok   is None or sim_ok))
 
 
 # ---------------------------------------------------------------------------

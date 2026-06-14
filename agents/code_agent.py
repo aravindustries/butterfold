@@ -32,13 +32,20 @@ Hard rules:
 
 
 def generate_subtask(client, spec, plan, subtask, prior_rtl=""):
+    constraints = plan.get("hardware_constraints", {})
     context_parts = [
         f"Full specification:\n{spec}",
+        f"Hardware constraints (extracted from waveform spec):\n{json.dumps(constraints, indent=2)}",
         f"Overall plan:\n{json.dumps(plan, indent=2)}",
     ]
     if prior_rtl:
         context_parts.append(f"Previously generated RTL (for context):\n{prior_rtl}")
-    context_parts.append(f"Subtask to implement now:\n{json.dumps(subtask, indent=2)}")
+    context_parts.append(
+        f"Subtask to implement now:\n{json.dumps(subtask, indent=2)}\n\n"
+        f"This subtask satisfies constraint: {subtask.get('constraint_basis', '')}\n"
+        f"The RTL must preserve these waveform properties: "
+        f"{constraints.get('waveform_properties', [])}"
+    )
 
     msg = client.messages.create(
         model="claude-opus-4-8",

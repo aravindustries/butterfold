@@ -64,15 +64,25 @@ def run():
     verify_agent = _load_verify_agent()
 
     for iteration in range(1, MAX_ITERATIONS + 1):
-        errors = "\n".join(result.get("errors", []) or ["unknown error"])
-        rtl    = RTL_FILE.read_text()
+        # Combine all error signals from the richer verify result
+        errors     = "\n".join(result.get("errors", [])     or ["unknown error"])
+        fix_hints  = "\n".join(result.get("fix_hints", [])  or [])
+        spec_issues = "\n".join(
+            f"[{i.get('severity','?').upper()}] {i.get('description','')} (near: {i.get('line_hint','')})"
+            for i in result.get("spec_issues", [])
+            if i.get("severity") == "error"
+        )
+
+        rtl = RTL_FILE.read_text()
         print(f"[debug] Iteration {iteration} — sending errors to LLM")
 
         prompt = (
             f"Original specification:\n{spec}\n\n"
             f"Current RTL:\n{rtl}\n\n"
             f"Verification errors:\n{errors}\n\n"
-            "Produce the corrected Verilog."
+            + (f"Spec compliance issues:\n{spec_issues}\n\n" if spec_issues else "")
+            + (f"Suggested fix hints from simulation analysis:\n{fix_hints}\n\n" if fix_hints else "")
+            + "Produce the corrected Verilog."
         )
 
         msg = client.messages.create(
@@ -86,11 +96,18 @@ def run():
         RTL_FILE.write_text(fixed_rtl)
         print("[debug] RTL updated — re-running verification")
 
-        result = verify_agent.run()
+        result    = verify_agent.run()
         syntax_ok = result.get("syntax_ok", False)
-        sim_ok    = result.get("sim_ok")          # None means not run (no TB)
+        spec_ok   = result.get("spec_ok", True)   # None = not run, treat as ok
+        synth_ok  = result.get("synth_ok", True)
+        sim_ok    = result.get("sim_ok")           # None = no TB, treat as ok
 
-        if syntax_ok and (sim_ok or sim_ok is None):
+        all_ok = (syntax_ok
+                  and (spec_ok is None or spec_ok)
+                  and (synth_ok is None or synth_ok)
+                  and (sim_ok   is None or sim_ok))
+
+        if all_ok:
             print(f"[debug] Fixed after {iteration} iteration(s).")
             return
 

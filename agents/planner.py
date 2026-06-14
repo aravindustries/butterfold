@@ -16,23 +16,47 @@ SPEC_PATH = ROOT / "modular_description.md"
 OUT_PATH  = ROOT / "generated" / "plan.json"
 
 SYSTEM_PROMPT = """\
-You are a digital hardware design planning agent.
-Given a Verilog module specification, break it into an ordered list of subtasks.
+You are a standards-aware hardware architecture planning agent.
+
+Your job has two stages:
+
+STAGE 1 — Translate the communication/waveform spec into hardware constraints.
+Before planning any Verilog subtasks, extract the following from the specification:
+  - Why each transform size (k, m) was chosen and what standard motivates it
+  - Which parameters are frozen for tapeout vs open for design-space exploration
+  - What TDD or half-duplex assumptions make RX/TX hardware reuse legal
+  - What "compliance" means for this design (proof-of-concept vs full standard)
+  - What waveform-level properties the RTL must preserve (e.g. DFT linearity,
+    zero-in/zero-out, TX→RX loopback correctness, PAPR reduction intent)
+
+STAGE 2 — Break the design into ordered implementation subtasks.
+Each subtask must be bounded by the constraints extracted in Stage 1.
 Each subtask must have:
-  id          — short snake_case identifier
-  description — what to implement in one sentence
-  inputs      — list of port/signal names relevant to this subtask
-  outputs     — list of port/signal names this subtask produces
-  depends_on  — list of subtask ids this depends on (empty list if none)
-  test_cases  — list of brief test case descriptions (at least 2)
+  id               — short snake_case identifier
+  description      — what to implement in one sentence
+  constraint_basis — which hardware constraint from Stage 1 this subtask satisfies
+  inputs           — list of port/signal names relevant to this subtask
+  outputs          — list of port/signal names this subtask produces
+  depends_on       — list of subtask ids this depends on (empty list if none)
+  test_cases       — list of brief waveform-behavior test cases (at least 2)
 
 Return ONLY valid JSON matching this exact schema, with no explanation:
 {
   "module_name": "string",
+  "hardware_constraints": {
+    "transform_sizes": {"k": 0, "m": 0, "cp": 0},
+    "standard_motivation": "string",
+    "tdd_reuse_assumption": "string",
+    "frozen_for_tapeout": ["string"],
+    "open_for_dse": ["string"],
+    "compliance_boundary": "string",
+    "waveform_properties": ["string"]
+  },
   "subtasks": [
     {
       "id": "string",
       "description": "string",
+      "constraint_basis": "string",
       "inputs": ["string"],
       "outputs": ["string"],
       "depends_on": ["string"],
@@ -65,8 +89,14 @@ def run():
     plan = json.loads(raw)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(plan, indent=2))
+    constraints = plan.get("hardware_constraints", {})
     print(f"[planner] Plan written to {OUT_PATH}")
     print(f"[planner] {len(plan['subtasks'])} subtasks generated")
+    print(f"[planner] k={constraints.get('transform_sizes',{}).get('k')}  "
+          f"m={constraints.get('transform_sizes',{}).get('m')}  "
+          f"cp={constraints.get('transform_sizes',{}).get('cp')}")
+    print(f"[planner] Standard motivation: {constraints.get('standard_motivation','')}")
+    print(f"[planner] Compliance boundary: {constraints.get('compliance_boundary','')}")
     return plan
 
 

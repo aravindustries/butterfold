@@ -672,32 +672,41 @@ This makes it a natural candidate for Track D because the design requires repeat
 
 ## AI / LLM-assisted design workflow
 
-ButterFold will use agentic workflows and LLMs heavily throughout the project. The goal is not to simply ask an LLM to write RTL once. The goal is to use AI assistance as a structured engineering loop from specification to verification and closure.
+ButterFold uses agentic AI as a **spec-to-silicon design assistant** — translating large modem specifications into traceable hardware constraints, bounded RTL implementations, golden models, and scalable design-space studies.
 
-### 1. Spec-compliant architectural planning
+The AI contribution is not autonomous RTL generation alone, but **standards-aware design closure**: preserving a traceable chain from 3GPP-style waveform requirements, to architectural parameter choices, to RTL and golden-model generation, to verification and design-space exploration.
 
-LLMs will be used to help translate wireless-system requirements into hardware architecture constraints.
+This distinguishes ButterFold from generic agentic RTL workflows in four concrete ways:
 
-Examples:
+| Generic agentic RTL workflow | ButterFold's stronger angle |
+|---|---|
+| Agents write Verilog | Agents translate communication specs into hardware constraints |
+| Agents check each other's RTL | Agents check RTL against spec-derived waveform behavior |
+| DSE over arbitrary architectures | DSE over standards-motivated modem parameterizations |
+| One-off chip generation | Reusable methodology for other modem / wireless chips |
 
-- identify the minimum useful NR-style DFT-s-OFDM configuration
-- reason about `k = 12 × N_RB`
-- identify why `k = 12` requires mixed-radix support
-- compare `m = 128`, `m = 256`, and larger FFT sizes
-- analyze TDD assumptions that permit RX/TX hardware reuse
-- define what is compliant, what is standards-motivated, and what is only proof-of-concept
+### 1. Standards-to-constraints translation
+
+The first agent step is not code generation — it is constraint extraction. The planner agent reads the modem specification and produces a hardware constraint document before any Verilog is written:
+
+- why `k = 12` requires a mixed-radix engine (not just radix-2)
+- why TDD is the assumption that makes RX/TX hardware reuse legal
+- what the minimum NR-style DFT-s-OFDM configuration actually is
+- which parameters are frozen for tapeout vs left open for DSE
+- what compliance means for a proof-of-concept vs a full NR modem
 
 Output artifacts:
 
-- architecture specification
+- hardware constraint document (parameter bounds, transform sizes, reuse assumptions)
 - fixed tapeout configuration
-- compliance matrix
-- timing and throughput assumptions
-- design-space constraints
+- compliance boundary definition
+- design-space axes for the simulation sweep
 
-### 2. Spec-compliant design generation
+### 2. Bounded RTL generation
 
-LLMs and agentic flows will help generate and refine implementation components such as:
+With constraints locked, the code agent generates Verilog that stays inside those bounds. The workflow prevents uncontrolled feature growth by grounding every subtask in the frozen tapeout spec.
+
+Components generated:
 
 - mixed-radix transform scheduler
 - radix-2 butterfly datapath
@@ -707,13 +716,19 @@ LLMs and agentic flows will help generate and refine implementation components s
 - block-streaming interface
 - TDD RX/TX mode controller
 - fixed-point scaling logic
-- RTL module stubs and integration logic
 
-The workflow will keep the design grounded in the frozen tapeout specification rather than allowing uncontrolled feature growth.
+### 3. Spec-derived waveform verification
 
-### 3. Spec-compliant verification
+The verify agent does not only check Verilog syntax. It checks RTL behavior against waveform-level expectations derived directly from the spec:
 
-LLMs will also be used to accelerate verification planning and testbench generation.
+- zero input → zero output (linearity required by DFT linearity)
+- impulse input → flat spectrum output (DFT property)
+- TX→RX loopback → recovered symbols match originals
+- `busy`, `done`, `dout_valid` timing matches block-streaming contract
+
+These are not arbitrary unit tests — they are consequences of the 3GPP-style waveform structure the spec describes.
+
+### 4. Standards-motivated design-space exploration
 
 Verification tasks include:
 
@@ -1132,23 +1147,30 @@ This gives the project both a hardware contribution and a methodology contributi
 
 ## Research claim
 
-ButterFold’s central research claim is:
+ButterFold makes two claims — one hardware, one methodology.
+
+**Hardware claim:**
 
 > A minimum-area, standards-motivated OFDM / DFT-s-OFDM RX/TX core can be constructed by folding DFT, IDFT, FFT, and IFFT operations onto a single mixed-radix transform engine, trading throughput for extreme area efficiency while preserving a path toward broader NR-style configurations.
 
-This claim is measurable through:
+**Methodology claim:**
 
-- gate count
-- RAM size
-- twiddle storage
-- cycle count
-- maximum clock frequency
-- power
-- EVM
-- latency
-- compliance coverage
+> Standards-aware design closure — preserving a traceable chain from 3GPP-style waveform requirements to architectural constraints to RTL to verified silicon — can be partially automated using a multi-agent LLM workflow, reducing the manual effort required to explore the hardware design space of modem building blocks.
 
-That makes the project technically grounded, tapeout-relevant, and publication-oriented.
+The hardware claim is measurable through:
+
+- gate count, RAM size, twiddle storage
+- cycle count, maximum clock frequency, power
+- EVM, latency, compliance coverage
+
+The methodology claim is measurable through:
+
+- number of debug iterations to correct RTL
+- spec-constraint traceability (can every RTL parameter be traced back to a waveform requirement?)
+- design-space coverage (how many architecture variants were evaluated vs a manual flow?)
+- time-to-verified-RTL compared to a baseline manual implementation
+
+Both claims together make the project technically grounded, tapeout-relevant, and publication-oriented.
 
 
 ---
@@ -1224,7 +1246,7 @@ The strongest initial target is likely a workshop or implementation-oriented ven
 
 ## One-line summary
 
-**ButterFold is a minimum-area OFDM / DFT-s-OFDM RX/TX core that reuses a single mixed-radix transform engine across the entire modem datapath.**
+**ButterFold uses agentic AI as a spec-to-silicon design assistant, translating large modem specifications into traceable hardware constraints, bounded RTL implementations, golden models, and scalable design-space studies — demonstrated on a minimum-area OFDM / DFT-s-OFDM RX/TX core.**
 
 
 ---
