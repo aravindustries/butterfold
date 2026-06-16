@@ -77,17 +77,7 @@ def centered_mapping_start(m: int, k: int) -> int:
     return (m - k) // 2
 
 
-def tx_chain(symbols: np.ndarray, m: int, cp_len: int, folded: bool) -> TxArtifacts:
-    k = len(symbols)
-    if folded:
-        spread = mixed_radix_dft(symbols, inverse=False)
-    else:
-        spread = np.fft.fft(symbols)
-
-    grid = np.zeros(m, dtype=np.complex128)
-    start = centered_mapping_start(m, k)
-    grid[start : start + k] = spread
-
+def _ofdm_modulate(grid: np.ndarray, cp_len: int, folded: bool) -> tuple[np.ndarray, np.ndarray]:
     if folded:
         time_no_cp = radix2_ifft(grid)
     else:
@@ -99,6 +89,23 @@ def tx_chain(symbols: np.ndarray, m: int, cp_len: int, folded: bool) -> TxArtifa
     else:
         time_with_cp = time_no_cp.copy()
 
+    return time_no_cp, time_with_cp
+
+
+def tx_chain(symbols: np.ndarray, m: int, cp_len: int, folded: bool) -> TxArtifacts:
+    """Uplink DFT-s-OFDM TX: DFT -> map -> IFFT -> CP insertion."""
+    k = len(symbols)
+    if folded:
+        spread = mixed_radix_dft(symbols, inverse=False)
+    else:
+        spread = np.fft.fft(symbols)
+
+    grid = np.zeros(m, dtype=np.complex128)
+    start = centered_mapping_start(m, k)
+    grid[start : start + k] = spread
+
+    time_no_cp, time_with_cp = _ofdm_modulate(grid, cp_len=cp_len, folded=folded)
+
     return TxArtifacts(
         spread_symbols=spread,
         grid=grid,
@@ -107,7 +114,23 @@ def tx_chain(symbols: np.ndarray, m: int, cp_len: int, folded: bool) -> TxArtifa
     )
 
 
+def cp_ofdm_downlink_tx_chain(symbols: np.ndarray, m: int, cp_len: int, folded: bool) -> TxArtifacts:
+    """Downlink CP-OFDM TX reference used to generate RX test waveforms."""
+    k = len(symbols)
+    grid = np.zeros(m, dtype=np.complex128)
+    start = centered_mapping_start(m, k)
+    grid[start : start + k] = symbols
+    time_no_cp, time_with_cp = _ofdm_modulate(grid, cp_len=cp_len, folded=folded)
+    return TxArtifacts(
+        spread_symbols=symbols,
+        grid=grid,
+        time_no_cp=time_no_cp,
+        time_with_cp=time_with_cp,
+    )
+
+
 def rx_chain(time_with_cp: np.ndarray, m: int, k: int, cp_len: int, folded: bool) -> RxArtifacts:
+    """Downlink CP-OFDM RX: CP removal -> FFT -> active-bin extraction."""
     if cp_len > 0:
         no_cp = time_with_cp[cp_len: cp_len + m]
     else:
@@ -120,13 +143,7 @@ def rx_chain(time_with_cp: np.ndarray, m: int, k: int, cp_len: int, folded: bool
 
     start = centered_mapping_start(m, k)
     active = spectrum[start : start + k]
-
-    if folded:
-        recovered = mixed_radix_dft(active, inverse=True)
-    else:
-        recovered = np.fft.ifft(active)
-
-    return RxArtifacts(spectrum=spectrum, active_bins=active, recovered_symbols=recovered)
+    return RxArtifacts(spectrum=spectrum, active_bins=active, recovered_symbols=active)
 
 
 def compare_folded_vs_golden(
@@ -140,10 +157,12 @@ def compare_folded_vs_golden(
     symbols = qam_symbols(k, rng=rng)
 
     tx_golden = tx_chain(symbols, m=m, cp_len=cp_len, folded=False)
-    rx_golden = rx_chain(tx_golden.time_with_cp, m=m, k=k, cp_len=cp_len, folded=False)
-
     tx_folded = tx_chain(symbols, m=m, cp_len=cp_len, folded=True)
-    rx_folded = rx_chain(tx_folded.time_with_cp, m=m, k=k, cp_len=cp_len, folded=True)
+
+    dl_tx_golden = cp_ofdm_downlink_tx_chain(symbols, m=m, cp_len=cp_len, folded=False)
+    dl_tx_folded = cp_ofdm_downlink_tx_chain(symbols, m=m, cp_len=cp_len, folded=True)
+    rx_golden = rx_chain(dl_tx_golden.time_with_cp, m=m, k=k, cp_len=cp_len, folded=False)
+    rx_folded = rx_chain(dl_tx_folded.time_with_cp, m=m, k=k, cp_len=cp_len, folded=True)
 
     max_err = float(np.max(np.abs(rx_folded.recovered_symbols - rx_golden.recovered_symbols)))
     rms_err = rms_error(rx_golden.recovered_symbols, rx_folded.recovered_symbols)

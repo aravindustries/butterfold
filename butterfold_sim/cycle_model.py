@@ -40,7 +40,7 @@ def dft_cycles(k: int, assumptions: CycleAssumptions) -> int:
     if is_power_of_two(k):
         return radix2_fft_cycles(k, assumptions)
 
-    # Conservative fallback for non-power-of-two DFT/IDFT sizes.
+    # Conservative fallback for non-power-of-two DFT sizes.
     mult_cycles = math.ceil((k * k) / assumptions.complex_multiply_per_cycle)
     return mult_cycles
 
@@ -78,7 +78,6 @@ def rx_cycle_breakdown(cfg: NRConfig, assumptions: CycleAssumptions) -> dict[str
     cp_remove_cycles = cfg.cp_len
     m_fft_cycles = radix2_fft_cycles(cfg.m, assumptions)
     subcarrier_extract_cycles = cfg.k
-    k_idft_cycles = dft_cycles(cfg.k, assumptions)
     output_stream_cycles = cfg.k
 
     total = (
@@ -86,7 +85,6 @@ def rx_cycle_breakdown(cfg: NRConfig, assumptions: CycleAssumptions) -> dict[str
         + cp_remove_cycles
         + m_fft_cycles
         + subcarrier_extract_cycles
-        + k_idft_cycles
         + output_stream_cycles
     )
 
@@ -95,7 +93,6 @@ def rx_cycle_breakdown(cfg: NRConfig, assumptions: CycleAssumptions) -> dict[str
         "cp_remove_cycles": cp_remove_cycles,
         "m_fft_cycles": m_fft_cycles,
         "subcarrier_extract_cycles": subcarrier_extract_cycles,
-        "k_idft_cycles": k_idft_cycles,
         "output_stream_cycles": output_stream_cycles,
         "total_cycles": total,
     }
