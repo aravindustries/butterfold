@@ -4,7 +4,7 @@
 
 > **One folded transform engine. Full RX/TX waveform path. Minimum area.**
 
-ButterFold is a silicon-targeted baseband architecture that collapses the major transform blocks of an OFDM / DFT-s-OFDM modem onto a highly reused transform datapath. Because the minimum NR-style DFT-s-OFDM allocation uses **k = 12** subcarriers, the taped-out core reuses a **single mixed-radix butterfly engine**, not only a radix-2 butterfly. The m-point FFT/IFFT path uses radix-2 reuse, while the k=12 DFT/IDFT path is handled with a compact mixed-radix **3×4 decomposition**.
+ButterFold is a silicon-targeted baseband architecture that collapses the major transform blocks of an OFDM / DFT-s-OFDM modem onto a highly reused transform datapath. Because the minimum NR-style DFT-s-OFDM allocation uses **k = 12** subcarriers, the taped-out core reuses a **single mixed-radix butterfly engine**, not only a radix-2 butterfly. The m-point FFT/IFFT path uses radix-2 reuse, while the k=12 TX DFT path is handled with a compact mixed-radix **3×4 decomposition**.
 
 The taped-out version is intentionally tiny: it targets the **minimum useful 5G NR proof-of-concept configuration** first, while larger standards-shaped configurations can be explored in simulation.
 
@@ -19,7 +19,8 @@ Modern OFDM and DFT-s-OFDM systems require multiple transforms across the RX/TX 
 - TX DFT for transform precoding
 - TX IFFT for OFDM modulation
 - RX FFT for OFDM demodulation
-- RX IDFT for DFT-s-OFDM de-precoding
+
+For the uplink DFT-s-OFDM plus downlink CP-OFDM case used here, ButterFold folds these **3 separate transforms** into one reused engine.
 
 Most practical designs use parallelism to meet throughput. **ButterFold asks the opposite question: how small can the hardware become if we aggressively fold every transform onto one reusable mixed-radix engine?**
 
@@ -174,7 +175,6 @@ ButterFold includes:
 - CP removal logic
 - m-point FFT for RX OFDM demodulation
 - subcarrier extraction
-- k-point IDFT for DFT-s-OFDM RX de-precoding
 - block-streaming digital I/O
 - fixed-point transform datapath
 - mixed-radix scheduling and verification
@@ -282,7 +282,6 @@ Processing:
   CP removal
   m-point FFT
   subcarrier extraction
-  k-point IDFT
 
 Output:
   k complex recovered symbols
@@ -340,7 +339,7 @@ TX path: DFT-s-OFDM-style uplink
   time-domain waveform
 
 
-RX path: OFDM / DFT-s-OFDM receive path
+RX path: CP-OFDM downlink receive path
 
   time-domain waveform
       │
@@ -354,10 +353,6 @@ RX path: OFDM / DFT-s-OFDM receive path
       ▼
   subcarrier extraction
   recover k active bins
-      │
-      ▼
-  k-point IDFT
-  k = 12
       │
       ▼
   QAM symbols
@@ -403,7 +398,7 @@ The tapeout configuration uses:
         │      Reused Mixed-Radix Engine       │
         │                                      │
         │   radix-2 butterfly for m FFT/IFFT   │
-        │   3×4 path for k=12 DFT/IDFT         │
+        │   3×4 path for k=12 TX DFT           │
         │   small radix-3 / 3-point kernel     │
         │   shared complex multiplier          │
         └──────────┬───────────────────────────┘
@@ -440,7 +435,7 @@ ButterFold uses:
 
 - **one reused mixed-radix transform engine**
 - **radix-2 butterfly reuse for the m-point FFT/IFFT**
-- **3×4 mixed-radix decomposition for k=12 DFT/IDFT**
+- **3×4 mixed-radix decomposition for k=12 TX DFT**
 - **small 3-point kernel for the radix-3 portion**
 - **one shared complex multiplier**
 - **in-place transform RAM**
@@ -507,7 +502,7 @@ Reuse dimension 1: RX/TX reuse
     k-point DFT  →  m-point IFFT
 
   RX path:
-    m-point FFT  →  k-point IDFT
+    m-point FFT
 
   Same hardware is reused because the system is half-duplex TDD.
 
@@ -515,7 +510,7 @@ Reuse dimension 1: RX/TX reuse
 Reuse dimension 2: transform-size reuse
 
   k-point transforms:
-    DFT / IDFT for DFT-s-OFDM precoding and de-precoding
+    DFT for DFT-s-OFDM uplink precoding
 
   m-point transforms:
     FFT / IFFT for OFDM demodulation and modulation
@@ -526,7 +521,7 @@ Reuse dimension 2: transform-size reuse
 The tapeout core therefore does not only reuse hardware between FFT and IFFT. It also reuses the same compute path across:
 
 - **TX and RX**
-- **DFT and IDFT**
+- **DFT and FFT/IFFT**
 - **FFT and IFFT**
 - **k-point and m-point transforms**
 
@@ -536,7 +531,7 @@ This is why TDD is central to the architecture. In a half-duplex TDD system, RX 
 Half-duplex TDD timing model:
 
   RX window:
-    CP removal → m-point FFT → k-bin extraction → k-point IDFT
+    CP removal → m-point FFT → k-bin extraction
 
   Guard / turnaround:
     RF and baseband mode switch
@@ -840,7 +835,7 @@ The project’s novelty is the **degree of reuse**:
 ```text
 same engine for RX and TX
 same engine for FFT and IFFT
-same engine for DFT and IDFT
+same engine for TX DFT and m-point FFT/IFFT
 same engine for k-point and m-point transforms
 same architecture studied across proof-of-concept and standards-shaped modes
 ```
@@ -872,7 +867,7 @@ This gives the project both a hardware contribution and a methodology contributi
 
 ButterFold’s central research claim is:
 
-> A minimum-area, standards-motivated OFDM / DFT-s-OFDM RX/TX core can be constructed by folding DFT, IDFT, FFT, and IFFT operations onto a single mixed-radix transform engine, trading throughput for extreme area efficiency while preserving a path toward broader NR-style configurations.
+> A minimum-area, standards-motivated OFDM / DFT-s-OFDM RX/TX core can be constructed by folding TX DFT, TX IFFT, and RX FFT operations onto a single mixed-radix transform engine, trading throughput for extreme area efficiency while preserving a path toward broader NR-style configurations.
 
 This claim is measurable through:
 
@@ -902,7 +897,7 @@ A tiny, frozen, verification-first silicon design:
 
 - fixed **k = 12**
 - fixed **m = 128**
-- mixed-radix k-path for exact 12-point DFT/IDFT
+- mixed-radix k-path for exact 12-point TX DFT
 - radix-2 reused m-path for FFT/IFFT
 - low-pin 8-bit I/Q interface
 - bit-accurate golden model
