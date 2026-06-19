@@ -5,7 +5,7 @@ uv pip install -r requirements.txt
 ```
 
 ## Running
-DOCKER_TAG=chipathon26 CONTAINER_NAME=gf180-x DESIGNS=$RTL_DIR bash $PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_jupyter.sh
+DOCKER_TAG=chipathon26 CONTAINER_NAME=gf180-x DESIGNS=$RTL_DIR bash $PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_x.sh
 
 note: set an env var path for runs/ if possible
 

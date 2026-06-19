@@ -7,12 +7,29 @@ DESIGN_NAME: counter # top module name
 VERILOG_FILES:
   - dir::src/counter.sv
 
+MACROS:
+  gf180mcu_fd_ip_sram__sram64x8m8wm1:
+    gds:
+      - "dir::macros/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram/cells/gf180mcu_fd_ip_sram__sram64x8m8wm1/gf180mcu_fd_ip_sram__sram64x8m8wm1.gds"
+    lef:
+      - "dir::macros/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram/cells/gf180mcu_fd_ip_sram__sram64x8m8wm1/gf180mcu_fd_ip_sram__sram64x8m8wm1.lef"
+    nl:
+      - "dir::macros/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram/cells/gf180mcu_fd_ip_sram__sram64x8m8wm1/gf180mcu_fd_ip_sram__sram64x8m8wm1_stub.v"
+    lib:
+      "*":
+        - "dir::macros/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram/cells/gf180mcu_fd_ip_sram__sram64x8m8wm1/gf180mcu_fd_ip_sram__sram64x8m8wm1__tt_025C_1v80.lib"
+
+    instances:
+      u_sram:
+        location: [100, 100]
+        orientation: N
+
 CLOCK_PORT: clk
 CLOCK_PERIOD: 50
 
 # Die area: 300x300 um absolute (plenty of room for 4 flops).
 FP_SIZING: absolute
-DIE_AREA: [0.0, 0.0, 300.0, 300.0]
+DIE_AREA: [0.0, 0.0, 3000.0, 3000.0]
 
 # Power / ground nets.
 VDD_NETS:
@@ -26,7 +43,9 @@ PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 # Routing / ESD.
 DIODE_ON_PORTS: in
 RT_MAX_LAYER: Metal4
-PDN_MULTILAYER: false
+PDN_MULTILAYER: true
+FP_PDN_MACRO_HOOKS:
+  - "u_sram VDD VDD VSS VSS"
 
 # Power distribution network (straps + pitch).
 PDN_VWIDTH: 5

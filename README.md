@@ -1,21 +1,5 @@
 # 🦋 ButterFold
 
-## Setting up the Dev Env
-- source `frontend/proj/launch_dev_session.zsh` to load all env vars & open zellij session
-- to just source env vars, manually source `frontend/proj/init/*.zsh`
-
-**A minimum-area 5G NR proof-of-concept DFT-s-OFDM + OFDM RX/TX core built around hyper-aggressive FFT butterfly reuse.**
-
-> **One folded transform engine. Full RX/TX waveform path. Minimum area.**
-
-ButterFold is a silicon-targeted baseband architecture that collapses the major transform blocks of an OFDM / DFT-s-OFDM modem onto a highly reused transform datapath. Because the minimum NR-style DFT-s-OFDM allocation uses **k = 12** subcarriers, the taped-out core reuses a **single mixed-radix butterfly engine**, not only a radix-2 butterfly. The m-point FFT/IFFT path uses radix-2 reuse, while the k=12 DFT/IDFT path is handled with a compact mixed-radix **3×4 decomposition**.
-
-The taped-out version is intentionally tiny: it targets the **minimum useful 5G NR proof-of-concept configuration** first, while larger standards-shaped configurations can be explored in simulation.
-
----
-
----
-
 ## Why this chip exists
 
 Modern OFDM and DFT-s-OFDM systems require multiple transforms across the RX/TX datapath:

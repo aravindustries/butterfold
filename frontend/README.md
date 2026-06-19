@@ -47,7 +47,7 @@ source init/proj_envs.zsh
 source $PROJECT_ROOT_DIR/.venv/bin/activate
 ```
 
-**To Launch EDA Tools:**
+**To Launch EDA Tools**
 ```bash
 just --choose # interactive recipe chooser
 ```

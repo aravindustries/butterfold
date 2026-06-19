@@ -148,25 +148,25 @@ module async_fifo #(
         empty = ({wr_phase_gray_cdc, wr_ptr_gray_cdc} == {rd_phase_gray, rd_ptr_gray});
 endmodule: async_fifo
 
-module mac_interface #(
-    parameter int DATA_WIDTH = 8 // share this in a pkg with the phy out layer as well
-)(
-    input  uwire         clk_core,
-    input  uwire [7 : 0] mac_dout,
-    input  uwire         mac_dout_wr,
-    output uwire [7 : 0] mac_din,
-    output uwire         mac_din_rd,
-
-    input  uwire         clk_mac_io,
-    input  uwire [7 : 0] sram_dout,
-    output uwire [7 : 0] sram_din,
-    output uwire [9 : 0] sram_addr,
-    output uwire [7 : 0] sram_rd_wr_en
-);
-    // it should be possible to get away with using just simple read logic to
-    // read from the SRAM with with a mac rd & eof signal
-
-    // Need a fifo from slow to fast if, the slow freq is too close to the fast freq
-    // then double flopping the valid signal will be too late to capture the data
-endmodule
+// module mac_interface #(
+//     parameter int DATA_WIDTH = 8 // share this in a pkg with the phy out layer as well
+// )(
+//     input  uwire         clk_core,
+//     input  uwire [7 : 0] mac_dout,
+//     input  uwire         mac_dout_wr,
+//     output uwire [7 : 0] mac_din,
+//     output uwire         mac_din_rd,
+//
+//     input  uwire         clk_mac_io,
+//     input  uwire [7 : 0] sram_dout,
+//     output uwire [7 : 0] sram_din,
+//     output uwire [9 : 0] sram_addr,
+//     output uwire [7 : 0] sram_rd_wr_en
+// );
+//     // it should be possible to get away with using just simple read logic to
+//     // read from the SRAM with with a mac rd & eof signal
+//
+//     // Need a fifo from slow to fast if, the slow freq is too close to the fast freq
+//     // then double flopping the valid signal will be too late to capture the data
+// endmodule
 
