@@ -1,10 +1,15 @@
 """
 LangGraph Orchestrator — automates the full ButterFold agentic workflow:
 
-  planner → code_agent → verify ──(pass)──► summarize → END
-                              │                 ▲
-                              └──(fail)──► debug ─┘
-                                           (loops until pass or max iterations)
+  planner → code_agent → reflect → verify ──(pass)──► summarize → END
+                                        │                  ▲
+                                        └──(fail)──► debug ─┘
+                                                    (loops until pass or max iterations)
+
+Deep-agent layers:
+  1. code_agent:    per-subtask generate → critique → revise inner loop
+  2. reflect_agent: whole-design cross-module review and auto-patch
+  3. debug_agent:   iverilog-error-driven repair loop (up to 5×)
 
 Run:
     python agents/orchestrator.py
@@ -13,6 +18,7 @@ Output:
     generated/summary.md   — human-readable run summary
     generated/plan.json
     generated/rtl/butterfold_top.v
+    generated/reflect_result.json
     generated/verify_result.json
     generated/logs/
 """
@@ -41,8 +47,9 @@ def _load_module(logical_name: str, filename: str):
     spec.loader.exec_module(mod)
     return mod
 
-planner_mod = _load_module("planner",      "planner.py")
+planner_mod = _load_module("planner",       "planner.py")
 code_mod    = _load_module("code_agent",   "code_agent.py")
+reflect_mod = _load_module("reflect_agent","reflect_agent.py")
 verify_mod  = _load_module("verify_agent", "verify.agent.py")
 
 
@@ -53,6 +60,7 @@ verify_mod  = _load_module("verify_agent", "verify.agent.py")
 class State(TypedDict):
     plan:             Optional[dict]
     rtl_path:         Optional[str]
+    reflect_result:   Optional[dict]
     verify_result:    Optional[dict]
     debug_iterations: int
     passed:           bool
@@ -80,11 +88,21 @@ def node_code_agent(state: State) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Node: reflect  (deep cross-module review between code_agent and verify)
+# ---------------------------------------------------------------------------
+
+def node_reflect(state: State) -> dict:
+    print("\n[orchestrator] ── Step 3: Reflect (deep review) ────────────")
+    result = reflect_mod.run()
+    return {"reflect_result": result}
+
+
+# ---------------------------------------------------------------------------
 # Node: verify
 # ---------------------------------------------------------------------------
 
 def node_verify(state: State) -> dict:
-    print("\n[orchestrator] ── Step 3: Verify ───────────────────────────")
+    print("\n[orchestrator] ── Step 4: Verify ───────────────────────────")
     result = verify_mod.run()
     passed = _compute_passed(result)
     return {"verify_result": result, "passed": passed}
@@ -96,7 +114,7 @@ def node_verify(state: State) -> dict:
 
 def node_debug(state: State) -> dict:
     iteration = state["debug_iterations"] + 1
-    print(f"\n[orchestrator] ── Step 4: Debug (iteration {iteration}/{MAX_DEBUG_ITERATIONS}) ──")
+    print(f"\n[orchestrator] ── Step 5: Debug (iteration {iteration}/{MAX_DEBUG_ITERATIONS}) ──")
 
     errors     = "\n".join(state["verify_result"].get("errors", [])    or ["unknown error"])
     fix_hints  = "\n".join(state["verify_result"].get("fix_hints", []) or [])
@@ -156,9 +174,10 @@ def node_debug(state: State) -> dict:
 # ---------------------------------------------------------------------------
 
 def node_summarize(state: State) -> dict:
-    print("\n[orchestrator] ── Step 5: Summarize ────────────────────────")
+    print("\n[orchestrator] ── Step 6: Summarize ────────────────────────")
 
     plan    = state.get("plan") or {}
+    reflect = state.get("reflect_result") or {}
     verify  = state.get("verify_result") or {}
     passed  = state.get("passed", False)
     iters   = state.get("debug_iterations", 0)
@@ -171,10 +190,14 @@ def node_summarize(state: State) -> dict:
         for t in plan.get("subtasks", [])
     )
 
+    reflect_errors = len([i for i in reflect.get("issues", []) if i.get("severity") == "error"])
+
     stats = (
         f"Module       : {plan.get('module_name', 'butterfold_top')}\n"
         f"Subtasks     : {len(plan.get('subtasks', []))}\n"
         f"RTL lines    : {rtl_lines}\n"
+        f"Reflect patch: {'yes' if reflect.get('patched') else 'no'} "
+        f"({reflect_errors} error(s) found)\n"
         f"Syntax OK    : {verify.get('syntax_ok')}\n"
         f"Sim result   : {verify.get('sim_ok')}\n"
         f"Debug iters  : {iters}\n"
@@ -263,14 +286,16 @@ def build_graph() -> StateGraph:
 
     g.add_node("planner",    node_planner)
     g.add_node("code_agent", node_code_agent)
+    g.add_node("reflect",    node_reflect)
     g.add_node("verify",     node_verify)
     g.add_node("debug",      node_debug)
     g.add_node("summarize",  node_summarize)
 
     g.set_entry_point("planner")
     g.add_edge("planner",    "code_agent")
-    g.add_edge("code_agent", "verify")
-    g.add_edge("debug",      "verify")   # always re-verify after a debug patch
+    g.add_edge("code_agent", "reflect")   # deep review before formal verify
+    g.add_edge("reflect",    "verify")
+    g.add_edge("debug",      "verify")    # re-verify after debug patch (skip reflect)
 
     g.add_conditional_edges("verify", route_after_verify, {
         "summarize": "summarize",
@@ -286,6 +311,7 @@ def run():
     initial: State = {
         "plan":             None,
         "rtl_path":         None,
+        "reflect_result":   None,
         "verify_result":    None,
         "debug_iterations": 0,
         "passed":           False,
