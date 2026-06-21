@@ -7,6 +7,7 @@ Stages (in order):
   3. Yosys synthesis   — catches structural issues syntax check misses
   4. Testbench         — auto-generate if none exists, then simulate with vvp
   5. Sim log analysis  — LLM reads simulation output and classifies failures
+  6. Golden model      — drive RTL with butterfold_sim test vectors, compare EVM
 
 Requires iverilog, vvp, yosys to be in PATH (inside IIC-OSIC-TOOLS Docker).
 
@@ -15,10 +16,12 @@ Output: generated/verify_result.json
         generated/logs/syntax.log
         generated/logs/synth.log
         generated/logs/sim.log
+        generated/golden/golden_sim.log
+        generated/golden/golden_result.json
 """
 
-import os, json, pathlib, subprocess, textwrap
-import anthropic
+import os, sys, json, pathlib, subprocess, textwrap
+import openai
 from dotenv import load_dotenv
 
 ROOT        = pathlib.Path(__file__).parent.parent
@@ -42,14 +45,16 @@ def _run(cmd, timeout=120, **kwargs):
 
 
 def _llm(system: str, user: str, max_tokens: int = 2048) -> str:
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    msg = client.messages.create(
-        model="claude-opus-4-8",
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    completion = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user",   "content": user},
+        ],
     )
-    return msg.content[0].text.strip()
+    return completion.choices[0].message.content.strip()
 
 
 # ─── Stage 1: Syntax check ────────────────────────────────────────────────────
@@ -291,6 +296,181 @@ def stage_sim_analysis(sim_log: str, spec_path: pathlib.Path) -> dict:
     return analysis
 
 
+# ─── Stage 6: Golden model comparison ────────────────────────────────────────
+
+# Tapeout-frozen parameters (must match modular_description.md)
+_K, _M, _CP = 12, 128, 9
+_EVM_THRESHOLD = 2.0  # percent — generous for 8-bit fixed point
+
+
+def _golden_tb(input_int8: list, n_input: int) -> str:
+    """Verilog testbench with inlined test vectors (avoids $readmemh path issues)."""
+    inits = "\n".join(f"    tx_input[{i}] = 8'h{v & 0xFF:02x};" for i, v in enumerate(input_int8))
+    return textwrap.dedent(f"""\
+        `timescale 1ns/1ps
+        module tb_golden_check;
+          reg        clk       = 0;
+          reg        rst_n     = 0;
+          reg        mode      = 0;
+          reg  [7:0] din       = 0;
+          reg        din_valid = 0;
+          wire [7:0] dout;
+          wire       dout_valid, busy, done;
+
+          butterfold_top dut (
+            .clk(clk), .rst_n(rst_n), .mode(mode),
+            .din(din), .din_valid(din_valid),
+            .dout(dout), .dout_valid(dout_valid),
+            .busy(busy), .done(done)
+          );
+
+          always #5 clk = ~clk;
+
+          reg [7:0] tx_input [0:{n_input - 1}];
+          integer   i;
+          reg       timeout_hit = 0;
+
+          initial begin
+        {inits}
+          end
+
+          initial begin
+            rst_n = 0; mode = 0;
+            repeat(4) @(posedge clk);
+            rst_n = 1;
+            @(posedge clk);
+            din_valid = 1;
+            for (i = 0; i < {n_input}; i = i + 1) begin
+              din = tx_input[i];
+              @(posedge clk);
+            end
+            din_valid = 0;
+            wait(done || timeout_hit);
+            repeat(5) @(posedge clk);
+            $finish;
+          end
+
+          initial begin
+            #500000;
+            timeout_hit = 1;
+            $display("GOLDEN_TIMEOUT");
+            $finish;
+          end
+
+          always @(posedge clk) begin
+            if (dout_valid)
+              $display("OUT: %02x", dout);
+          end
+        endmodule
+    """)
+
+
+def stage_golden_model_check(rtl_file: pathlib.Path) -> dict:
+    """
+    Drive the RTL with golden model test vectors and compare output.
+
+    Uses butterfold_sim (one directory above butterfold/) to generate k=12
+    16-QAM input symbols and the expected TX output waveform, both in int8.
+    Runs a dedicated testbench, parses $display output, and computes EVM.
+    """
+    print("[verify] Stage 6 — Golden model comparison ...")
+
+    sim_pkg_dir = ROOT
+    if not (sim_pkg_dir / "butterfold_sim").exists():
+        print("[verify]   butterfold_sim not found — skipping golden check")
+        return {"golden_ok": None, "reason": "butterfold_sim package not found at ../butterfold_sim"}
+
+    if str(sim_pkg_dir) not in sys.path:
+        sys.path.insert(0, str(sim_pkg_dir))
+
+    try:
+        import numpy as np
+        from butterfold_sim.waveform import qam_symbols, tx_chain
+        from butterfold_sim.fixed_point import quantize_complex_stream
+    except ImportError as exc:
+        print(f"[verify]   Import error: {exc} — skipping golden check")
+        return {"golden_ok": None, "reason": str(exc)}
+
+    rng              = np.random.default_rng(42)
+    symbols          = qam_symbols(_K, rng=rng)
+    input_bytes, _   = quantize_complex_stream(symbols, scale=127.0)
+    tx               = tx_chain(symbols, m=_M, cp_len=_CP, folded=True)
+    expected_bytes, _ = quantize_complex_stream(tx.time_with_cp, scale=127.0)
+    n_expected       = len(expected_bytes)  # 2*(128+9) = 274
+
+    golden_dir = ROOT / "generated" / "golden"
+    golden_dir.mkdir(parents=True, exist_ok=True)
+
+    tb_path = RTL_DIR / "tb_golden_check.v"
+    tb_path.write_text(_golden_tb(input_bytes.tolist(), len(input_bytes)))
+
+    vvp_out   = LOG_DIR / "golden_check.vvp"
+    compile_r = _run(["iverilog", "-g2012", "-o", str(vvp_out), str(tb_path), str(rtl_file)])
+    if compile_r.returncode != 0:
+        log = (compile_r.stdout + compile_r.stderr).strip()
+        print("[verify]   Golden TB compile FAILED")
+        (golden_dir / "golden_compile.log").write_text(log)
+        return {"golden_ok": False, "reason": "compile failed", "log": log[:500]}
+
+    sim_r   = _run(["vvp", str(vvp_out)], timeout=300)
+    sim_out = sim_r.stdout + sim_r.stderr
+    (golden_dir / "golden_sim.log").write_text(sim_out)
+
+    if "GOLDEN_TIMEOUT" in sim_out:
+        return {"golden_ok": False, "reason": "simulation timed out waiting for done signal"}
+
+    actual_raw = []
+    for line in sim_out.splitlines():
+        if line.startswith("OUT: "):
+            try:
+                val = int(line[5:].strip(), 16)
+                actual_raw.append(val if val < 128 else val - 256)
+            except ValueError:
+                pass
+
+    if len(actual_raw) < n_expected:
+        result = {
+            "golden_ok": False,
+            "reason": f"RTL output {len(actual_raw)} bytes, expected {n_expected}",
+        }
+        (golden_dir / "golden_result.json").write_text(json.dumps(result, indent=2))
+        print(f"[verify]   Golden model FAILED — {result['reason']}")
+        return result
+
+    actual   = np.array(actual_raw[:n_expected], dtype=np.int8)
+    expected = expected_bytes[:n_expected].astype(np.int8)
+
+    mismatch_count = int(np.sum(actual != expected))
+
+    actual_c   = actual[0::2].astype(np.float64)  + 1j * actual[1::2].astype(np.float64)
+    expected_c = expected[0::2].astype(np.float64) + 1j * expected[1::2].astype(np.float64)
+
+    ref_power = float(np.mean(np.abs(expected_c) ** 2))
+    evm       = float(100.0 * np.sqrt(np.mean(np.abs(actual_c - expected_c) ** 2) / ref_power)) \
+                if ref_power > 0 else float("inf")
+    max_err   = float(np.max(np.abs(actual_c - expected_c)))
+    rms_err   = float(np.sqrt(np.mean(np.abs(actual_c - expected_c) ** 2)))
+
+    golden_ok = evm < _EVM_THRESHOLD
+
+    result = {
+        "golden_ok":             golden_ok,
+        "evm_percent":           round(evm, 4),
+        "evm_threshold_percent": _EVM_THRESHOLD,
+        "max_error":             round(max_err, 4),
+        "rms_error":             round(rms_err, 4),
+        "bit_mismatch_count":    mismatch_count,
+        "output_bytes_expected": n_expected,
+        "output_bytes_received": len(actual_raw),
+    }
+    (golden_dir / "golden_result.json").write_text(json.dumps(result, indent=2))
+
+    status = "PASSED" if golden_ok else f"FAILED (EVM={evm:.2f}% > {_EVM_THRESHOLD}%)"
+    print(f"[verify]   Golden model: {status}")
+    print(f"[verify]   EVM={evm:.4f}%  max_err={max_err:.4f}  mismatches={mismatch_count}/{n_expected}")
+    return result
+
+
 # ─── Orchestrate all stages ───────────────────────────────────────────────────
 
 def run() -> dict:
@@ -298,13 +478,15 @@ def run() -> dict:
     RTL_DIR.mkdir(parents=True, exist_ok=True)
 
     result = {
-        "syntax_ok":    False,
-        "spec_ok":      None,
-        "synth_ok":     None,
-        "sim_ok":       None,
-        "errors":       [],
-        "spec_issues":  [],
-        "fix_hints":    [],
+        "syntax_ok":      False,
+        "spec_ok":        None,
+        "synth_ok":       None,
+        "sim_ok":         None,
+        "golden_ok":      None,
+        "golden_metrics": {},
+        "errors":         [],
+        "spec_issues":    [],
+        "fix_hints":      [],
     }
 
     # ── Guard ────────────────────────────────────────────────────────────────
@@ -354,10 +536,30 @@ def run() -> dict:
         result["fix_hints"]  = analysis.get("fix_hints", [])
         result["errors"].extend(analysis.get("root_causes", []))
 
+    # ── Stage 6: Golden model comparison ──────────────────────────────────────
+    # Run whenever RTL compiled successfully (syntax + synth passed), even if
+    # the generic testbench in Stage 4 failed — Stage 6 uses its own testbench.
+    if syntax_ok and synth_ok:
+        golden = stage_golden_model_check(RTL_FILE)
+        result["golden_ok"]      = golden.get("golden_ok")
+        result["golden_metrics"] = golden
+        if golden.get("golden_ok") is False:
+            hint = (
+                f"Golden model check failed: EVM={golden.get('evm_percent', '?')}% "
+                f"(threshold {_EVM_THRESHOLD}%), "
+                f"bit mismatches={golden.get('bit_mismatch_count', '?')}"
+                f"/{golden.get('output_bytes_expected', '?')}. "
+                "Check fixed-point scaling, twiddle factors, and transform stage ordering."
+            )
+            result["fix_hints"].append(hint)
+            if golden.get("reason"):
+                result["errors"].append(golden["reason"])
+
     # ── Final verdict ─────────────────────────────────────────────────────────
-    overall = syntax_ok and spec_ok and synth_ok and sim_ok
+    golden_ok = result.get("golden_ok")
+    overall   = syntax_ok and spec_ok and synth_ok and sim_ok and (golden_ok is not False)
     print(f"\n[verify] ── Overall: {'PASSED' if overall else 'FAILED'} ──")
-    print(f"          syntax={syntax_ok}  spec={spec_ok}  synth={synth_ok}  sim={sim_ok}")
+    print(f"          syntax={syntax_ok}  spec={spec_ok}  synth={synth_ok}  sim={sim_ok}  golden={golden_ok}")
 
     RESULT_FILE.write_text(json.dumps(result, indent=2))
     return result

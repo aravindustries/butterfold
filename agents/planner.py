@@ -6,7 +6,7 @@ Input : modular_description.md
 Output: generated/plan.json
 """
 import os, json, pathlib
-import anthropic
+import openai
 from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -71,16 +71,18 @@ def run():
         raise FileNotFoundError(f"Spec not found: {SPEC_PATH}")
 
     spec   = SPEC_PATH.read_text()
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-    msg = client.messages.create(
-        model="claude-opus-4-8",
+    completion = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": spec}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": spec},
+        ],
     )
 
-    raw = msg.content[0].text.strip()
+    raw = completion.choices[0].message.content.strip()
     if "```json" in raw:
         raw = raw.split("```json", 1)[1].split("```", 1)[0].strip()
     elif "```" in raw:

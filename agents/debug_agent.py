@@ -6,7 +6,7 @@ Input : generated/verify_result.json + generated/rtl/butterfold_top.v
 Output: updated generated/rtl/butterfold_top.v  (overwritten in place)
 """
 import os, json, pathlib, importlib.util
-import anthropic
+import openai
 from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -60,7 +60,7 @@ def run():
         return
 
     spec         = SPEC_PATH.read_text()
-    client       = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client       = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     verify_agent = _load_verify_agent()
 
     for iteration in range(1, MAX_ITERATIONS + 1):
@@ -85,14 +85,16 @@ def run():
             + "Produce the corrected Verilog."
         )
 
-        msg = client.messages.create(
-            model="claude-opus-4-8",
+        completion = client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=8192,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": prompt},
+            ],
         )
 
-        fixed_rtl = _strip_fences(msg.content[0].text)
+        fixed_rtl = _strip_fences(completion.choices[0].message.content)
         RTL_FILE.write_text(fixed_rtl)
         print("[debug] RTL updated — re-running verification")
 

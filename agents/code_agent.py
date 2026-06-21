@@ -6,7 +6,7 @@ Input : generated/plan.json + modular_description.md
 Output: generated/rtl/<subtask_id>.v  +  generated/rtl/butterfold_top.v
 """
 import os, json, pathlib
-import anthropic
+import openai
 from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -47,13 +47,15 @@ def generate_subtask(client, spec, plan, subtask, prior_rtl=""):
         f"{constraints.get('waveform_properties', [])}"
     )
 
-    msg = client.messages.create(
-        model="claude-opus-4-8",
+    completion = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=8192,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": "\n\n".join(context_parts)}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": "\n\n".join(context_parts)},
+        ],
     )
-    return msg.content[0].text.strip()
+    return completion.choices[0].message.content.strip()
 
 
 def run():
@@ -64,7 +66,7 @@ def run():
     plan = json.loads(PLAN_PATH.read_text())
     RTL_DIR.mkdir(parents=True, exist_ok=True)
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     accumulated_rtl = ""
 
     for subtask in plan["subtasks"]:

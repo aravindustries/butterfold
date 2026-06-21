@@ -21,7 +21,7 @@ import os, json, pathlib, importlib.util
 from typing import TypedDict, Optional
 
 from langgraph.graph import StateGraph, END
-import anthropic
+import openai
 from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -109,32 +109,37 @@ def node_debug(state: State) -> dict:
     spec     = (ROOT / "modular_description.md").read_text()
     rtl      = rtl_file.read_text()
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    msg = client.messages.create(
-        model="claude-opus-4-8",
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    completion = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=8192,
-        system=(
-            "You are a Verilog RTL debug agent. "
-            "Fix only what the errors indicate. "
-            "Preserve all port names, module names, and parameter values exactly. "
-            "Keep synthesizability rules: no initial blocks in RTL, no $display/$finish, "
-            "synchronous rst_n, posedge clk flip-flops, fixed-point arithmetic only. "
-            "Return ONLY the corrected Verilog — no markdown fences, no explanation."
-        ),
-        messages=[{
-            "role": "user",
-            "content": (
-                f"Original specification:\n{spec}\n\n"
-                f"Current RTL:\n{rtl}\n\n"
-                f"Verification errors:\n{errors}\n\n"
-                + (f"Spec compliance issues:\n{spec_issues}\n\n" if spec_issues else "")
-                + (f"Suggested fix hints:\n{fix_hints}\n\n" if fix_hints else "")
-                + "Return the corrected Verilog."
-            ),
-        }],
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a Verilog RTL debug agent. "
+                    "Fix only what the errors indicate. "
+                    "Preserve all port names, module names, and parameter values exactly. "
+                    "Keep synthesizability rules: no initial blocks in RTL, no $display/$finish, "
+                    "synchronous rst_n, posedge clk flip-flops, fixed-point arithmetic only. "
+                    "Return ONLY the corrected Verilog — no markdown fences, no explanation."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Original specification:\n{spec}\n\n"
+                    f"Current RTL:\n{rtl}\n\n"
+                    f"Verification errors:\n{errors}\n\n"
+                    + (f"Spec compliance issues:\n{spec_issues}\n\n" if spec_issues else "")
+                    + (f"Suggested fix hints:\n{fix_hints}\n\n" if fix_hints else "")
+                    + "Return the corrected Verilog."
+                ),
+            },
+        ],
     )
 
-    fixed = msg.content[0].text.strip()
+    fixed = completion.choices[0].message.content.strip()
     if "```" in fixed:
         fixed = fixed.split("```", 1)[1]
         if fixed.lower().startswith(("verilog", "systemverilog", "sv")):
@@ -191,15 +196,17 @@ def node_summarize(state: State) -> dict:
         f"\nSubtasks planned:\n{subtask_lines}"
     )
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    msg = client.messages.create(
-        model="claude-opus-4-8",
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    completion = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=1024,
-        system="You are a chip design technical writer. Be concise and engineering-precise.",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": "You are a chip design technical writer. Be concise and engineering-precise."},
+            {"role": "user",   "content": prompt},
+        ],
     )
 
-    summary = msg.content[0].text.strip()
+    summary = completion.choices[0].message.content.strip()
 
     # Print to terminal
     print("\n" + "=" * 62)

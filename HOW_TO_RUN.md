@@ -10,7 +10,7 @@ A step-by-step guide from zero to generated RTL.
 |---|---|
 | Docker Desktop running | Open Docker Desktop — whale icon should be green |
 | IIC-OSIC-TOOLS container started | VNC accessible at `http://localhost:80` |
-| Anthropic API key | Get one at `https://console.anthropic.com` |
+| OpenAI API key | Get one at `https://platform.openai.com` |
 
 ---
 
@@ -48,11 +48,11 @@ cd /foss/designs/butterfold
 pip install -r requirements.txt
 ```
 
-This installs `anthropic`, `python-dotenv`, and `langgraph`.
+This installs `openai`, `numpy`, `python-dotenv`, `langgraph`, and `pdfplumber`.
 
 ---
 
-## Step 4 — Set your API key
+## Step 4 — Set your OpenAI API key
 
 Open `.env` in a text editor:
 
@@ -63,7 +63,7 @@ nano .env
 Replace the placeholder with your real key:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+OPENAI_API_KEY=sk-...your-key-here...
 ```
 
 Save and exit (`Ctrl+X` → `Y` → `Enter`).
@@ -204,10 +204,10 @@ python agents/debug_agent.py      # fix errors (re-run if verify failed)
 
 | Problem | Fix |
 |---|---|
-| `ANTHROPIC_API_KEY` not set | Edit `.env` — make sure there are no spaces around `=` |
+| `OPENAI_API_KEY` not set | Edit `.env` — make sure there are no spaces around `=` |
 | `iverilog: command not found` | You are on the Windows host — open VNC at `http://localhost:80` and run from there |
-| `ModuleNotFoundError: anthropic` | Run `pip install -r requirements.txt` |
+| `ModuleNotFoundError: openai` | Run `pip install -r requirements.txt` |
 | `generated/plan.json not found` | Run planner first: `python agents/planner.py` |
 | Debug loops 5 times and still fails | Review `generated/rtl/butterfold_top.v` manually. Check `generated/logs/syntax.log` for the exact errors. Tighten the spec in `modular_description.md` and re-run |
 | VNC screen is black | Restart the IIC-OSIC-TOOLS container in Docker Desktop |
-| `pip install` fails (no internet in Docker) | Check Docker network settings — the container needs internet access for the Anthropic API |
+| `pip install` fails (no internet in Docker) | Check Docker network settings — the container needs internet access for the OpenAI API |

@@ -73,8 +73,6 @@ DFT-s-OFDM TX:
   time-domain waveform
 ```
 
-![DFT-s-OFDM Diagram](download.png)
-
 The key idea is that the DFT spreads each data symbol across the allocated subcarriers before the OFDM IFFT. This gives the transmitted waveform a more single-carrier-like structure while retaining many OFDM benefits, such as frequency-domain equalization and flexible resource allocation.
 
 ### Why DFT-s-OFDM is useful
@@ -804,8 +802,6 @@ The goal is a reproducible, open-source workflow that shows how LLMs can assist 
 ---
 ## Agentic Verilog Design Workflow
 
-![Multi-Agent VerilogCoder Workflow](assets/verilogcoder-workflow.png.png)
-
 This project follows a multi-agent LLM workflow inspired by VerilogCoder, where different LLM agents cooperate to convert a natural-language hardware specification into verified Verilog RTL. Instead of relying on a single model to directly generate the full design, the workflow separates planning, code generation, verification, and debugging into specialized agent roles.
 
 The input to the system is a module-level natural-language problem description. A **Task Planning Agent** first breaks the specification into smaller hardware subtasks, such as identifying module inputs/outputs, extracting circuit signals, understanding state transitions, and building a task-driven circuit relation graph. This planning stage helps the system reason about the design structure before producing RTL.
@@ -844,7 +840,7 @@ This is the step-by-step guide to running the four-agent pipeline on the ButterF
 |---|---|
 | IIC-OSIC-TOOLS Docker container running | VNC at `http://localhost:80` |
 | Terminal inside Docker | Open terminal from the VNC desktop |
-| Anthropic API key | `https://console.anthropic.com` |
+| OpenAI API key | `https://platform.openai.com/api-keys` |
 | Python 3.10+ | Already in the Docker container |
 | `iverilog` / `vvp` | Already in the Docker container |
 | `yosys` | Already in the Docker container |
@@ -884,12 +880,17 @@ cd butterfold
 pip install -r requirements.txt
 ```
 
-**0c. Set your Anthropic API key**
+**0c. Set your OpenAI API key**
 
-Open `.env` and replace the placeholder:
+Copy `.env.example` to `.env` and fill in your key:
+
+```bash
+cp .env.example .env
+nano .env
+```
 
 ```
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+OPENAI_API_KEY=sk-...your-key-here...
 ```
 
 ---
@@ -930,7 +931,7 @@ Repeat Steps 3 and 4 until `verify_result.json` shows `"syntax_ok": true`.
 **Reads:** `modular_description.md`  
 **Writes:** `generated/plan.json`
 
-Sends the full `butterfold_top` module specification to Claude and receives a structured JSON task plan. The plan breaks the design into ordered subtasks — module interface, address generator, radix-2 butterfly, 3×4 mixed-radix kernel, FSM scheduler, subcarrier mapper, CP logic, and I/O integration.
+Sends the full `butterfold_top` module specification to GPT-4o and receives a structured JSON task plan. The plan breaks the design into ordered subtasks — module interface, address generator, radix-2 butterfly, 3×4 mixed-radix kernel, FSM scheduler, subcarrier mapper, CP logic, and I/O integration.
 
 ```bash
 python agents/planner.py
@@ -997,7 +998,7 @@ generated/rtl/butterfold_top.v:42: error: ...
 **Reads:** `generated/verify_result.json` + `generated/rtl/butterfold_top.v`  
 **Writes:** updated `generated/rtl/butterfold_top.v` (overwritten in place)
 
-Reads the error log, sends the failing RTL + errors + original spec to Claude, and applies the returned fix. Re-runs the verify agent after each patch. Loops up to 5 times automatically.
+Reads the error log, sends the failing RTL + errors + original spec to GPT-4o, and applies the returned fix. Re-runs the verify agent after each patch. Loops up to 5 times automatically.
 
 ```bash
 python agents/debug_agent.py
@@ -1080,9 +1081,9 @@ butterfold/
 
 | Problem | Fix |
 |---|---|
-| `ANTHROPIC_API_KEY` not set | Edit `.env` and set your key from `console.anthropic.com` |
+| `OPENAI_API_KEY` not set | Edit `.env` and set your key from `platform.openai.com` |
 | `iverilog: command not found` | You are outside Docker — open VNC at `http://localhost:80` and run from the Docker terminal |
-| `ModuleNotFoundError: anthropic` | Run `pip install -r requirements.txt` inside Docker |
+| `ModuleNotFoundError: openai` | Run `pip install -r requirements.txt` inside Docker |
 | `generated/plan.json not found` | Run `python agents/planner.py` first |
 | Debug loops 5 times without fixing | Review `generated/rtl/butterfold_top.v` and `generated/logs/` manually, adjust `modular_description.md` if the spec is ambiguous, then re-run from Step 1 |
 | VCD file too large for GTKWave | Limit waveform dump to the specific signals you need in the testbench |
