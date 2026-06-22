@@ -2,8 +2,7 @@
 
 from .config import NRConfig, SweepSpace, milestone_configs
 from .cycle_model import CycleAssumptions
-from .report import run_full_report, run_milestone_report
-from .sweep import run_sweep
+from .report import run_full_report, run_milestone_report, run_sweep
 
 __all__ = [
     "NRConfig",

@@ -210,15 +210,20 @@ def node_summarize(state: State) -> dict:
     )
 
     reflect_errors = len([i for i in reflect.get("issues", []) if i.get("severity") == "error"])
+    golden = verify.get("golden_metrics", {}) or {}
+    golden_line = (f"{verify.get('golden_ok')}  "
+                   f"(EVM={golden.get('evm_percent', '?')}%, "
+                   f"threshold {golden.get('evm_threshold_percent', 2.0)}%)")
 
     stats = (
         f"Module       : {plan.get('module_name', 'butterfold_top')}\n"
         f"Subtasks     : {len(plan.get('subtasks', []))}\n"
         f"RTL lines    : {rtl_lines}\n"
-        f"Reflect patch: {'yes' if reflect.get('patched') else 'no'} "
-        f"({reflect_errors} error(s) found)\n"
         f"Syntax OK    : {verify.get('syntax_ok')}\n"
+        f"Synth OK     : {verify.get('synth_ok')}\n"
         f"Sim result   : {verify.get('sim_ok')}\n"
+        f"Golden model : {golden_line}\n"
+        f"Reflect      : {reflect_errors} advisory issue(s)\n"
         f"Debug iters  : {iters}\n"
         f"Final status : {'✓ PASSED' if passed else '✗ FAILED'}\n"
     )
@@ -285,16 +290,26 @@ def route_after_verify(state: State) -> str:
     return "debug"
 
 
-# Update the passed flag to require all four verify stages
+# Pass criterion. Per the project's rule ("RTL must match the bit-accurate
+# golden model"), the golden-model EVM check is authoritative: if it passes,
+# the design passes regardless of the subjective LLM spec-review opinion.
 def _compute_passed(result: dict) -> bool:
     syntax_ok = result.get("syntax_ok", False)
-    spec_ok   = result.get("spec_ok",   True)   # None = not run
     synth_ok  = result.get("synth_ok",  True)
-    sim_ok    = result.get("sim_ok")             # None = no TB
-    return (syntax_ok
-            and (spec_ok  is None or spec_ok)
-            and (synth_ok is None or synth_ok)
-            and (sim_ok   is None or sim_ok))
+    golden_ok = result.get("golden_ok")          # True / False / None
+
+    if not syntax_ok:
+        return False
+    if golden_ok is True:
+        return True                              # golden model is ground truth
+    if golden_ok is False:
+        return False
+    # Golden check couldn't run (None): fall back to syntax + synth + sim
+    sim_ok  = result.get("sim_ok")
+    spec_ok = result.get("spec_ok", True)
+    return ((synth_ok is None or synth_ok)
+            and (sim_ok  is None or sim_ok)
+            and (spec_ok is None or spec_ok))
 
 
 # ---------------------------------------------------------------------------

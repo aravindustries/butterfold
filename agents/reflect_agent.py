@@ -122,33 +122,15 @@ def run() -> dict:
     print(f"[reflect] {result.get('summary', '')}")
     print(f"[reflect] {len(errors)} error(s), {len(warnings)} warning(s)")
 
-    if not result.get("approved") and errors:
-        print(f"[reflect] Patching {len(errors)} error(s) in place")
-
-        issue_text = "\n".join(
-            f"[{i['category']}] {i['description']}"
-            for i in errors
-        )
-        patch_completion = _call_with_retry(
-            client.chat.completions.create,
-            model="gpt-4o",
-            max_tokens=8192,
-            messages=[
-                {"role": "system", "content": PATCH_PROMPT},
-                {"role": "user",   "content": (
-                    f"Spec:\n{spec}\n\n"
-                    f"Issues to fix:\n{issue_text}\n\n"
-                    f"RTL to patch:\n{rtl}"
-                )},
-            ],
-        )
-        patched = _strip_fences(patch_completion.choices[0].message.content)
-        TOP_FILE.write_text(patched)
-        result["patched"] = True
-        print(f"[reflect] RTL patched and written back to {TOP_FILE.name}")
+    # Review-only: the kernel is verified-by-construction against the golden
+    # model, so reflect reports issues but never overwrites the RTL (an LLM
+    # patch could corrupt the bit-exact twiddle ROMs). Findings are advisory.
+    result["patched"] = False
+    if errors:
+        print(f"[reflect] {len(errors)} advisory error(s) noted (not auto-patched — "
+              f"kernel is golden-validated)")
     else:
-        result["patched"] = False
-        print("[reflect] RTL approved — no patches needed")
+        print("[reflect] No structural issues found")
 
     RESULT_PATH.parent.mkdir(parents=True, exist_ok=True)
     RESULT_PATH.write_text(json.dumps(result, indent=2))
