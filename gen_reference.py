@@ -177,7 +177,7 @@ module butterfold_top (
   reg [8:0]  out_cnt;           // 0..273
 
   // ── Input buffer (24 signed bytes) ──────────────────────────────────────
-  reg signed [7:0] buf [0:23];
+  reg signed [7:0] inbuf [0:23];
 
   // ── DFT result: 12 complex spread bins (wide accumulators) ──────────────
   reg signed [31:0] spread_re [0:11];
@@ -247,7 +247,7 @@ module butterfold_top (
         S_IDLE: begin
           busy <= 1'b0;
           if (din_valid) begin
-            buf[0]   <= din;        // capture first byte at the transition
+            inbuf[0] <= din;        // capture first byte at the transition
             load_cnt <= 5'd1;
             busy     <= 1'b1;
             state    <= S_LOAD;
@@ -256,7 +256,7 @@ module butterfold_top (
 
         S_LOAD: begin
           busy <= 1'b1;
-          buf[load_cnt] <= din;
+          inbuf[load_cnt] <= din;
           if (load_cnt == 5'd23) begin
             load_cnt <= 5'd0;
             state    <= S_DFT;
@@ -307,8 +307,8 @@ module butterfold_top (
         dacc_im = 32'sd0;
         for (dn = 0; dn < {K}; dn = dn + 1) begin
           d12 = ((dn * dj) % 12);
-          dpr_re = buf[2*dn] * w12_re(d12) - buf[2*dn+1] * w12_im(d12);
-          dpr_im = buf[2*dn] * w12_im(d12) + buf[2*dn+1] * w12_re(d12);
+          dpr_re = inbuf[2*dn] * w12_re(d12) - inbuf[2*dn+1] * w12_im(d12);
+          dpr_im = inbuf[2*dn] * w12_im(d12) + inbuf[2*dn+1] * w12_re(d12);
           dacc_re = dacc_re + dpr_re;
           dacc_im = dacc_im + dpr_im;
         end
