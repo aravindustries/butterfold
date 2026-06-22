@@ -17,10 +17,11 @@ from dotenv import load_dotenv
 ROOT = pathlib.Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
-PLAN_PATH    = ROOT / "generated" / "plan.json"
-SPEC_PATH    = ROOT / "modular_description.md"
-GPP_PATH     = ROOT / "3GPP_ButterFold_Spec_Extract.md"
-RTL_DIR      = ROOT / "generated" / "rtl"
+PLAN_PATH      = ROOT / "generated" / "plan.json"
+SPEC_PATH      = ROOT / "modular_description.md"
+GPP_PATH       = ROOT / "3GPP_ButterFold_Spec_Extract.md"
+REFERENCE_PATH = ROOT / "butterfold_reference.v"
+RTL_DIR        = ROOT / "generated" / "rtl"
 
 MAX_RETRIES = 5
 INITIAL_WAIT = 1
@@ -41,23 +42,25 @@ def _call_with_retry(func, *args, **kwargs):
 
 
 SYSTEM_PROMPT = """\
-You are a synthesizable Verilog RTL generation agent.
-Given a hardware design spec and a subtask, generate clean, synthesizable Verilog
-compatible with open-source simulators like iverilog.
+You are a Verilog RTL refinement agent. You are given a reference implementation
+and asked to improve it, not generate from scratch.
+
+Your tasks may include:
+1. Optimize for area (reduce bit widths, simplify logic)
+2. Optimize for timing (add pipelining, reduce critical paths)
+3. Fix bugs or incomplete sections (marked with comments like "// TODO" or "// SIMPLIFIED")
+4. Add missing features while preserving the core algorithm
 
 Hard rules:
+- Preserve all port names, module names, and external interfaces exactly
+- Preserve the overall architecture and state machine structure
 - No `initial` blocks in RTL (testbenches only)
-- No $display, $finish, or other simulation-only constructs
-- No SystemVerilog unpacked arrays (e.g., "logic data [0:11]")
-- No array slicing or range indexing (e.g., "data[0:11]")
-- No tasks or functions with array ports — use scalar loops instead
+- No SystemVerilog unpacked arrays, array slicing, or array function ports
 - Synchronous active-low reset (rst_n)
 - All flip-flops on posedge clk
 - Fixed-point arithmetic only — no real/float keywords
-- No automatic variables; use explicit widths on all signals
-- Use only Verilog-2005 constructs (loop through array elements one at a time)
-- Return ONLY the Verilog code — no explanation, no markdown fences, no comments
-  beyond what is architecturally required"""
+- Use only Verilog-2005 constructs for iverilog compatibility
+- Return ONLY the complete corrected Verilog file — no explanation, no markdown fences"""
 
 CRITIQUE_PROMPT = """\
 You are a senior RTL reviewer. Given a Verilog module and its specification,
@@ -106,6 +109,79 @@ def _load_gpp_context() -> str:
               f"({len(content)} chars)")
         return content
     return ""
+
+
+def refine_from_reference(client, spec, plan, reference_rtl, gpp_context=""):
+    """Deep-agent refinement: take reference RTL and improve it."""
+    constraints = plan.get("hardware_constraints", {})
+
+    context_parts = [
+        f"Specification:\n{spec}",
+    ]
+    if gpp_context:
+        context_parts.append(f"3GPP standard reference:\n{gpp_context}")
+    context_parts += [
+        f"Hardware constraints:\n{json.dumps(constraints, indent=2)}",
+        f"Design plan:\n{json.dumps(plan, indent=2)}",
+        f"Reference RTL (to refine, not replace):\n{reference_rtl}",
+    ]
+    user_content = "\n\n".join(context_parts)
+
+    # --- Stage 1: Review and suggest improvements ---
+    print(f"[code_agent]   stage1: analyzing reference RTL")
+    review_completion = _call_with_retry(
+        client.chat.completions.create,
+        model="gpt-4o",
+        max_tokens=2048,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a senior hardware architect reviewing a Verilog reference implementation. "
+                    "Identify areas for improvement: incomplete sections (marked // SIMPLIFIED or // TODO), "
+                    "potential bugs, optimization opportunities, or missing functionality. "
+                    "Be specific about what needs improvement and how. Return a list of issues."
+                ),
+            },
+            {"role": "user", "content": user_content},
+        ],
+    )
+    review = review_completion.choices[0].message.content.strip()
+    print(f"[code_agent]   stage1: review complete ({len(review)} chars)")
+
+    # --- Stage 2: Refine the RTL based on review ---
+    print(f"[code_agent]   stage2: refining RTL")
+    refine_completion = _call_with_retry(
+        client.chat.completions.create,
+        model="gpt-4o",
+        max_tokens=8192,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a Verilog RTL refinement expert. "
+                    "Given a reference implementation and a list of improvement areas, "
+                    "produce an improved version of the complete Verilog file. "
+                    "Preserve the module interface and overall architecture. "
+                    "Replace // SIMPLIFIED sections with correct implementations. "
+                    "Return ONLY the complete refined Verilog file — no markdown, no explanation."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Specification:\n{spec}\n\n"
+                    f"Areas for improvement:\n{review}\n\n"
+                    f"Reference RTL to refine:\n{reference_rtl}\n\n"
+                    f"Produce the refined Verilog."
+                ),
+            },
+        ],
+    )
+    refined = _strip_fences(refine_completion.choices[0].message.content)
+    print(f"[code_agent]   stage2: refined to {refined.count(chr(10))} lines")
+
+    return refined
 
 
 def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
@@ -181,27 +257,23 @@ def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
 def run():
     if not PLAN_PATH.exists():
         raise FileNotFoundError("generated/plan.json not found — run planner.py first")
+    if not REFERENCE_PATH.exists():
+        raise FileNotFoundError(f"Reference RTL not found: {REFERENCE_PATH}")
 
     spec        = SPEC_PATH.read_text()
     plan        = json.loads(PLAN_PATH.read_text())
     gpp_context = _load_gpp_context()
+    reference   = REFERENCE_PATH.read_text()
     RTL_DIR.mkdir(parents=True, exist_ok=True)
 
-    client          = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    accumulated_rtl = ""
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-    for subtask in plan["subtasks"]:
-        print(f"[code_agent] Generating subtask: {subtask['id']}")
-        rtl = generate_subtask(client, spec, plan, subtask, accumulated_rtl, gpp_context)
-
-        out_file = RTL_DIR / f"{subtask['id']}.v"
-        out_file.write_text(rtl)
-        accumulated_rtl += f"\n// --- {subtask['id']} ---\n{rtl}\n"
-        print(f"[code_agent]  -> {out_file}")
+    print(f"[code_agent] Refining RTL from reference: {REFERENCE_PATH.name}")
+    rtl = refine_from_reference(client, spec, plan, reference, gpp_context)
 
     top_file = RTL_DIR / "butterfold_top.v"
-    top_file.write_text(accumulated_rtl.strip())
-    print(f"[code_agent] Combined RTL written to {top_file}")
+    top_file.write_text(rtl)
+    print(f"[code_agent] Refined RTL written to {top_file}")
 
 
 if __name__ == "__main__":
