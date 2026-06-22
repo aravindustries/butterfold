@@ -5,17 +5,18 @@
   "CLOCK_PERIOD": 50,
   "PDK": "gf180mcuD",
 
-  "FP_CORE_UTIL": 40,
+  "FP_CORE_UTIL": 45,
   "FP_PDN_MULTILAYER": true,
-  "PL_TARGET_DENSITY_PCT": 45,
 
   "RUN_LINTER": true,
   "QUIT_ON_LINTER_WARNINGS": false,
   "QUIT_ON_SYNTH_CHECKS": false,
 
-  "//": "ButterFold is a single-clock, block-streaming TX core. CLOCK_PERIOD=50ns",
-  "//2": "(20 MHz) is deliberately relaxed for a first area-first GF180 close; the",
-  "//3": "critical path is the shared 32x16 complex multiplier. Tighten later once",
-  "//4": "the multiplier/index-gen widths are trimmed. Only clk/rst_n/mode/din*/dout*",
-  "//5": "are real pins (8-bit interleaved I/Q), so the design is intentionally tiny."
+  "//": "Single-clock block-streaming TX core. After folding + width trimming the",
+  "//2": "datapath is ~900 FFs (one shared 24x12 complex multiplier, idx LUT instead",
+  "//3": "of a modulo divider), so 50ns (20 MHz) should close timing comfortably.",
+  "//4": "IMPORTANT: if detailed routing fails on GF180 (e.g. DRT-0073 'no access",
+  "//5": "point'), start from the chipathon example config which carries GF180-proven",
+  "//6": "PDN/routing settings -- see README.md -- and only swap in DESIGN_NAME,",
+  "//7": "VERILOG_FILES, CLOCK_PORT, CLOCK_PERIOD."
 }

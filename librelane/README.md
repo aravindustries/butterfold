@@ -32,6 +32,27 @@ librelane config.json
 LibreLane creates a `runs/<timestamp>/` directory. The flow: lint → synthesis →
 floorplan → placement → CTS → routing → signoff (STA, DRC, LVS) → GDS.
 
+### If detailed routing fails on GF180 (recommended starting point)
+
+`config.json` here is intentionally minimal. GF180 detailed routing is finicky and
+needs PDK-specific PDN/routing settings. If you hit a routing error such as
+`DRT-0073 No access point for clkbuf...`, **start from the chipathon example config**,
+which already carries working GF180 settings, and just point it at our RTL:
+
+```bash
+cp -r ../../sscs-chipathon-2026/examples/librelane_rtl2gds_gf180 ./run_gf180
+cd run_gf180
+# edit its config.json:
+#   "DESIGN_NAME":   "butterfold_top"
+#   "VERILOG_FILES": "dir::/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v"
+#   "CLOCK_PORT":    "clk"
+#   "CLOCK_PERIOD":  50
+librelane config.json
+```
+
+That inherits the example's proven `FP_*`, PDN, and routing knobs for GF180 so you
+only change the design-specific fields.
+
 ---
 
 ## Where the numbers land
@@ -62,15 +83,21 @@ cat runs/*/final/metrics.json | python -m json.tool | grep -Ei "area|count|power
 
 ---
 
-## Known area hotspots (for the paper / optimization)
+## Area optimizations already applied (and what remains)
 
-The folded datapath already uses **one shared complex multiplier**. Two index-generation
-costs remain in `gen_reference.py` and are worth trimming before final tapeout:
+The kernel in `gen_reference.py` has been trimmed for minimum area:
 
-1. **`(n*j) % 12`** in the DFT operand mux — a runtime modulo-12 (non-power-of-2 →
-   a small divider). Replace with a 144-entry index LUT or precomputed schedule.
-2. **`(START+j)*tau`** — a runtime 7×7 multiply for the IFFT twiddle index. Could be
-   an incremental adder (stride accumulation) instead of a multiply.
+- **One shared complex multiplier**, now **24×12** (was 32×16) after dropping twiddle
+  precision to A=B=9 — EVM is output-quantization limited, so this stayed at 1.59%.
+- **Accumulators 40-bit** (was 64), **spread bins 24-bit** (was 32) — sized to worst
+  case. This cut the flip-flop count / clock fanout from ~1147 toward ~900.
+- **`(n*j) % 12` replaced by a 144-entry `idx12` LUT** — removes a modulo-12 divider
+  from the critical path.
 
-The shared `32×16` complex multiplier and the 48–64-bit accumulators are the next
-width-trim targets if area/timing needs it.
+Remaining trim targets if area/timing still needs it:
+
+1. **`(START+j)*tau`** — a runtime 7×7 multiply for the IFFT twiddle index. Could be
+   stride accumulation (an adder) instead of a multiply.
+2. **`spread` storage** (12 complex × 24-bit ≈ 576 FFs) dominates the register count;
+   it could drop to ~21-bit with a small EVM margin check, or be stored at lower
+   precision than it is computed.
