@@ -37,11 +37,14 @@ GND_NETS:
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 
 # Routing / ESD. DIODE_ON_PORTS is a direction (none|in|out|both), NOT a port name.
-# RT_MAX_LAYER raised to Metal5 (vs the counter's Metal4): our larger clock tree
-# hit DRT-0073 "no access point" on clkbuf input pins; an extra routing layer gives
-# the detailed router more room to reach those pins. Drop back to Metal4 if needed.
+# CRITICAL: route signals on Metal2..Metal4, exactly like the working counter.
+# GF180's Via1 enclosure rule is broken in this tool version (DRT-0349), so any
+# router that defaults to RT_MIN_LAYER=Metal1 fails to make Via1 access points to
+# pins (DRT-0073 "no access point"). Starting at Metal2 sidesteps Via1 entirely --
+# the counter hits the same DRT-0349 warning yet still routes to GDS because of this.
 DIODE_ON_PORTS: in
-RT_MAX_LAYER: Metal5
+RT_MIN_LAYER: Metal2
+RT_MAX_LAYER: Metal4
 PDN_MULTILAYER: false
 
 # Power distribution network (straps + pitch) -- same as the proven counter run.
@@ -53,11 +56,13 @@ PDN_VPITCH: 75
 PDN_HPITCH: 75
 PDN_EXTEND_TO: boundary
 
-# Placement. 40% target keeps cells spread for easy routing on a big die.
-PL_TARGET_DENSITY_PCT: 40
+# Placement -- match the proven counter (util 50, density 65).
+FP_CORE_UTIL: 50
+PL_TARGET_DENSITY_PCT: 65
 MAX_FANOUT_CONSTRAINT: 10
 
-# CTS defaults.
+# CTS -- use the counter's proven clock buffers (clkbuf_16 root is fine; the earlier
+# failures were the Via1 routing layer, NOT these cells).
 CTS_CLK_MAX_WIRE_LENGTH: 0
 CTS_DISTANCE_BETWEEN_BUFFERS: 0
 CTS_SINK_CLUSTERING_SIZE: 20
