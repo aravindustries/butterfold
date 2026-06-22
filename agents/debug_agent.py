@@ -5,7 +5,7 @@ re-runs verification. Loops up to MAX_ITERATIONS times.
 Input : generated/verify_result.json + generated/rtl/butterfold_top.v
 Output: updated generated/rtl/butterfold_top.v  (overwritten in place)
 """
-import os, json, pathlib, importlib.util
+import os, json, pathlib, importlib.util, time
 import openai
 from dotenv import load_dotenv
 
@@ -17,6 +17,23 @@ RESULT_FILE = ROOT / "generated" / "verify_result.json"
 SPEC_PATH   = ROOT / "modular_description.md"
 
 MAX_ITERATIONS = 5
+MAX_RETRIES = 5
+INITIAL_WAIT = 1
+
+
+def _call_with_retry(func, *args, **kwargs):
+    """Retry OpenAI API calls with exponential backoff on rate limit errors."""
+    wait_time = INITIAL_WAIT
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except openai.RateLimitError as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"[debug] Rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {wait_time}s...")
+            time.sleep(wait_time)
+            wait_time *= 2
+
 
 SYSTEM_PROMPT = """\
 You are a Verilog RTL debug agent.
@@ -89,7 +106,8 @@ def run():
             + "Produce the corrected Verilog."
         )
 
-        completion = client.chat.completions.create(
+        completion = _call_with_retry(
+            client.chat.completions.create,
             model="gpt-4o",
             max_tokens=8192,
             messages=[

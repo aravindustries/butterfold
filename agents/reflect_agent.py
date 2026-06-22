@@ -15,7 +15,7 @@ Input : generated/rtl/butterfold_top.v + modular_description.md
 Output: generated/rtl/butterfold_top.v (patched in place if issues found)
         generated/reflect_result.json
 """
-import os, json, pathlib
+import os, json, pathlib, time
 import openai
 from dotenv import load_dotenv
 
@@ -25,6 +25,24 @@ load_dotenv(ROOT / ".env")
 TOP_FILE    = ROOT / "generated" / "rtl" / "butterfold_top.v"
 SPEC_PATH   = ROOT / "modular_description.md"
 RESULT_PATH = ROOT / "generated" / "reflect_result.json"
+
+MAX_RETRIES = 5
+INITIAL_WAIT = 1
+
+
+def _call_with_retry(func, *args, **kwargs):
+    """Retry OpenAI API calls with exponential backoff on rate limit errors."""
+    wait_time = INITIAL_WAIT
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except openai.RateLimitError as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"[reflect] Rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {wait_time}s...")
+            time.sleep(wait_time)
+            wait_time *= 2
+
 
 REFLECT_PROMPT = """\
 You are a senior RTL architect performing a holistic design review.
@@ -81,7 +99,8 @@ def run() -> dict:
     print(f"[reflect] Reviewing {rtl.count(chr(10))} lines of assembled RTL")
 
     # --- Deep reflection pass ---
-    completion = client.chat.completions.create(
+    completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=2048,
         messages=[
@@ -110,7 +129,8 @@ def run() -> dict:
             f"[{i['category']}] {i['description']}"
             for i in errors
         )
-        patch_completion = client.chat.completions.create(
+        patch_completion = _call_with_retry(
+            client.chat.completions.create,
             model="gpt-4o",
             max_tokens=8192,
             messages=[

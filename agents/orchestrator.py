@@ -23,7 +23,7 @@ Output:
     generated/logs/
 """
 
-import os, json, pathlib, importlib.util
+import os, json, pathlib, importlib.util, time
 from typing import TypedDict, Optional
 
 from langgraph.graph import StateGraph, END
@@ -34,6 +34,22 @@ ROOT = pathlib.Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
 MAX_DEBUG_ITERATIONS = 5
+MAX_RETRIES = 5
+INITIAL_WAIT = 1
+
+
+def _call_with_retry(func, *args, **kwargs):
+    """Retry OpenAI API calls with exponential backoff on rate limit errors."""
+    wait_time = INITIAL_WAIT
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except openai.RateLimitError as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"[orchestrator] Rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {wait_time}s...")
+            time.sleep(wait_time)
+            wait_time *= 2
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +144,8 @@ def node_debug(state: State) -> dict:
     rtl      = rtl_file.read_text()
 
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    completion = client.chat.completions.create(
+    completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=8192,
         messages=[
@@ -222,7 +239,8 @@ def node_summarize(state: State) -> dict:
     )
 
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    completion = client.chat.completions.create(
+    completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=1024,
         messages=[

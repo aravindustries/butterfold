@@ -10,7 +10,7 @@ Input : generated/plan.json + modular_description.md
         (optional) 3GPP_ButterFold_Spec_Extract.md  — loaded automatically if present
 Output: generated/rtl/<subtask_id>.v  +  generated/rtl/butterfold_top.v
 """
-import os, json, pathlib
+import os, json, pathlib, time
 import openai
 from dotenv import load_dotenv
 
@@ -21,6 +21,24 @@ PLAN_PATH    = ROOT / "generated" / "plan.json"
 SPEC_PATH    = ROOT / "modular_description.md"
 GPP_PATH     = ROOT / "3GPP_ButterFold_Spec_Extract.md"
 RTL_DIR      = ROOT / "generated" / "rtl"
+
+MAX_RETRIES = 5
+INITIAL_WAIT = 1
+
+
+def _call_with_retry(func, *args, **kwargs):
+    """Retry OpenAI API calls with exponential backoff on rate limit errors."""
+    wait_time = INITIAL_WAIT
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except openai.RateLimitError as e:
+            if attempt == MAX_RETRIES:
+                raise
+            print(f"[code_agent] Rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {wait_time}s...")
+            time.sleep(wait_time)
+            wait_time *= 2  # exponential backoff
+
 
 SYSTEM_PROMPT = """\
 You are a synthesizable Verilog RTL generation agent.
@@ -111,7 +129,8 @@ def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
     user_content = "\n\n".join(context_parts)
 
     # --- Stage 1: Generate ---
-    completion = client.chat.completions.create(
+    completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=8192,
         messages=[
@@ -123,7 +142,8 @@ def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
     print(f"[code_agent]   stage1: generated {rtl.count(chr(10))} lines")
 
     # --- Stage 2: Critique (deep-agent self-review) ---
-    critique_completion = client.chat.completions.create(
+    critique_completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=1024,
         messages=[
@@ -140,7 +160,8 @@ def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
     print(f"[code_agent]   stage2: critique found issues — revising")
 
     # --- Stage 3: Revise ---
-    revise_completion = client.chat.completions.create(
+    revise_completion = _call_with_retry(
+        client.chat.completions.create,
         model="gpt-4o",
         max_tokens=8192,
         messages=[
