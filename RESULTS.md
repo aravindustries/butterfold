@@ -5,7 +5,8 @@ agentic workflow and characterized on the **GF180MCU** open-source PDK.
 
 - **Configuration:** k = 12, m = 128, CP = 9, 8-bit interleaved I/Q (frozen tapeout spec)
 - **Flow:** agentic RTL generation → golden-model verification → Yosys synthesis →
-  LibreLane placement / CTS / static timing (GF180MCU)
+  LibreLane full RTL-to-GDS (placement / CTS / routing / DRC / LVS, GF180MCU)
+- **Result:** signed-off **GDSII**, DRC + LVS clean
 - **RTL:** `generated/rtl/butterfold_top.v`, produced by `gen_reference.py`
   (generator-based, validated against `butterfold_sim` before emit)
 
@@ -59,21 +60,21 @@ the twiddle/index ROMs cost more than the registers — exactly the intended
 
 ---
 
-## 3. Timing (OpenROAD STA, slow corner SS / 125 °C / 4.5 V)
+## 3. Timing (post-route STA, multi-corner, 50 ns target)
 
-| Metric | Value | Notes |
-|---|---|---|
-| Hold slack | **+1.14 ns** | met (no hold violations) |
-| Setup slack @ 50 ns target | **−23.6 ns** | critical path ≈ 73.6 ns |
-| **Max frequency (Fmax)** | **≈ 13.6 MHz** | slow corner; higher at typical |
+| Metric | Typical (TT/25°C/5V) | Slow (SS/125°C/4.5V) | Fast (FF/−40°C/5.5V) |
+|---|---|---|---|
+| Setup worst slack | **+15.3 ns** (met) | −16.1 ns | +27.9 ns (met) |
+| Hold worst slack | +0.61 ns (met) | +1.36 ns (met) | +0.28 ns (met) |
+| Implied Fmax | **≈ 28.8 MHz** | ≈ 15.1 MHz | ≈ 43 MHz |
 
-The critical path is the shared **24×12 complex multiply + 40-bit accumulate**
-(combinational, one per cycle, through the ROM/operand mux). A ~13.6 MHz folded
-core is consistent with ButterFold's minimum-area / low-throughput design point:
-one block (k = 12) takes ≈ 2,086 cycles ≈ 153 µs at 13.6 MHz.
-
-Raising `CLOCK_PERIOD` to ~80 ns (12.5 MHz) yields positive setup slack;
-pipelining the multiplier would roughly double Fmax at the cost of re-verification.
+**Hold is met at every corner.** Setup is met at typical and fast corners at 50 ns;
+the slow corner needs ~66 ns (≈ **15.1 MHz**) — the binding sign-off speed. The
+critical path is the shared **24×12 complex multiply + 40-bit accumulate**
+(combinational, one per cycle, through the ROM/operand mux). A ~15 MHz folded core
+is consistent with ButterFold's minimum-area / low-throughput point: one block
+(k = 12) ≈ 2,086 cycles ≈ 138 µs at 15.1 MHz. Setting `CLOCK_PERIOD` ≈ 66 ns closes
+all corners with positive slack; pipelining the multiplier would roughly double Fmax.
 
 ---
 
@@ -95,15 +96,31 @@ pipelining the multiplier would roughly double Fmax at the cost of re-verificati
 
 ---
 
-## 5. Physical design status (LibreLane, GF180)
+## 5. Physical design — full GDS (LibreLane, GF180)
 
-The flow completes **synthesis → floorplan → placement → CTS → static timing**.
-Final detailed routing is blocked by a **GF180 PDK / OpenROAD tool issue**, not the
-design: `DRT-0349 LEF58_ENCLOSURE … Via1 skipping` prevents access-point generation
-on the largest clock-buffer pins (`clkbuf_8`, `clkbuf_16`), giving `DRT-0073`.
-Raising `RT_MAX_LAYER` to Metal5 reduced the failures from 6 buffers to 2 (the two
-largest). Full GDS requires the chipathon's verified PDK/tool combination; all
-pre-routing area and timing numbers above are final.
+The complete RTL-to-GDS flow runs end to end (76 stages) and produces a
+**signed-off GDSII**: synthesis → floorplan → placement → CTS → routing → DRC →
+LVS → streamout.
+
+| Sign-off metric | Result |
+|---|---|
+| **GDSII** | `final/gds/butterfold_top.gds` (12 MB) |
+| Die area | 700 × 700 µm = **0.49 mm²** |
+| Core / placed-instance area | 478,308 µm² |
+| Placed std cells (incl. clock tree, diodes, fill) | 16,188 |
+| Routed wirelength | ~705,258 µm, 93,018 vias |
+| Antenna | 17 diodes inserted, resolved |
+| **Magic DRC** | **0 errors — clean** |
+| **Netgen LVS** | **"Circuits match uniquely" — clean** |
+| Power (OpenROAD total estimate) | ≈ 1.47 (report units) |
+
+**Note on routing:** the GF180 `Via1` enclosure rule is broken in this tool
+version (`DRT-0349`), which initially caused `DRT-0073` "no access point" on the
+top clock-tree buffers. The fix was to build a smaller, obstruction-aware clock
+tree without the wide non-default routing rule (`CTS_APPLY_NDR: none`,
+`CTS_OBSTRUCTION_AWARE: true`, larger sink clusters) — after which the design routes
+cleanly through DRC and LVS. The LibreLane config mirrors the verified GF180
+counter example (absolute die, Metal2–Metal4 routing, GF180 PDN straps).
 
 ---
 
