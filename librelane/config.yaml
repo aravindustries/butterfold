@@ -61,12 +61,17 @@ FP_CORE_UTIL: 50
 PL_TARGET_DENSITY_PCT: 65
 MAX_FANOUT_CONSTRAINT: 10
 
-# CTS -- use the counter's proven clock buffers (clkbuf_16 root is fine; the earlier
-# failures were the Via1 routing layer, NOT these cells).
+# CTS -- ButterFold's ~900-sink clock built a 318-buffer tree, and a few top-level
+# buffers could not get pin access during routing. Build a SMALLER, obstruction-
+# aware clock tree WITHOUT the wide non-default routing rule, so every clock-buffer
+# pin stays reachable (the wide NDR wires + GF180's broken Via1 rule were what made
+# the top buffers unroutable). Larger sink clusters => fewer buffers.
 CTS_CLK_MAX_WIRE_LENGTH: 0
 CTS_DISTANCE_BETWEEN_BUFFERS: 0
-CTS_SINK_CLUSTERING_SIZE: 20
+CTS_SINK_CLUSTERING_SIZE: 40
 CTS_SINK_CLUSTERING_MAX_DIAMETER: 60
+CTS_OBSTRUCTION_AWARE: true
+CTS_APPLY_NDR: false
 
 # Margins.
 TOP_MARGIN_MULT: 1
