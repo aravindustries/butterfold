@@ -261,6 +261,12 @@ def node_summarize(state: State) -> dict:
     print("  BUTTERFOLD WORKFLOW SUMMARY")
     print("=" * 62)
     print(summary)
+    print("-" * 62)
+    print(stats, end="")
+    print("=" * 62)
+    print(f"  RESULT: {'✓ PASSED' if passed else '✗ FAILED'}  "
+          f"(golden model EVM {golden.get('evm_percent', '?')}% "
+          f"< {golden.get('evm_threshold_percent', 2.0)}% threshold)")
     print("=" * 62)
 
     # Save to file
