@@ -1,15 +1,16 @@
 """
 LangGraph Orchestrator — automates the full ButterFold agentic workflow:
 
-  planner → code_agent → reflect → verify ──(pass)──► summarize → END
-                                        │                  ▲
-                                        └──(fail)──► debug ─┘
+  planner → code_agent → reflect → verify ──(pass)──► synth → summarize → END
+                                        │                                ▲
+                                        └──(fail)──► debug ───────────────┘
                                                     (loops until pass or max iterations)
 
 Deep-agent layers:
-  1. code_agent:    per-subtask generate → critique → revise inner loop
-  2. reflect_agent: whole-design cross-module review and auto-patch
+  1. code_agent:    generator-validated DSP kernel (golden-checked before emit)
+  2. reflect_agent: whole-design cross-module review (advisory)
   3. debug_agent:   iverilog-error-driven repair loop (up to 5×)
+  4. synth_agent:   full Yosys synthesis + GF180 area/cell/FF report (on pass)
 
 Run:
     python agents/orchestrator.py
@@ -20,6 +21,7 @@ Output:
     generated/rtl/butterfold_top.v
     generated/reflect_result.json
     generated/verify_result.json
+    generated/synth/synth_report.json + butterfold_top_synth.v
     generated/logs/
 """
 
@@ -67,6 +69,7 @@ planner_mod = _load_module("planner",       "planner.py")
 code_mod    = _load_module("code_agent",   "code_agent.py")
 reflect_mod = _load_module("reflect_agent","reflect_agent.py")
 verify_mod  = _load_module("verify_agent", "verify.agent.py")
+synth_mod   = _load_module("synth_agent",  "synth_agent.py")
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +81,7 @@ class State(TypedDict):
     rtl_path:         Optional[str]
     reflect_result:   Optional[dict]
     verify_result:    Optional[dict]
+    synth_result:     Optional[dict]
     debug_iterations: int
     passed:           bool
     summary:          Optional[str]
@@ -189,6 +193,20 @@ def node_debug(state: State) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Node: synth  (full Yosys synthesis + area report; runs only after a pass)
+# ---------------------------------------------------------------------------
+
+def node_synth(state: State) -> dict:
+    print("\n[orchestrator] ── Step 5: Synthesis (area/timing) ──────────")
+    try:
+        result = synth_mod.run()
+    except Exception as exc:
+        print(f"[orchestrator] Synthesis skipped ({exc})")
+        result = {"synth_ran": False, "error": str(exc)}
+    return {"synth_result": result}
+
+
+# ---------------------------------------------------------------------------
 # Node: summarize
 # ---------------------------------------------------------------------------
 
@@ -198,6 +216,7 @@ def node_summarize(state: State) -> dict:
     plan    = state.get("plan") or {}
     reflect = state.get("reflect_result") or {}
     verify  = state.get("verify_result") or {}
+    synth   = state.get("synth_result") or {}
     passed  = state.get("passed", False)
     iters   = state.get("debug_iterations", 0)
 
@@ -215,6 +234,19 @@ def node_summarize(state: State) -> dict:
                    f"(EVM={golden.get('evm_percent', '?')}%, "
                    f"threshold {golden.get('evm_threshold_percent', 2.0)}%)")
 
+    # Synthesis / area line
+    sm = (synth or {}).get("metrics", {})
+    if sm.get("chip_area_um2") is not None:
+        synth_line = (f"area={sm['chip_area_um2']} um^2, cells={sm.get('num_cells', '?')}, "
+                      f"FF={sm.get('flip_flops', '?')} (GF180)")
+    elif sm.get("num_cells") is not None:
+        synth_line = (f"cells={sm['num_cells']}, FF={sm.get('flip_flops', '?')} "
+                      f"(generic — no PDK liberty)")
+    elif synth.get("error"):
+        synth_line = f"not run ({synth['error']})"
+    else:
+        synth_line = "not run"
+
     stats = (
         f"Module       : {plan.get('module_name', 'butterfold_top')}\n"
         f"Subtasks     : {len(plan.get('subtasks', []))}\n"
@@ -223,6 +255,7 @@ def node_summarize(state: State) -> dict:
         f"Synth OK     : {verify.get('synth_ok')}\n"
         f"Sim result   : {verify.get('sim_ok')}\n"
         f"Golden model : {golden_line}\n"
+        f"Synthesis    : {synth_line}\n"
         f"Reflect      : {reflect_errors} advisory issue(s)\n"
         f"Debug iters  : {iters}\n"
         f"Final status : {'✓ PASSED' if passed else '✗ FAILED'}\n"
@@ -289,10 +322,10 @@ def node_summarize(state: State) -> dict:
 
 def route_after_verify(state: State) -> str:
     if state["passed"]:
-        return "summarize"
+        return "synth"            # design verified → synthesize for area/timing
     if state["debug_iterations"] >= MAX_DEBUG_ITERATIONS:
         print(f"\n[orchestrator] Max debug iterations ({MAX_DEBUG_ITERATIONS}) reached.")
-        return "summarize"
+        return "summarize"        # give up → skip synthesis, just summarize
     return "debug"
 
 
@@ -330,6 +363,7 @@ def build_graph() -> StateGraph:
     g.add_node("reflect",    node_reflect)
     g.add_node("verify",     node_verify)
     g.add_node("debug",      node_debug)
+    g.add_node("synth",      node_synth)
     g.add_node("summarize",  node_summarize)
 
     g.set_entry_point("planner")
@@ -339,10 +373,12 @@ def build_graph() -> StateGraph:
     g.add_edge("debug",      "verify")    # re-verify after debug patch (skip reflect)
 
     g.add_conditional_edges("verify", route_after_verify, {
-        "summarize": "summarize",
+        "synth":     "synth",             # passed → synthesize for area/timing
+        "summarize": "summarize",         # gave up → skip synthesis
         "debug":     "debug",
     })
 
+    g.add_edge("synth",     "summarize")  # synthesis report feeds the summary
     g.add_edge("summarize", END)
 
     return g.compile()
@@ -354,6 +390,7 @@ def run():
         "rtl_path":         None,
         "reflect_result":   None,
         "verify_result":    None,
+        "synth_result":     None,
         "debug_iterations": 0,
         "passed":           False,
         "summary":          None,

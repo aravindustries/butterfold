@@ -104,13 +104,17 @@ The more precise your spec, the fewer debug iterations the agents need.
 python agents/orchestrator.py
 ```
 
-This runs the full four-agent pipeline automatically:
+This runs the full agentic pipeline automatically:
 
 ```
-planner  →  code_agent  →  verify  →  summarize
-                               ↑          ↓
-                             debug  ←  (if errors)
+planner → code_agent → reflect → verify ──(pass)──► synth → summarize
+                                     ↑                            
+                                   debug ◄──(if errors)           
 ```
+
+On a passing run it also runs **full Yosys synthesis** and reports area / cell /
+flip-flop counts (real GF180 area if the PDK liberty is found). For the complete
+RTL-to-GDS flow, see `librelane/README.md`.
 
 You will see live progress printed to the terminal:
 
@@ -193,9 +197,10 @@ If you want to run one step at a time (useful for debugging):
 
 ```bash
 python agents/planner.py          # create task plan
-python agents/code_agent.py       # generate RTL
-python agents/verify.agent.py     # syntax check + simulate
+python agents/code_agent.py       # generate (gen_reference.py) + write RTL
+python agents/verify.agent.py     # syntax + spec + yosys + sim + golden EVM
 python agents/debug_agent.py      # fix errors (re-run if verify failed)
+python agents/synth_agent.py      # full yosys synth + area/cell/FF report
 ```
 
 ---
