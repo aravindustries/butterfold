@@ -143,22 +143,32 @@ def stage_spec_review(rtl_file: pathlib.Path, spec_path: pathlib.Path) -> tuple[
 
 # ─── Stage 3: Yosys synthesis check ──────────────────────────────────────────
 
+# Structural elaboration check — NOT a full tapeout synthesis. We only need to
+# catch what iverilog misses (multi-driven nets, undeclared signals after
+# elaboration, unresolved hierarchies). Full `synth -flatten` runs techmap+abc
+# gate-mapping, which is very slow on wide combinational multipliers and times
+# out; `hierarchy -check; proc; opt -fast; check` is fast and catches the same
+# structural problems. Full synthesis is left to the dedicated Yosys/LibreLane
+# step in HOW_TO_RUN.md.
 YOSYS_SCRIPT = """\
 read_verilog -sv {rtl}
-synth -top butterfold_top -flatten
+hierarchy -top butterfold_top -check
+proc
+opt -fast
+check
 stat
 """
 
 
 def stage_yosys(rtl_file: pathlib.Path) -> tuple[bool, str]:
     """
-    Run Yosys synthesis. Catches things iverilog misses:
+    Run a fast Yosys structural check. Catches things iverilog misses:
     multi-driven nets, undeclared signals after elaboration, unresolved hierarchies.
     """
     print("[verify] Stage 3 — Yosys synthesis check ...")
     script = YOSYS_SCRIPT.format(rtl=str(rtl_file))
     try:
-        r = _run(["yosys", "-p", script], timeout=120)
+        r = _run(["yosys", "-p", script], timeout=300)
     except FileNotFoundError:
         print("[verify]   Yosys not found — skipping synthesis check")
         return True, "yosys not available"
