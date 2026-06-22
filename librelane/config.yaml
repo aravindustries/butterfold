@@ -36,10 +36,12 @@ GND_NETS:
 # Signoff / streamout.
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 
-# Routing / ESD (GF180: cap routing at Metal4, single-layer PDN).
-# DIODE_ON_PORTS is a direction (none|in|out|both), NOT a port name.
+# Routing / ESD. DIODE_ON_PORTS is a direction (none|in|out|both), NOT a port name.
+# RT_MAX_LAYER raised to Metal5 (vs the counter's Metal4): our larger clock tree
+# hit DRT-0073 "no access point" on clkbuf input pins; an extra routing layer gives
+# the detailed router more room to reach those pins. Drop back to Metal4 if needed.
 DIODE_ON_PORTS: in
-RT_MAX_LAYER: Metal4
+RT_MAX_LAYER: Metal5
 PDN_MULTILAYER: false
 
 # Power distribution network (straps + pitch) -- same as the proven counter run.
