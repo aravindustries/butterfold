@@ -140,6 +140,8 @@ def node_debug(state: State) -> dict:
                     "Preserve all port names, module names, and parameter values exactly. "
                     "Keep synthesizability rules: no initial blocks in RTL, no $display/$finish, "
                     "synchronous rst_n, posedge clk flip-flops, fixed-point arithmetic only. "
+                    "CRITICAL: NO SystemVerilog unpacked arrays, NO array slicing/range indexing, "
+                    "NO tasks/functions with array ports. Use ONLY Verilog-2005 constructs for iverilog. "
                     "Return ONLY the corrected Verilog — no markdown fences, no explanation."
                 ),
             },

@@ -28,6 +28,10 @@ Rules:
 - Preserve all port names, module names, and parameter values exactly
 - Keep synthesizability rules: no initial blocks in RTL, no $display/$finish,
   synchronous rst_n, posedge clk flip-flops, fixed-point only
+- NO SystemVerilog unpacked arrays (e.g., "logic data [0:11]")
+- NO array slicing or range indexing (e.g., "data[0:11]")
+- NO tasks/functions with array ports — use scalar loops instead
+- Use ONLY Verilog-2005 constructs for iverilog compatibility
 - Return ONLY the corrected Verilog, no explanation, no markdown fences"""
 
 

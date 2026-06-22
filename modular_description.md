@@ -48,3 +48,10 @@ Outputs:
 - done
 
 The design should be synthesizable Verilog and should avoid unsynthesizable constructs.
+
+CRITICAL IMPLEMENTATION CONSTRAINTS FOR AGENT:
+- Do NOT use SystemVerilog unpacked arrays (e.g., "logic data [0:11]"). Instead, use packed arrays or scalar loops.
+- Do NOT use array slicing or range indexing (e.g., "data[0:11]"). Loop through elements one at a time with individual assignments.
+- Do NOT use tasks or functions with array ports. Process data element-by-element in always blocks or combinational logic.
+- Generate ONLY Verilog-2005 constructs for maximum compatibility with iverilog simulator.
+- If you need to work with multi-element data (like DFT input/output), use individual scalar signals or tightly-coupled RAM reads/writes, not array passing.
