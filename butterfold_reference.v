@@ -43,11 +43,13 @@ module butterfold_top (
   reg        emit_half;       // 0 = emit I byte, 1 = emit Q byte
 
   // ── Input buffer (24 signed bytes) ──────────────────────────────────────
-  reg signed [7:0] inbuf [0:23];
+  // (* mem2reg *) forces flip-flop inference instead of a RAM write-port model,
+  // which avoids the benign "$mem$...wr$...DATA has no driver" synth warnings.
+  (* mem2reg *) reg signed [7:0] inbuf [0:23];
 
   // ── DFT result: 12 complex spread bins (sized to worst case) ────────────
-  reg signed [23:0] spread_re [0:11];
-  reg signed [23:0] spread_im [0:11];
+  (* mem2reg *) reg signed [23:0] spread_re [0:11];
+  (* mem2reg *) reg signed [23:0] spread_im [0:11];
 
   // ── Shared accumulator and pending output bytes ─────────────────────────
   reg signed [39:0] acc_re, acc_im;
