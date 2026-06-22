@@ -8,17 +8,18 @@ produce a GDS and real area/timing/power numbers on the GF180MCU PDK.
 
 ---
 
+`config.yaml` here mirrors the **proven** GF180 counter example
+(`/foss/designs/01_rtl2gds_counter/config.yaml`, which routes cleanly to GDS):
+same `meta`/flow, absolute `DIE_AREA`, GF180 PDN straps, `RT_MAX_LAYER: Metal4`,
+`PDN_MULTILAYER: false`. Only the design-specific fields differ (name, RTL path,
+a larger 700×700 die for our ~900 flops, and `DIODE_ON_PORTS: din`).
+
 ## Prerequisites (inside the IIC-OSIC-TOOLS Docker container)
 
 | Need | Check |
 |---|---|
 | LibreLane installed | `librelane --version` |
-| GF180 PDK | `echo $PDK_ROOT` then `ls $PDK_ROOT/gf180mcuD` |
 | Generated RTL present | `ls ../generated/rtl/butterfold_top.v` |
-
-If `librelane` isn't on PATH, use the chipathon example's invocation from
-`sscs-chipathon-2026/examples/librelane_rtl2gds_gf180` — the command and PDK name
-there are authoritative for your container; copy them over `config.json` if they differ.
 
 ---
 
@@ -26,32 +27,18 @@ there are authoritative for your container; copy them over `config.json` if they
 
 ```bash
 cd /foss/designs/chipathon/butterfold/librelane
-librelane config.json
+librelane config.yaml
 ```
 
 LibreLane creates a `runs/<timestamp>/` directory. The flow: lint → synthesis →
 floorplan → placement → CTS → routing → signoff (STA, DRC, LVS) → GDS.
 
-### If detailed routing fails on GF180 (recommended starting point)
+### If a step still fails
 
-`config.json` here is intentionally minimal. GF180 detailed routing is finicky and
-needs PDK-specific PDN/routing settings. If you hit a routing error such as
-`DRT-0073 No access point for clkbuf...`, **start from the chipathon example config**,
-which already carries working GF180 settings, and just point it at our RTL:
-
-```bash
-cp -r ../../sscs-chipathon-2026/examples/librelane_rtl2gds_gf180 ./run_gf180
-cd run_gf180
-# edit its config.json:
-#   "DESIGN_NAME":   "butterfold_top"
-#   "VERILOG_FILES": "dir::/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v"
-#   "CLOCK_PORT":    "clk"
-#   "CLOCK_PERIOD":  50
-librelane config.json
-```
-
-That inherits the example's proven `FP_*`, PDN, and routing knobs for GF180 so you
-only change the design-specific fields.
+- **Placement congestion / `DIE_AREA` too small** → raise `DIE_AREA` (e.g. 900×900).
+- **Setup violations** → raise `CLOCK_PERIOD` (e.g. 80–100).
+- When in doubt, diff against the working counter config in
+  `/foss/designs/01_rtl2gds_counter/config.yaml` and copy any GF180 knob you're missing.
 
 ---
 
