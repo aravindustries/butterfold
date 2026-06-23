@@ -92,13 +92,15 @@ def run_react(max_steps: int = 14):
 
     goal = (
         "The control wrapper generated/rtl/butterfold_top.v fails verification. "
-        "Reason about the failure and fix ONLY the wrapper — never touch the locked "
-        "butterfold_kernel. Frozen params: K=12, M=128, CP=9, centered START=58; the "
-        "cyclic-prefix address logic must be tau=(samp<9)?samp+119:samp-9 and "
-        "w_idx=((58+ifft_j)*tau)&7'h7f. Use `compile` to find syntax errors and "
-        "`golden_evm` as the authoritative pass test (EVM < 2%). Make targeted edits "
-        "with edit_file. Call done(status='success') only once golden_evm passes.\n"
-        f"Known verification errors:\n{errors or '(none captured — run compile/golden_evm to discover)'}"
+        "Fix ONLY the wrapper — never touch the locked butterfold_kernel.\n"
+        "Start by running golden_evm and compile to see the ACTUAL current failure, "
+        "then read_file to inspect the wrapper. Frozen params: K=12, M=128, CP=9, "
+        "centered START=58; the cyclic-prefix address logic must be "
+        "tau=(samp<9)?(samp+119):(samp-9) and w_idx=((58+ifft_j)*tau)&7'h7f — compare "
+        "the file against these and fix any deviation. golden_evm (<2%) is the "
+        "authoritative pass test; call done(status='success') only once it passes.\n"
+        f"Possibly-stale prior notes (verify against live tools, may be irrelevant):\n"
+        f"{errors[:300] or '(none)'}"
     )
     journal.append("debug", "finding", f"ReAct debug start; errors={errors[:160] or 'none'}")
     res = core.react_loop(goal, harness, journal, agent="debug", max_steps=max_steps)

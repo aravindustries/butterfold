@@ -245,12 +245,19 @@ Rules:
 - The bit-exact DSP datapath lives in the LOCKED butterfold_kernel; never author or
   edit its twiddle constants. To change kernel behaviour, call regen_kernel and
   observe the EVM — command the generator, do not hand-write constants.
-- Edit only the wrapper/control RTL. After any edit, re-check with compile and (when
-  relevant) golden_evm. The golden EVM gate (<2%) is the authoritative success test.
-- Use prior context from the journal; do not repeat an action that already failed
-  the same way.
-- Call 'done' with status='success' once the goal is verified, or 'blocked' if you
-  cannot proceed, always with a short summary."""
+- Edit only the wrapper/control RTL.
+- Work in SMALL STEPS: make ONE minimal edit_file, then IMMEDIATELY run compile, then
+  golden_evm, before making any further edit. Never make two edits in a row without
+  re-checking in between.
+- If compile reports errors, your MOST RECENT edit was wrong: read_file and fix or
+  revert exactly that change before doing anything else. Do not pile on new edits.
+- Diagnose the ACTUAL failure from compile/golden_evm output. Any error text handed to
+  you in the goal may be stale — trust the live tool observations over it.
+- The golden EVM gate (EVM < 2%) is the authoritative success test.
+- Use prior journal context; never repeat an action that already failed the same way.
+- Every turn you MUST call exactly one tool, or call 'done'. Never reply with prose
+  only. Call done(status='success') once golden_evm passes, or done(status='blocked')
+  if truly stuck, always with a short summary."""
 
 
 def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
@@ -279,6 +286,7 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
         {"role": "user", "content": f"GOAL:\n{goal}\n\nPRIOR CONTEXT:\n{journal.context_block()}"},
     ]
 
+    stalls = 0
     for step in range(1, max_steps + 1):
         resp = client.chat.completions.create(
             model=model, messages=messages,
@@ -286,8 +294,18 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
         msg = resp.choices[0].message
 
         if not msg.tool_calls:
-            journal.append(agent, "decision", f"stopped (no tool call): {(msg.content or '')[:120]}")
-            return {"ok": False, "status": "stalled", "steps": step, "reason": "no_tool_call"}
+            # Anti-stall: nudge the model back into act-mode instead of giving up.
+            stalls += 1
+            journal.append(agent, "decision", f"no tool call (nudge {stalls})")
+            if stalls > 2:
+                return {"ok": False, "status": "stalled", "steps": step, "reason": "no_tool_call"}
+            messages.append({"role": "assistant", "content": msg.content or ""})
+            messages.append({"role": "user", "content":
+                "You replied with prose. You MUST call exactly one tool now "
+                "(compile, golden_evm, read_file, edit_file, regen_kernel), or call "
+                "done() if golden_evm already passes. Re-read the latest tool output "
+                "and take the single next action."})
+            continue
 
         messages.append({"role": "assistant", "content": msg.content or "",
                          "tool_calls": [{"id": tc.id, "type": "function",
