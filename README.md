@@ -201,45 +201,48 @@ ButterFold does **not** include:
 
 The project is intentionally scoped to the reusable digital transform core.
 
-### Chip I/O at a high level
+### Top-level chip I/O
 
-The taped-out core uses a narrow digital interface to keep pin count low.
+The taped-out core uses one shared byte-stream interface for commands, FDIQ payloads, TDIQ payloads, and status. The FDIQ and TDIQ adapters remain separate internal modules, but a small top-level mux routes the shared physical pins to the active adapter.
 
 ```text
-External digital input:
+Clock and reset:
+
+  clk_i
+    shared synchronous clock for the entire chip
+
+  rst_ni
+    active-low reset
+
+Input stream:
 
   din[7:0]
-    8-bit signed interleaved I/Q stream
+    command bytes or interleaved I/Q payload bytes
 
-  din_valid
-    marks valid input bytes
+  din_valid_i
+    input byte is valid
 
-  mode
-    selects TX or RX operation
+  din_ready_o
+    chip can accept the current byte
 
-
-External digital output:
+Output stream:
 
   dout[7:0]
-    8-bit signed interleaved I/Q stream
+    status bytes or interleaved I/Q payload bytes
 
-  dout_valid
-    marks valid output bytes
+  dout_valid_o
+    output byte is valid
 
+  dout_ready_i
+    external tester can accept the current byte
 
-Clocking / reset:
+Completion:
 
-  clk_io
-    external I/O clock
-
-  clk_core
-    optional faster internal compute clock
-
-  rst_n
-    active-low reset
+  done_irq_o
+    transaction completed or status is available
 ```
 
-The I/Q stream is interleaved:
+The external I/Q stream remains byte-interleaved:
 
 ```text
 cycle 0: I0
@@ -251,42 +254,83 @@ cycle 5: Q2
 ...
 ```
 
-### TX mode I/O behavior
+Internally, adapters combine each I/Q pair into one packed complex sample:
+
+```text
+complex_sample[15:0] = {I[7:0], Q[7:0]}
+```
+
+All internal sample streams use `data`, `valid`, `ready`, and `last`. A transfer occurs only when both `valid` and `ready` are asserted.
+
+### Command-based operation selection
+
+A command header is sent over `din[7:0]` before the payload. This avoids dedicated mode, CP-selection, and test-mode pins.
+
+Suggested operations are:
+
+| Command | Operation |
+|---|---|
+| `000` | 12-point DFT only |
+| `001` | 128-point FFT only |
+| `010` | 128-point IFFT only |
+| `011` | Complete TX symbol |
+| `100` | Complete RX symbol |
+| `101` | CP-only test |
+| `110` | Digital loopback test |
+| `111` | Diagnostic/readback |
+
+A command/configuration byte can also carry the normal/long CP selection and future test controls.
+
+### TX transaction
 
 ```text
 Input:
-  k complex QAM symbols
-  streamed as 2k 8-bit I/Q values
+  12 complex QAM samples
+  24 interleaved I/Q bytes
 
 Processing:
-  k-point DFT
-  subcarrier mapping
-  m-point IFFT
+  12-point DFT
+  subcarrier mapping into 128 bins
+  128-point IFFT
   CP insertion
 
 Output:
-  m complex time-domain OFDM samples
-  plus CP if enabled
-  streamed as interleaved 8-bit I/Q
+  128 + N_CP complex time-domain samples
+  274 bytes when N_CP = 9
+  276 bytes when N_CP = 10
 ```
 
-### RX mode I/O behavior
+### RX transaction
 
 ```text
 Input:
-  m complex time-domain OFDM samples
-  plus CP if enabled
-  streamed as interleaved 8-bit I/Q
+  128 + N_CP complex time-domain samples
+  274 bytes when N_CP = 9
+  276 bytes when N_CP = 10
 
 Processing:
   CP removal
-  m-point FFT
-  subcarrier extraction
+  128-point FFT
+  extraction of 12 active subcarriers
 
 Output:
-  k complex recovered symbols
-  streamed as interleaved 8-bit I/Q
+  12 complex recovered frequency-domain samples
+  24 interleaved I/Q bytes
 ```
+
+### Pin-count target
+
+The proposed functional digital interface requires 23 pins:
+
+- 1 clock
+- 1 reset
+- 8 input-data pins
+- 2 input handshake pins
+- 8 output-data pins
+- 2 output handshake pins
+- 1 completion/status interrupt
+
+With four logical power/ground connections and three optional scan pins, the design has a target of approximately **30 logical pins**. The physical pad count may be higher because the pad library can require duplicated supply, ground, corner, and ESD pads.
 
 ### Project boundary
 
@@ -372,78 +416,237 @@ The tapeout configuration uses:
 
 ---
 
-## Architecture
+## Frozen architecture and module plan
+
+ButterFold is partitioned into six synthesizable functional modules under one scheduler-controlled, synchronous datapath.
 
 ```text
-                         ButterFold Core
-               minimum-area folded mixed-radix RX/TX engine
+                         ButterFold top level
 
-        8-bit interleaved I/Q in
-                   │
-                   ▼
-        ┌──────────────────────┐
-        │   Input Buffer / RAM │
-        │   block streaming    │
-        └──────────┬───────────┘
-                   │
-                   ▼
-        ┌──────────────────────┐
-        │   Address Generator  │
-        │   stage / stride /   │
-        │   permutation control│
-        └──────────┬───────────┘
-                   │
-                   ▼
-        ┌──────────────────────────────────────┐
-        │      Reused Mixed-Radix Engine       │
-        │                                      │
-        │   radix-2 butterfly for m FFT/IFFT   │
-        │   3×4 path for k=12 TX DFT           │
-        │   small radix-3 / 3-point kernel     │
-        │   shared complex multiplier          │
-        └──────────┬───────────────────────────┘
-                   │
-                   ▼
-        ┌──────────────────────┐
-        │   In-place RAM       │
-        │   transform storage  │
-        └──────────┬───────────┘
-                   │
-                   ▼
-        ┌──────────────────────┐
-        │   Output Buffer      │
-        │   serialized output  │
-        └──────────┬───────────┘
-                   │
-                   ▼
-        8-bit interleaved I/Q out
-
-
-        ┌──────────────────────┐
-        │ FSM Scheduler        │
-        │ TX/RX mode control   │
-        │ transform sequencing │
-        └──────────────────────┘
-
-        ┌──────────────────────┐
-        │ Twiddle ROM / CORDIC │
-        │ design-space option  │
-        └──────────────────────┘
+                    shared command / byte I/O
+                              │
+             ┌────────────────┴────────────────┐
+             │                                 │
+             ▼                                 ▼
+     ┌───────────────┐                 ┌───────────────┐
+     │ FDIQ Adapter  │                 │ TDIQ Adapter  │
+     │ pack/unpack   │                 │ pack/unpack   │
+     │ 12-sample I/O │                 │ CP add/remove │
+     └───────┬───────┘                 └───────┬───────┘
+             │                                 │
+             ▼                                 │
+     ┌──────────────────┐                      │
+     │ Subcarrier Map / │                      │
+     │ Extract          │                      │
+     └────────┬─────────┘                      │
+              │                                │
+              └──────────────┬─────────────────┘
+                             ▼
+                  ┌───────────────────────┐
+                  │ Unified Mixed-radix  │
+                  │ Core + scratch RAM   │
+                  │ radix-2 + 3-point    │
+                  │ shared multiplier    │
+                  └───────────┬───────────┘
+                              ▲
+                    twiddles  │  micro-operations
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+      ┌───────────────┐             ┌──────────────────┐
+      │ Twiddle Source│             │ Scheduler +      │
+      │ quantized ROM │             │ Address Control  │
+      └───────────────┘             └──────────────────┘
 ```
 
-ButterFold uses:
+### Common internal conventions
 
-- **one reused mixed-radix transform engine**
-- **radix-2 butterfly reuse for the m-point FFT/IFFT**
-- **3×4 mixed-radix decomposition for k=12 TX DFT**
-- **small 3-point kernel for the radix-3 portion**
-- **one shared complex multiplier**
-- **in-place transform RAM**
-- **twiddle ROM or generated twiddle option**
-- **FSM-based scheduling**
-- **8-bit interleaved I/Q block-streaming I/O**
+- One shared synchronous `clk` and active-low `rst_n` are used by all modules.
+- External I/Q uses signed 8-bit Q1.7 bytes.
+- Internal samples use packed 16-bit complex values: `{I[7:0], Q[7:0]}`.
+- Internal streams use `valid/ready/last` handshaking.
+- The scheduler is the only module that owns complete-operation sequencing.
+- The mixed-radix core executes scheduler-issued micro-operations rather than independently interpreting full FFT/IFFT/DFT commands.
+- Twiddle lookup latency, scratch-RAM latency, scaling, rounding, and saturation behavior are fixed and documented in the bit-accurate model.
 
----
+### Memory ownership
+
+The **Unified Mixed-radix Core owns the physical transform scratch memory**. The Scheduler owns address generation and buffer-bank selection. The FDIQ adapter, TDIQ adapter, and Map/Extract block access the selected memory bank through controlled load/read ports.
+
+For continuous operation, the implementation may use two 128-complex-sample banks:
+
+```text
+Bank A: transform processing
+Bank B: input loading or output streaming
+```
+
+This ping-pong arrangement prevents I/O from overwriting a symbol while the folded transform datapath is still using it. The TDIQ adapter does not require a separate duplicate 128-sample CP RAM; TX CP insertion re-reads the final `N_CP` samples and then the full symbol from the selected transform-memory bank.
+
+## Module 1: FDIQ I/O Adapter
+
+**Function**
+
+- Converts external 8-bit interleaved frequency-domain I/Q bytes into packed complex samples.
+- Converts packed complex outputs back into external interleaved bytes.
+- Accepts 12 QAM samples for TX and emits 12 extracted subcarrier samples for RX.
+- Tracks I/Q phase and 12-sample block boundaries.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| External input | `fdiq_in_data[7:0]`, `fdiq_in_valid`, `fdiq_in_ready` |
+| External output | `fdiq_out_data[7:0]`, `fdiq_out_valid`, `fdiq_out_ready` |
+| Internal TX stream | `fd_in_data[15:0]`, `fd_in_valid`, `fd_in_ready`, `fd_in_last` |
+| Internal RX stream | `fd_out_data[15:0]`, `fd_out_valid`, `fd_out_ready`, `fd_out_last` |
+| Control/status | `start`, `direction`, `busy`, `done`, `iq_alignment_error` |
+
+## Module 2: Unified Mixed-radix Core
+
+**Function**
+
+- Implements the arithmetic needed for the 12-point forward DFT, 128-point FFT, and 128-point IFFT.
+- Contains the radix-2 butterfly, 3-point kernel, shared complex multiplier, widened internal datapath, fixed-point scaling, rounding, saturation, and transform scratch RAM.
+- Executes one scheduler-issued micro-operation at a time.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| Micro-operation | `uop_valid`, `uop_ready`, `uop_radix[1:0]`, `uop_inverse`, `uop_scale_shift[2:0]`, `uop_last` |
+| Source addresses | `src_addr_0[6:0]`, `src_addr_1[6:0]`, `src_addr_2[6:0]` |
+| Destination addresses | `dst_addr_0[6:0]`, `dst_addr_1[6:0]`, `dst_addr_2[6:0]` |
+| Twiddle input | `twiddle_re[7:0]`, `twiddle_im[7:0]`, `twiddle_valid` |
+| External memory load | `load_addr[6:0]`, `load_data[15:0]`, `load_valid`, `load_ready` |
+| External memory read | `read_addr[6:0]`, `read_req`, `read_data[15:0]`, `read_valid` |
+| Status | `uop_done`, `overflow`, `saturation_occurred` |
+
+The complete-transform `busy` and `done` signals belong to the Scheduler, not this arithmetic core.
+
+## Module 3: Twiddle Source
+
+**Function**
+
+- Stores or generates quantized transform twiddles.
+- Supplies real and imaginary Q1.7 components in the same cycle.
+- Supports conjugation for inverse transforms.
+- Presents a fixed, documented lookup latency.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| Request | `tw_req`, `tw_addr[6:0]`, `tw_conjugate` |
+| Response | `tw_re[7:0]`, `tw_im[7:0]`, `tw_valid` |
+
+The fixed constants used by the 3-point kernel may remain local to the Mixed-radix Core.
+
+## Module 4: Scheduler + Address Control
+
+**Function**
+
+- Controls the complete TX, RX, transform-only, CP-only, loopback, and diagnostic operations.
+- Sequences the 12-point DFT, 128-point FFT, and 128-point IFFT.
+- Generates transform source/destination addresses and twiddle addresses.
+- Controls map/extract, CP insertion/removal, and ping-pong bank ownership.
+- Reports global completion, errors, and cycle count.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| Command | `cmd_valid`, `cmd_ready`, `cmd_op[2:0]`, `long_cp` |
+| Transform control | `uop_valid`, `uop_ready`, `uop_radix[1:0]`, `uop_inverse`, `uop_scale_shift[2:0]`, `uop_last` |
+| Transform addresses | `src_addr_0/1/2[6:0]`, `dst_addr_0/1/2[6:0]` |
+| Twiddle control | `tw_req`, `tw_addr[6:0]`, `tw_conjugate`, `tw_valid` |
+| Map/extract control | `map_start`, `map_direction`, `first_subcarrier[6:0]`, `map_done` |
+| CP control | `cp_start`, `cp_insert`, `cp_len[3:0]`, `cp_done` |
+| Buffer control | `input_bank_select`, `output_bank_select` |
+| Global status | `busy`, `done`, `error`, `cycle_count[15:0]` |
+
+## Module 5: Subcarrier Map / Extract
+
+**Function**
+
+- TX: writes 12 DFT outputs into a selected contiguous allocation of a 128-bin frequency grid and zeros unused bins.
+- RX: reads the selected 12 bins from a 128-bin FFT result and emits them as a complex stream.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| Control | `start`, `map_not_extract`, `first_subcarrier[6:0]`, `busy`, `done`, `config_error` |
+| Input stream | `in_data[15:0]`, `in_valid`, `in_ready`, `in_last` |
+| Output stream | `out_data[15:0]`, `out_valid`, `out_ready`, `out_last` |
+| Scratch-memory access | `mem_addr[6:0]`, `mem_write`, `mem_wdata[15:0]`, `mem_rdata[15:0]`, `mem_rvalid` |
+
+## Module 6: TDIQ I/O Adapter with CP
+
+**Function**
+
+- Converts external time-domain interleaved I/Q bytes to and from packed complex samples.
+- RX: discards the first `N_CP` complex samples and writes the next 128 useful samples into transform memory.
+- TX: reads the final `N_CP` IFFT samples followed by all 128 samples and serializes the resulting CP-added symbol.
+- Supports the current 9-sample and 10-sample CP configurations.
+- Tracks I/Q phase, CP length, and symbol sample count.
+
+**Key I/O**
+
+| Interface | Signals |
+|---|---|
+| External input | `tdiq_in_data[7:0]`, `tdiq_in_valid`, `tdiq_in_ready` |
+| External output | `tdiq_out_data[7:0]`, `tdiq_out_valid`, `tdiq_out_ready` |
+| CP control | `cp_start`, `cp_insert`, `cp_len[3:0]` |
+| RX useful-symbol stream | `rx_symbol_data[15:0]`, `rx_symbol_valid`, `rx_symbol_ready`, `rx_symbol_last` |
+| TX memory read | `tx_symbol_rd_addr[6:0]`, `tx_symbol_rd_req`, `tx_symbol_rd_data[15:0]`, `tx_symbol_rd_valid` |
+| Status | `busy`, `done`, `cp_error`, `sample_count_error`, `iq_alignment_error` |
+
+## Clocking and throughput strategy
+
+The tapeout uses **one clock domain**. No asynchronous design or clock-domain crossing is required for the base chip interface. A faster core is achieved by running all logic from a sufficiently fast shared clock while accepting or emitting external bytes only when the stream handshake permits.
+
+A 128-point radix-2 FFT requires 448 butterfly operations. The initial implementation target is a shared core clock in the approximate **25–50 MHz** range, subject to cycle-accurate scheduling and synthesis. The final minimum frequency is determined from the measured full-symbol cycle count rather than assumed from the sample rate.
+
+Clock enables and handshakes are used instead of internally generated divided clocks. If a future ADC, DAC, or host interface uses an unrelated clock, asynchronous FIFOs can be added at the adapter boundary without changing the transform architecture.
+
+## Verification strategy
+
+Each module is verified independently against a Python model before full-chip integration.
+
+### Reference models
+
+1. A floating-point NumPy model validates the intended DFT-s-OFDM and CP-OFDM mathematics.
+2. A bit-accurate fixed-point model reproduces Q1.7 input quantization, twiddle quantization, internal widths, shifts, rounding, saturation, permutations, and output ordering.
+
+RTL is required to match the bit-accurate model exactly.
+
+### Module-level verification
+
+| Module | Primary comparison |
+|---|---|
+| FDIQ Adapter | Byte packing/unpacking, I/Q alignment, stalls, and 12-sample boundaries |
+| Mixed-radix Core | DFT-12, FFT-128, IFFT-128, scaling, overflow, and output ordering |
+| Twiddle Source | Every lookup address against the generated Q1.7 table |
+| Scheduler | Address, radix, stage, twiddle, and bank-selection traces against a Python schedule generator |
+| Map/Extract | Exact placement and recovery of 12 bins in a 128-bin grid |
+| TDIQ/CP Adapter | CP insertion/removal for `N_CP = 9` and `N_CP = 10`, including random stalls |
+
+### Full-chip verification
+
+The integrated RTL is tested in this order:
+
+1. arithmetic primitives;
+2. transform-only commands;
+3. complete TX chain;
+4. complete RX chain;
+5. digital TX-to-RX loopback;
+6. continuous multi-symbol operation with ping-pong buffers;
+7. synthesis and gate-level regression;
+8. post-layout timing and selected SDF tests.
+
+Directed tests include zeros, impulses, tones, random QAM, maximum/minimum values, clipping cases, both CP lengths, reset interruption, and randomized `valid/ready` backpressure.
+
+Post-silicon bring-up uses the same deterministic command protocol and saved Python vectors. Transform-only, CP-only, map/extract, loopback, twiddle-readback, and memory-test modes provide block-level observability without additional functional pins.
 
 ---
 
@@ -463,7 +666,7 @@ ButterFold:
   minimum area
 ```
 
-ButterFold intentionally trades throughput for silicon area. A faster internal compute clock and deterministic scheduling can recover some throughput while preserving the extremely folded architecture.
+ButterFold intentionally trades throughput for silicon area. A sufficiently fast shared chip clock, deterministic scheduling, and optional ping-pong buffering recover practical symbol throughput without introducing a second asynchronous clock domain.
 
 ---
 
@@ -480,8 +683,10 @@ The tapeout core intentionally supports a narrow fixed configuration:
 | DFT size | `k = 12` | Minimum 1-RB transform-precoded allocation |
 | OFDM size | `m = 128` | Smallest practical silicon demo target |
 | Waveform path | DFT-s-OFDM TX + OFDM RX/TX transform chain | Demonstrates NR-style baseband structure |
-| Interface | 8-bit interleaved I/Q | Reduces pins for tapeout |
-| Scheduling | Block streaming | Deterministic verification and low area |
+| Interface | Shared 8-bit command/IQ byte streams | Reduces pins for tapeout |
+| Clocking | One synchronous clock domain | Avoids CDC and asynchronous-FIFO complexity |
+| RTL partition | Six functional modules | Clear ownership and independent verification |
+| Scheduling | Block streaming with optional ping-pong banks | Deterministic verification and sustained symbol flow |
 
 This means the taped-out chip is **standards-motivated and NR-inspired**, but not a full-bandwidth, fully schedulable 5G NR modem. A larger simulation model will extend the same folded architecture toward more complete NR parameterizations, including realistic `k = 12 × N_RB`, larger FFT sizes, and timing checks.
 
@@ -489,62 +694,29 @@ This means the taped-out chip is **standards-motivated and NR-inspired**, but no
 
 ---
 
-## Minimum-compliant TDD system target
+## Half-duplex TDD reuse assumption
 
-ButterFold specifically targets a **minimum-compliant TDD-style system** because TDD enables the same physical transform hardware to be reused across both receive and transmit operation.
-
-This gives ButterFold two layers of reuse:
+ButterFold targets a narrow **NR-style half-duplex TDD proof of concept**, not a complete standards-compliant modem. The TDD assumption is architecturally important because RX and TX do not need to execute simultaneously, allowing one folded mixed-radix datapath to serve all three required transforms.
 
 ```text
-Reuse dimension 1: RX/TX reuse
+RX window:
+  CP removal → 128-point FFT → 12-bin extraction
 
-  TX path:
-    k-point DFT  →  m-point IFFT
+Guard / turnaround:
+  external RF and system direction change
 
-  RX path:
-    m-point FFT
-
-  Same hardware is reused because the system is half-duplex TDD.
-
-
-Reuse dimension 2: transform-size reuse
-
-  k-point transforms:
-    DFT for DFT-s-OFDM uplink precoding
-
-  m-point transforms:
-    FFT / IFFT for OFDM demodulation and modulation
-
-  Same folded mixed-radix engine is reused across both sizes.
+TX window:
+  12-point DFT → subcarrier mapping → 128-point IFFT → CP insertion
 ```
 
-The tapeout core therefore does not only reuse hardware between FFT and IFFT. It also reuses the same compute path across:
+The reuse dimensions are:
 
-- **TX and RX**
-- **DFT and FFT/IFFT**
-- **FFT and IFFT**
-- **k-point and m-point transforms**
+- the same core is used for RX and TX;
+- the same arithmetic is used for FFT and IFFT;
+- the same mixed-radix hardware supports the 12-point DFT and 128-point transforms;
+- the same scratch-memory system is reused across every operation.
 
-This is why TDD is central to the architecture. In a half-duplex TDD system, RX and TX do not need to run at the exact same time, which allows one folded transform engine to serve the entire modem datapath.
-
-```text
-Half-duplex TDD timing model:
-
-  RX window:
-    CP removal → m-point FFT → k-bin extraction
-
-  Guard / turnaround:
-    RF and baseband mode switch
-
-  TX window:
-    k-point DFT → subcarrier mapping → m-point IFFT → CP insertion
-```
-
-This is the minimum system assumption that makes the aggressive reuse strategy practical.
-
----
-
----
+The chip demonstrates the standards-motivated waveform structure and timing tradeoffs. It does not claim complete NR compliance because synchronization, coding, channel estimation, equalization, RF conversion, and protocol scheduling remain outside the project boundary.
 
 ## Design-space exploration
 
@@ -808,6 +980,7 @@ Syntax checking and simulation
 Waveform/debug feedback
         ↓
 Corrected Verilog RTL
+```
 
 ## Why this is a strong Chipathon project
 
@@ -897,11 +1070,15 @@ A tiny, frozen, verification-first silicon design:
 
 - fixed **k = 12**
 - fixed **m = 128**
-- mixed-radix k-path for exact 12-point TX DFT
-- radix-2 reused m-path for FFT/IFFT
-- low-pin 8-bit I/Q interface
-- bit-accurate golden model
-- RTL verified against the golden model
+- six-module RTL partition with one Scheduler controlling the complete datapath
+- one shared synchronous clock domain
+- mixed-radix 12-point DFT support plus radix-2 128-point FFT/IFFT support
+- centrally owned transform scratch memory with optional ping-pong banks
+- shared low-pin 8-bit command and interleaved-I/Q interface
+- 9-sample and 10-sample CP insertion/removal
+- bit-accurate Python golden model
+- module-level and full-chip RTL regression against the golden model
+- transform-only, CP-only, loopback, and diagnostic test commands
 
 ### 2. Larger simulation core
 A scalable model for standards-shaped exploration:
@@ -964,3 +1141,4 @@ The strongest initial target is likely a workshop or implementation-oriented ven
 
 
 ---
+
