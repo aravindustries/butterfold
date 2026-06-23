@@ -208,6 +208,115 @@ class ActionHarness:
             return self._log("golden_evm", {}, _obs(False, f"golden check unavailable: {exc}"))
 
 
+# ── ReAct loop controller ────────────────────────────────────────────────────
+# Maps tool name -> (HarnessMethod, OpenAI parameter schema).
+_TOOLS = {
+    "read_file":    ({"path": "string"}, ["path"], "Read a repo file (relative path)."),
+    "edit_file":    ({"path": "string", "old": "string", "new": "string"},
+                     ["path", "old", "new"], "Replace the first exact occurrence of 'old' with 'new'."),
+    "list_rtl":     ({}, [], "List the synthesizable RTL files in generated/rtl."),
+    "compile":      ({}, [], "iverilog syntax check over all RTL (needs container)."),
+    "yosys_check":  ({}, [], "Yosys structural elaboration check (needs container)."),
+    "golden_evm":   ({}, [], "Run the authoritative bit-exact golden EVM gate (needs container)."),
+    "regen_kernel": ({}, [], "Re-run the deterministic generator and observe the kernel EVM."),
+    "done":         ({"status": "string", "summary": "string"}, ["status", "summary"],
+                     "Finish: status='success' or 'blocked', with a one-line summary."),
+}
+
+
+def _tool_schemas() -> list:
+    schemas = []
+    for name, (props, required, desc) in _TOOLS.items():
+        schemas.append({"type": "function", "function": {
+            "name": name, "description": desc,
+            "parameters": {"type": "object",
+                           "properties": {k: {"type": v} for k, v in props.items()},
+                           "required": required},
+        }})
+    return schemas
+
+
+REACT_SYSTEM = """\
+You are a deep RTL engineering agent that REASONS then ACTS. You achieve the goal
+by calling tools one at a time, observing each result, and deciding the next step
+— not by emitting a wall of code.
+
+Rules:
+- The bit-exact DSP datapath lives in the LOCKED butterfold_kernel; never author or
+  edit its twiddle constants. To change kernel behaviour, call regen_kernel and
+  observe the EVM — command the generator, do not hand-write constants.
+- Edit only the wrapper/control RTL. After any edit, re-check with compile and (when
+  relevant) golden_evm. The golden EVM gate (<2%) is the authoritative success test.
+- Use prior context from the journal; do not repeat an action that already failed
+  the same way.
+- Call 'done' with status='success' once the goal is verified, or 'blocked' if you
+  cannot proceed, always with a short summary."""
+
+
+def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
+               agent: str = "agent", model: str = "gpt-4o", max_steps: int = 12) -> dict:
+    """think -> act -> observe loop using OpenAI tool-calling.
+
+    Returns {"ok", "status", "steps", "reason"}. If no API key is set, returns
+    {"ok": False, "fallback": True} so the caller runs today's scripted path —
+    keeping the whole system usable without an LLM (open-source constraint).
+    """
+    import os
+    if not os.environ.get("OPENAI_API_KEY"):
+        journal.append(agent, "decision", "no API key — falling back to scripted pipeline")
+        return {"ok": False, "fallback": True, "reason": "no_api_key"}
+
+    import openai
+    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    dispatch = {
+        "read_file": harness.read_file, "edit_file": harness.edit_file,
+        "list_rtl": harness.list_rtl, "compile": harness.compile,
+        "yosys_check": harness.yosys_check, "golden_evm": harness.golden_evm,
+        "regen_kernel": harness.regen_kernel,
+    }
+    messages = [
+        {"role": "system", "content": REACT_SYSTEM},
+        {"role": "user", "content": f"GOAL:\n{goal}\n\nPRIOR CONTEXT:\n{journal.context_block()}"},
+    ]
+
+    for step in range(1, max_steps + 1):
+        resp = client.chat.completions.create(
+            model=model, messages=messages,
+            tools=_tool_schemas(), tool_choice="auto", max_tokens=1024)
+        msg = resp.choices[0].message
+
+        if not msg.tool_calls:
+            journal.append(agent, "decision", f"stopped (no tool call): {(msg.content or '')[:120]}")
+            return {"ok": False, "status": "stalled", "steps": step, "reason": "no_tool_call"}
+
+        messages.append({"role": "assistant", "content": msg.content or "",
+                         "tool_calls": [{"id": tc.id, "type": "function",
+                                         "function": {"name": tc.function.name,
+                                                      "arguments": tc.function.arguments}}
+                                        for tc in msg.tool_calls]})
+
+        for tc in msg.tool_calls:
+            name = tc.function.name
+            try:
+                args = json.loads(tc.function.arguments or "{}")
+            except json.JSONDecodeError:
+                args = {}
+
+            if name == "done":
+                status = args.get("status", "blocked")
+                journal.append(agent, "decision", f"done [{status}]: {args.get('summary', '')}")
+                return {"ok": status == "success", "status": status,
+                        "steps": step, "summary": args.get("summary", "")}
+
+            fn = dispatch.get(name)
+            obs = fn(**args) if fn else _obs(False, f"unknown tool: {name}")
+            messages.append({"role": "tool", "tool_call_id": tc.id,
+                             "content": json.dumps(obs)[:3000]})
+
+    journal.append(agent, "decision", f"hit max_steps ({max_steps}) without finishing")
+    return {"ok": False, "status": "max_steps", "steps": max_steps, "reason": "max_steps"}
+
+
 # ── self-test (host, no API key) ─────────────────────────────────────────────
 if __name__ == "__main__":
     import tempfile, os
@@ -234,3 +343,14 @@ if __name__ == "__main__":
     print(f"[agent_core] compile -> ok={r_comp['ok']} {r_comp['summary']}")
     assert r_read["ok"] and not r_comp["ok"]   # file action works; EDA degrades gracefully
     print("[agent_core] ActionHarness self-test OK (EDA tools degrade gracefully off-container)")
+
+    # ── ReAct loop: no-key fallback path (host) ─────────────────────────────
+    import os as _os
+    _saved = _os.environ.pop("OPENAI_API_KEY", None)
+    jr = Journal(tmp); jr.reset()
+    res = react_loop("smoke test", ActionHarness(jr, "selftest"), jr, agent="selftest")
+    assert res.get("fallback") is True and res["reason"] == "no_api_key", res
+    print(f"[agent_core] react_loop no-key fallback OK -> {res}")
+    if _saved is not None:
+        _os.environ["OPENAI_API_KEY"] = _saved
+    _os.remove(tmp)
