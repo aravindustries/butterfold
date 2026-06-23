@@ -273,8 +273,20 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
         journal.append(agent, "decision", "no API key — falling back to scripted pipeline")
         return {"ok": False, "fallback": True, "reason": "no_api_key"}
 
-    import openai
+    import openai, time
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+    def _create(**kw):
+        """Chat-completions call with exponential backoff on rate limits."""
+        wait = 1.0
+        for attempt in range(6):
+            try:
+                return client.chat.completions.create(**kw)
+            except openai.RateLimitError:
+                if attempt == 5:
+                    raise
+                time.sleep(wait); wait = min(wait * 2, 20)
+
     dispatch = {
         "read_file": harness.read_file, "edit_file": harness.edit_file,
         "list_rtl": harness.list_rtl, "compile": harness.compile,
@@ -285,12 +297,13 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
         {"role": "system", "content": REACT_SYSTEM},
         {"role": "user", "content": f"GOAL:\n{goal}\n\nPRIOR CONTEXT:\n{journal.context_block()}"},
     ]
+    read_cache: dict = {}      # path -> already returned full content this session
+    dirty: set = set()         # files edited since last read (force a re-read)
 
     stalls = 0
     for step in range(1, max_steps + 1):
-        resp = client.chat.completions.create(
-            model=model, messages=messages,
-            tools=_tool_schemas(), tool_choice="auto", max_tokens=1024)
+        resp = _create(model=model, messages=messages,
+                       tools=_tool_schemas(), tool_choice="auto", max_tokens=1024)
         msg = resp.choices[0].message
 
         if not msg.tool_calls:
@@ -326,10 +339,33 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
                 return {"ok": status == "success", "status": status,
                         "steps": step, "summary": args.get("summary", "")}
 
+            # Anti-repeat read: don't resend a file's full content if it hasn't
+            # changed since the last read — this is what blew the token budget.
+            if name == "read_file":
+                path = args.get("path", "")
+                if path in read_cache and path not in dirty:
+                    obs = _obs(True, f"{path} already read and unchanged — do NOT read "
+                                     f"again; make your next edit or run golden_evm.")
+                    messages.append({"role": "tool", "tool_call_id": tc.id,
+                                     "content": json.dumps(obs)})
+                    journal.append(agent, "action", f"read_file cached (skipped): {path}")
+                    continue
+
             fn = dispatch.get(name)
             obs = fn(**args) if fn else _obs(False, f"unknown tool: {name}")
-            messages.append({"role": "tool", "tool_call_id": tc.id,
-                             "content": json.dumps(obs)[:3000]})
+
+            if name == "read_file" and obs.get("ok"):
+                read_cache[args.get("path", "")] = True
+                dirty.discard(args.get("path", ""))
+            elif name == "edit_file" and obs.get("ok"):
+                dirty.add(args.get("path", ""))     # force a fresh read after an edit
+
+            # Cap log-style outputs (compile/golden/yosys) to bound tokens; keep a
+            # file read intact so the agent can actually see the code it must fix.
+            content = json.dumps(obs)
+            if name != "read_file" and len(content) > 1800:
+                content = content[:1800] + ' ...TRUNCATED"}'
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": content})
 
     journal.append(agent, "decision", f"hit max_steps ({max_steps}) without finishing")
     return {"ok": False, "status": "max_steps", "steps": max_steps, "reason": "max_steps"}
