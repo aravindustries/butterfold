@@ -236,10 +236,10 @@ Output stream:
   dout_ready_i
     external tester can accept the current byte
 
-Completion:
+Completion and status:
 
-  done_irq_o
-    transaction completed or status is available
+  Completion, error, overflow, and cycle-count information are returned as
+  status bytes over dout[7:0]. No dedicated interrupt pin is required.
 ```
 
 The external I/Q stream remains byte-interleaved:
@@ -318,19 +318,29 @@ Output:
   24 interleaved I/Q bytes
 ```
 
-### Pin-count target
+### Digital interface pinout
 
-The proposed functional digital interface requires 23 pins:
+ButterFold targets exactly **22 digital interface pins**:
 
-- 1 clock
-- 1 reset
-- 8 input-data pins
-- 2 input handshake pins
-- 8 output-data pins
-- 2 output handshake pins
-- 1 completion/status interrupt
+| Signal | Width | Direction | Function |
+|---|---:|---|---|
+| `clk_i` | 1 | Input | Shared synchronous chip clock |
+| `rst_ni` | 1 | Input | Active-low reset |
+| `din[7:0]` | 8 | Input | Command bytes and interleaved input I/Q bytes |
+| `din_valid_i` | 1 | Input | Indicates that `din[7:0]` is valid |
+| `din_ready_o` | 1 | Output | Indicates that ButterFold can accept an input byte |
+| `dout[7:0]` | 8 | Output | Status bytes and interleaved output I/Q bytes |
+| `dout_valid_o` | 1 | Output | Indicates that `dout[7:0]` is valid |
+| `dout_ready_i` | 1 | Input | Indicates that the external receiver can accept an output byte |
 
-With four logical power/ground connections and three optional scan pins, the design has a target of approximately **30 logical pins**. The physical pad count may be higher because the pad library can require duplicated supply, ground, corner, and ESD pads.
+The total is:
+
+```text
+1 clock + 1 reset + 8 input data + 2 input handshake
++ 8 output data + 2 output handshake = 22 digital pins
+```
+
+No dedicated completion or status interrupt is exposed. Software or the external test controller detects completion by reading the status response on the normal `dout[7:0]` stream.
 
 ### Project boundary
 
@@ -420,6 +430,10 @@ The tapeout configuration uses:
 
 ButterFold is partitioned into six synthesizable functional modules under one scheduler-controlled, synchronous datapath.
 
+![ButterFold modular architecture](assets/diagrams/butterfold_modular_architecture.png)
+
+The overview above is the primary team-facing integration diagram. The module-level diagrams below define ownership, interfaces, and signal direction for each RTL block.
+
 ```text
                          ButterFold top level
 
@@ -484,6 +498,8 @@ This ping-pong arrangement prevents I/O from overwriting a symbol while the fold
 
 ## Module 1: FDIQ I/O Adapter
 
+![Module 1: FDIQ I/O Adapter](assets/diagrams/module_1_fdiq_io_adapter.png)
+
 **Function**
 
 - Converts external 8-bit interleaved frequency-domain I/Q bytes into packed complex samples.
@@ -502,6 +518,8 @@ This ping-pong arrangement prevents I/O from overwriting a symbol while the fold
 | Control/status | `start`, `direction`, `busy`, `done`, `iq_alignment_error` |
 
 ## Module 2: Unified Mixed-radix Core
+
+![Module 2: Unified Mixed-radix Core](assets/diagrams/module_2_unified_mixed_radix_core.png)
 
 **Function**
 
@@ -525,6 +543,8 @@ The complete-transform `busy` and `done` signals belong to the Scheduler, not th
 
 ## Module 3: Twiddle Source
 
+![Module 3: Twiddle Source](assets/diagrams/module_3_twiddle_source.png)
+
 **Function**
 
 - Stores or generates quantized transform twiddles.
@@ -542,6 +562,8 @@ The complete-transform `busy` and `done` signals belong to the Scheduler, not th
 The fixed constants used by the 3-point kernel may remain local to the Mixed-radix Core.
 
 ## Module 4: Scheduler + Address Control
+
+![Module 4: Scheduler and Address Control](assets/diagrams/module_4_scheduler_address_control.png)
 
 **Function**
 
@@ -566,6 +588,8 @@ The fixed constants used by the 3-point kernel may remain local to the Mixed-rad
 
 ## Module 5: Subcarrier Map / Extract
 
+![Module 5: Subcarrier Map and Extract](assets/diagrams/module_5_subcarrier_map_extract.png)
+
 **Function**
 
 - TX: writes 12 DFT outputs into a selected contiguous allocation of a 128-bin frequency grid and zeros unused bins.
@@ -581,6 +605,8 @@ The fixed constants used by the 3-point kernel may remain local to the Mixed-rad
 | Scratch-memory access | `mem_addr[6:0]`, `mem_write`, `mem_wdata[15:0]`, `mem_rdata[15:0]`, `mem_rvalid` |
 
 ## Module 6: TDIQ I/O Adapter with CP
+
+![Module 6: TDIQ I/O Adapter with CP](assets/diagrams/module_6_tdiq_io_adapter_cp.png)
 
 **Function**
 
