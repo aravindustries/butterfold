@@ -12,8 +12,9 @@ from dotenv import load_dotenv
 ROOT = pathlib.Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
-SPEC_PATH = ROOT / "modular_description.md"
-OUT_PATH  = ROOT / "generated" / "plan.json"
+SPEC_PATH      = ROOT / "modular_description.md"
+MODULE_IO_PATH = ROOT / "butterfold_module_io.md"   # authoritative 6-module port contract
+OUT_PATH       = ROOT / "generated" / "plan.json"
 
 MAX_RETRIES = 5
 INITIAL_WAIT = 1
@@ -91,13 +92,27 @@ def run():
     spec   = SPEC_PATH.read_text()
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
+    # Additively include the authoritative 6-module port contract so the plan
+    # decomposes into ButterFold's real module boundaries (mirrors how code_agent
+    # loads the 3GPP extract). Optional — planning still works without it.
+    user_content = spec
+    if MODULE_IO_PATH.exists():
+        module_io = MODULE_IO_PATH.read_text().strip()
+        user_content = (
+            f"{spec}\n\n"
+            f"=== AUTHORITATIVE MODULE I/O CONTRACT (butterfold_module_io.md) ===\n"
+            f"Decompose the design into these modules; use these exact port names/widths.\n\n"
+            f"{module_io}"
+        )
+        print(f"[planner] Loaded module I/O contract ({len(module_io)} chars)")
+
     completion = _call_with_retry(
         client.chat.completions.create,
         model="gpt-4o",
         max_tokens=4096,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": spec},
+            {"role": "user",   "content": user_content},
         ],
     )
 

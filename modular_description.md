@@ -1,57 +1,60 @@
-Design a Verilog module called butterfold_top.
+# ButterFold — Design Specification (planner input)
 
-The module implements a minimum-area OFDM / DFT-s-OFDM transform core for a tiny 5G NR-inspired proof-of-concept modem.
+Design **ButterFold**, a minimum-area OFDM / DFT-s-OFDM transform core for a tiny 5G NR-inspired
+proof-of-concept modem. The detailed, authoritative port-level contract for every block is in
+`butterfold_module_io.md` — treat that file as the source of truth for signal names and widths; this
+file is the high-level design intent the planner decomposes from.
 
-The core supports two modes: TX mode and RX mode.
+## Frozen tapeout parameters
+- k = 12 complex QAM symbols per block (1 resource block, transform-precoded)
+- m = 128-point OFDM grid; centered subcarrier mapping (active bins start at 58)
+- 8-bit signed I/Q, Q1.7; internal complex sample packed as {I[7:0], Q[7:0]} (16 bits)
+- Cyclic prefix: **9 samples (normal)**, selectable **10 samples (long, first symbol)** via `long_cp`
+- Single shared synchronous clock domain, active-low reset
 
-In TX mode, the module accepts k = 12 complex input QAM symbols through an 8-bit signed interleaved I/Q input stream. The input format is:
+## Target architecture — 6 modules + top
 
-cycle 0: I0
-cycle 1: Q0
-cycle 2: I1
-cycle 3: Q1
-...
-cycle 22: I11
-cycle 23: Q11
+ButterFold is partitioned into six cooperating modules driven by streaming valid/ready handshakes.
+See `butterfold_module_io.md` for the full interface of each.
 
-After receiving the full input block, the module performs:
+1. **FDIQ I/O Adapter** — frequency-domain I/Q byte ↔ 16-bit complex packing; accepts 12 QAM symbols
+   for TX, emits 12 extracted subcarriers for RX; tracks I/Q alignment and block boundaries.
+2. **Unified Mixed-Radix Core** — the arithmetic for the 12-pt DFT, 128-pt FFT and 128-pt IFFT: a
+   radix-2 butterfly, a radix-3 / 3-point kernel, the shared complex multiplier, widened
+   accumulation, scaling, rounding and saturation. Executes scheduler micro-ops; reads/writes
+   transform **scratch memory**. Does not schedule whole transforms itself.
+3. **Twiddle Source** — stores/generates quantized twiddle factors; supplies one packed complex
+   twiddle per request; supports conjugation for inverse transforms; fixed lookup latency.
+4. **Scheduler + Address Control** — sequences DFT-12 / FFT-128 / IFFT-128, generates transform
+   stage, memory and twiddle addresses, controls subcarrier map/extract, controls CP insertion and
+   removal (`cp_len`, `long_cp`), selects ping-pong banks, reports completion/errors.
+5. **Subcarrier Map / Extract** — TX: place 12 DFT outputs into selected bins of the 128-bin grid and
+   zero-fill the rest; RX: read the selected 12 bins from the 128-bin FFT result.
+6. **TDIQ I/O Adapter with CP** — time-domain I/Q byte ↔ complex packing; inserts CP after the TX
+   IFFT, removes CP before the RX FFT; supports 9- and 10-sample CP; ping-pong symbol buffers.
 
-1. 12-point DFT
-2. subcarrier mapping into a 128-point OFDM grid
-3. 128-point IFFT
-4. cyclic prefix insertion
-5. serialized 8-bit interleaved I/Q output
+A top-level chip wrapper exposes `clk_i`, `rst_ni`, an 8-bit `din`/`dout` command+I/Q interface with
+valid/ready handshakes, `done_irq_o`, and optional scan ports (see `butterfold_module_io.md`).
 
-In RX mode, the module accepts a 128-point OFDM time-domain block with cyclic prefix through the same 8-bit signed interleaved I/Q input stream. The module performs:
+## Transform behaviour
+- **TX chain:** 12-pt DFT → centered subcarrier map → 128-pt IFFT → CP insertion → interleaved I/Q out.
+- **RX chain:** CP removal → 128-pt FFT → active-subcarrier extraction → 12-pt IDFT → interleaved I/Q out.
+- The 128-pt FFT/IFFT path uses radix-2 scheduling; the 12-pt DFT/IDFT path uses a 3×4 mixed-radix
+  decomposition. All transforms reuse the single Unified Mixed-Radix Core (TDD half-duplex reuse).
 
-1. cyclic prefix removal
-2. 128-point FFT
-3. active subcarrier extraction
-4. 12-point IDFT
-5. serialized 8-bit interleaved I/Q output
+## Current implementation status (important for the code step)
+The proven, GDS-signed-off implementation today is a **flat TX core**: `butterfold_top.v` (control
+wrapper: FSM + input deserializer + CP/centered-map addressing + output serializer) instantiating the
+**locked, bit-exact** `butterfold_kernel.v` (twiddle ROMs + shared complex multiplier + round/clip),
+generated and golden-validated by `gen_reference.py` (seed-42 EVM 1.59%). The 6-module architecture
+above is the target the design is migrating toward; the adapters, scratch-memory scheduler, RX path
+and variable CP are the modules still to be built on top of that locked kernel.
 
-The module should reuse a single folded mixed-radix transform engine for all DFT, IDFT, FFT, and IFFT operations. The 128-point FFT/IFFT path should use radix-2 scheduling. The 12-point DFT/IDFT path should use a 3×4 mixed-radix decomposition.
-
-The design should use block-streaming control. The module should assert dout_valid whenever output data is valid.
-
-Inputs:
-- clk
-- rst_n
-- mode
-- din[7:0]
-- din_valid
-
-Outputs:
-- dout[7:0]
-- dout_valid
-- busy
-- done
-
-The design should be synthesizable Verilog and should avoid unsynthesizable constructs.
-
-CRITICAL IMPLEMENTATION CONSTRAINTS FOR AGENT:
-- Do NOT use SystemVerilog unpacked arrays (e.g., "logic data [0:11]"). Instead, use packed arrays or scalar loops.
-- Do NOT use array slicing or range indexing (e.g., "data[0:11]"). Loop through elements one at a time with individual assignments.
-- Do NOT use tasks or functions with array ports. Process data element-by-element in always blocks or combinational logic.
-- Generate ONLY Verilog-2005 constructs for maximum compatibility with iverilog simulator.
-- If you need to work with multi-element data (like DFT input/output), use individual scalar signals or tightly-coupled RAM reads/writes, not array passing.
+## Synthesizability constraints for the agent
+- Verilog-2005 only, for iverilog (`-g2012`) and Yosys/GF180 compatibility.
+- No SystemVerilog unpacked arrays (`reg x [0:N]` is allowed only with `(* mem2reg *)` for register
+  files); no array slicing / range indexing; no tasks/functions with array ports.
+- Synchronous active-low reset (`rst_n` / `rst_ni`); all flip-flops on `posedge clk`.
+- Fixed-point arithmetic only — no `real`/`float`; no `initial` blocks in RTL (testbenches only).
+- The bit-exact `butterfold_kernel` (twiddle ROMs / multiplier / rounding) is generated and LOCKED —
+  do not hand-author or modify it; instantiate it.
