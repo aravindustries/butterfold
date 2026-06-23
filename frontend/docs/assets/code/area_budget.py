@@ -106,28 +106,38 @@ def main():
     total_area = core_length_um * core_width_um
     # print(f"{total_area = }")
 
-    # Single 128x8b SRAM
-    sram128x8b_length = 431.86 # um
-    sram128x8b_width  = 268.88 # um
-    sram128x8b_area = sram128x8b_length * sram128x8b_width
+    default_sram64x8b_length = 431.86 # um
+    default_sram64x8b_width  = 232.88 # um
+    default_sram64x8b_area = default_sram64x8b_length * default_sram64x8b_width
+
+    timothy_sram64x8b_length = 301.3  # um
+    timothy_sram64x8b_width  = 152.21 # um
+    timothy_sram64x8b_area = timothy_sram64x8b_length * timothy_sram64x8b_width
+
+    default_sram128x8b_length = 431.86 # um
+    default_sram128x8b_width  = 268.88 # um
+    default_sram128x8b_area = default_sram128x8b_length * default_sram128x8b_width
     # print(f"{sram128x8b_area = }")
 
-    # Sigle 512x8b SRAM
-    sram512x8b_length = 431.86 # um
-    sram512x8b_width  = 484.88 # um
-    sram512x8b_area = sram512x8b_length * sram512x8b_width
-    # print(f"{sram512x8b_area = }")
+    timothy_sram256x8b_length = 301.3  # um
+    timothy_sram256x8b_width  = 224.93 # um
+    timothy_sram256x8b_area = timothy_sram256x8b_length * timothy_sram256x8b_width
+
+    # default_sram512x8b_length = 431.86 # um
+    # default_sram512x8b_width  = 484.88 # um
+    # default_sram512x8b_area = default_sram512x8b_length * default_sram512x8b_width
+    # # print(f"{sram512x8b_area = }")
     ################# Initialisations #####################
 
     # 4 for 128x32b SRAM (data storage)
-    sram128x32b_area = 4 * sram128x8b_area
+    default_sram128x16b_area = 2 * default_sram128x8b_area
 
     # 4 for 512x32b SRAM (twiddle storage)
-    sram512x32b_area = 4 * sram512x8b_area
+    default_sram64x16b_area = 2 * default_sram64x8b_area
 
     partitions = [
-        {'name': f'sram128x32b (data) Area {sram128x32b_area}um2', 'subtitle': '',  'pct': (sram128x32b_area/total_area)*100},
-        {'name': f'sram512x32b (twiddle) Area {sram512x32b_area}um2', 'subtitle': '', 'pct': (sram512x32b_area/total_area)*100},
+        {'name': f'default_sram128x16b (data) Area {default_sram128x16b_area}um2', 'subtitle': '',  'pct': (default_sram128x16b_area/total_area)*100},
+        {'name': f'default_sram64x16b (twiddle) Area {default_sram64x16b_area}um2', 'subtitle': '', 'pct': (default_sram64x16b_area/total_area)*100},
     ]
 
     draw_partition_table(partitions, title=f"Total Area {total_area}um2 ({core_length_um}um x {core_width_um}um)")

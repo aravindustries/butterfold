@@ -7,20 +7,30 @@ layout {
 			plugin location="zellij:compact-bar";
 		}
 	}
+
     tab name="Git" cwd="$PROJECT_ROOT_DIR" {
         pane size="70%" name="lazygit" {
             command "lazygit"
         }
-        pane focus=true size="30%" name="Review git-ignore" {
-            edit ".gitignore"
+        pane focus=true size="30%" name="review git" {
+            edit ".gitignore" ".gitmodules"
+        }
+    }
+    tab name="Docs" cwd="$FRONTEND_DIR/docs" {
+        pane size="70%" name="code"
+        pane size="30%" name="execute"
+    }
+    tab name="AI" cwd="$PROJECT_ROOT_DIR" {
+        pane name="hermes" {
+            command "hermes"
         }
     }
     tab focus=true name="Dev" {
         pane size="70%" split_direction="vertical" {
-            pane size="50%" name="Design" cwd="$RTL_DIR"
-            pane size="50%" name="Verif"  cwd="$SIM_DIR"
+            pane size="50%" name="design" cwd="$RTL_DIR"
+            pane size="50%" name="verif"  cwd="$SIM_DIR"
         }
-        pane focus=true size="30%" name="Execute" cwd="$FRONTEND_DIR"
+        pane focus=true size="30%" name="execute" cwd="$FRONTEND_DIR"
     }
 
     // Necessities

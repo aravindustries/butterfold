@@ -101,6 +101,7 @@ SRAM can also be configured to use 5.0V
   ]
 )
 
+
 #table(
   columns: (auto, auto, auto),
   align: horizon,
@@ -109,26 +110,26 @@ SRAM can also be configured to use 5.0V
   ),
   [1],  [mode],           [Input (Digital)],
   [2],  [mac_clk],        [Input (Digital)],
-  [3],  [mac_data[0]],    [InOut (Digital)],
-  [4],  [mac_data[1]],    [InOut (Digital)],
-  [5],  [mac_data[2]],    [InOut (Digital)],
-  [6],  [mac_data[3]],    [InOut (Digital)],
-  [7],  [mac_data[4]],    [InOut (Digital)],
-  [8],  [mac_data[5]],    [InOut (Digital)],
-  [9],  [mac_data[6]],    [InOut (Digital)],
-  [10], [mac_data[7]],    [InOut (Digital)],
-  [11], [mac_data_valid], [InOut (Digital)],
+  [3],  [mac_data[0]],    [Bidirectional (Digital)],
+  [4],  [mac_data[1]],    [Bidirectional (Digital)],
+  [5],  [mac_data[2]],    [Bidirectional (Digital)],
+  [6],  [mac_data[3]],    [Bidirectional (Digital)],
+  [7],  [mac_data[4]],    [Bidirectional (Digital)],
+  [8],  [mac_data[5]],    [Bidirectional (Digital)],
+  [9],  [mac_data[6]],    [Bidirectional (Digital)],
+  [10], [mac_data[7]],    [Bidirectional (Digital)],
+  [11], [mac_data_valid], [Bidirectional (Digital)],
   [12], [arst_n],         [Input (Digital)],
   [13], [core_clk],       [Input (Digital)],
-  [14], [rf_data[0]],     [InOut (Digital)],
-  [15], [rf_data[1]],     [InOut (Digital)],
-  [16], [rf_data[2]],     [InOut (Digital)],
-  [17], [rf_data[3]],     [InOut (Digital)],
-  [18], [rf_data[4]],     [InOut (Digital)],
-  [19], [rf_data[5]],     [InOut (Digital)],
-  [20], [rf_data[6]],     [InOut (Digital)],
-  [21], [rf_data[7]],     [InOut (Digital)],
-  [22], [rf_data_valid],  [InOut (Digital)],
+  [14], [rf_data[0]],     [Bidirectional (Digital)],
+  [15], [rf_data[1]],     [Bidirectional (Digital)],
+  [16], [rf_data[2]],     [Bidirectional (Digital)],
+  [17], [rf_data[3]],     [Bidirectional (Digital)],
+  [18], [rf_data[4]],     [Bidirectional (Digital)],
+  [19], [rf_data[5]],     [Bidirectional (Digital)],
+  [20], [rf_data[6]],     [Bidirectional (Digital)],
+  [21], [rf_data[7]],     [Bidirectional (Digital)],
+  [22], [rf_data_valid],  [Bidirectional (Digital)],
 )
 
 #figure(
