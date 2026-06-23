@@ -61,6 +61,55 @@ def _load_verify_agent():
     return mod
 
 
+def _load_agent_core():
+    core_path = pathlib.Path(__file__).parent / "agent_core.py"
+    spec = importlib.util.spec_from_file_location("agent_core", core_path)
+    mod  = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def run_react(max_steps: int = 14):
+    """Deep (reason+act) debug: the agent drives the action harness itself —
+    compile -> read the error -> edit the wrapper -> golden_evm -> repeat — with
+    the Journal as memory so it never repeats a failed fix. Falls back to the
+    scripted run() when no API key is available.
+
+    Unlike run() (which cold-rewrites the whole file each iteration), this makes
+    targeted edits and observes each tool result, the way a human debugs.
+    """
+    core    = _load_agent_core()
+    journal = core.Journal()
+    harness = core.ActionHarness(journal, agent="debug")
+
+    errors = ""
+    if RESULT_FILE.exists():
+        try:
+            r = json.loads(RESULT_FILE.read_text())
+            errors = "\n".join((r.get("errors") or [])[:5])
+        except json.JSONDecodeError:
+            pass
+
+    goal = (
+        "The control wrapper generated/rtl/butterfold_top.v fails verification. "
+        "Reason about the failure and fix ONLY the wrapper — never touch the locked "
+        "butterfold_kernel. Frozen params: K=12, M=128, CP=9, centered START=58; the "
+        "cyclic-prefix address logic must be tau=(samp<9)?samp+119:samp-9 and "
+        "w_idx=((58+ifft_j)*tau)&7'h7f. Use `compile` to find syntax errors and "
+        "`golden_evm` as the authoritative pass test (EVM < 2%). Make targeted edits "
+        "with edit_file. Call done(status='success') only once golden_evm passes.\n"
+        f"Known verification errors:\n{errors or '(none captured — run compile/golden_evm to discover)'}"
+    )
+    journal.append("debug", "finding", f"ReAct debug start; errors={errors[:160] or 'none'}")
+    res = core.react_loop(goal, harness, journal, agent="debug", max_steps=max_steps)
+    print(f"[debug] ReAct debug finished: {res}")
+
+    if res.get("fallback"):
+        print("[debug] No API key — using scripted debug loop instead.")
+        return run()
+    return res
+
+
 def _strip_fences(text):
     if "```" not in text:
         return text.strip()
@@ -140,4 +189,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--react" in sys.argv:
+        run_react()
+    else:
+        run()
