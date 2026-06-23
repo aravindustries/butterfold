@@ -136,5 +136,83 @@ def run():
     return plan
 
 
+def _load_agent_core():
+    import importlib.util
+    p = pathlib.Path(__file__).parent / "agent_core.py"
+    spec = importlib.util.spec_from_file_location("agent_core", p)
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
+
+
+def _strip_json(raw: str) -> str:
+    if "```json" in raw:
+        return raw.split("```json", 1)[1].split("```", 1)[0].strip()
+    if "```" in raw:
+        return raw.split("```", 1)[1].split("```", 1)[0].strip()
+    return raw.strip()
+
+
+def run_react(max_rounds: int = 2):
+    """Deep (reason+act) planner: generate -> self-critique against the 6-module
+    contract -> revise. The planner produces text (a plan), not tool actions, so
+    its 'loop' is a critique/revise reasoning loop (logged to the Journal) rather
+    than a tool-using ReAct loop. Falls back to a single-shot run() with no key.
+    """
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("[planner] No API key — single-shot plan.")
+        return run()
+
+    core    = _load_agent_core()
+    journal = core.Journal()
+    plan    = run()                       # initial generation (already module-aware)
+    journal.append("planner", "plan", f"initial plan: {len(plan.get('subtasks', []))} subtasks")
+
+    client     = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    module_io  = MODULE_IO_PATH.read_text() if MODULE_IO_PATH.exists() else ""
+
+    for rnd in range(1, max_rounds + 1):
+        critique = _call_with_retry(
+            client.chat.completions.create, model="gpt-4o", max_tokens=1024,
+            messages=[
+                {"role": "system", "content":
+                 "You are a hardware planning reviewer. Given the 6-module I/O contract "
+                 "and a JSON plan, list concrete gaps: modules from the contract not "
+                 "covered by a subtask, wrong/missing depends_on edges, or missing "
+                 "test_cases. If the plan is complete and correct, reply exactly OK."},
+                {"role": "user", "content": f"CONTRACT:\n{module_io}\n\nPLAN:\n{json.dumps(plan, indent=2)}"},
+            ],
+        ).choices[0].message.content.strip()
+
+        if critique.upper().startswith("OK"):
+            journal.append("planner", "decision", f"round {rnd}: plan complete")
+            print(f"[planner] Self-critique round {rnd}: plan complete.")
+            break
+
+        journal.append("planner", "finding", f"round {rnd} gaps: {critique[:200]}")
+        print(f"[planner] Self-critique round {rnd} found gaps — revising.")
+        revised = _call_with_retry(
+            client.chat.completions.create, model="gpt-4o", max_tokens=4096,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content":
+                 f"Revise this plan to address the gaps. Return ONLY the JSON.\n\n"
+                 f"CONTRACT:\n{module_io}\n\nGAPS:\n{critique}\n\nCURRENT PLAN:\n{json.dumps(plan)}"},
+            ],
+        ).choices[0].message.content
+        try:
+            plan = json.loads(_strip_json(revised))
+            OUT_PATH.write_text(json.dumps(plan, indent=2))
+        except json.JSONDecodeError:
+            print("[planner] Revision was not valid JSON — keeping prior plan.")
+            break
+
+    print(f"[planner] Final plan: {len(plan.get('subtasks', []))} subtasks.")
+    return plan
+
+
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--react" in sys.argv:
+        run_react()
+    else:
+        run()

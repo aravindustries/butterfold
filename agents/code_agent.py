@@ -430,5 +430,58 @@ def run():
               f"→ {top_dst.relative_to(ROOT)} ({top_ref.count(chr(10))} lines)")
 
 
+def _load_agent_core():
+    import importlib.util
+    core_path = pathlib.Path(__file__).parent / "agent_core.py"
+    spec = importlib.util.spec_from_file_location("agent_core", core_path)
+    mod  = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def run_react(max_steps: int = 12):
+    """Deep (reason+act) code agent: CLOSED-loop wrapper authoring.
+
+    Unlike run() (refine once, open-loop, hope it passes), this seeds the locked
+    kernel + reference wrapper, then drives the action harness to verify and, if
+    needed, repair the wrapper until golden_evm passes — verifying its own output
+    instead of trusting a single refine pass. The kernel stays locked; the agent
+    may only command regen_kernel to change kernel parameters.
+    """
+    if not PLAN_PATH.exists():
+        raise FileNotFoundError("generated/plan.json not found — run planner first")
+    RTL_DIR.mkdir(parents=True, exist_ok=True)
+    if not _ensure_reference():
+        raise FileNotFoundError("kernel/top reference could not be generated")
+
+    # Deterministic setup: lock the kernel, seed the reference wrapper as a start.
+    (RTL_DIR / "butterfold_kernel.v").write_text(KERNEL_REF.read_text())
+    (RTL_DIR / "butterfold_top.v").write_text(TOP_REF.read_text())
+
+    core    = _load_agent_core()
+    journal = core.Journal()
+    harness = core.ActionHarness(journal, agent="code")
+    goal = (
+        "Deliver generated/rtl/butterfold_top.v: a control wrapper that instantiates "
+        "the LOCKED butterfold_kernel and passes the golden EVM gate (EVM < 2%). A "
+        "correct reference wrapper is already in place — VERIFY it with compile then "
+        "golden_evm. You MAY improve wrapper clarity, but golden_evm must stay < 2% "
+        "and you must NOT edit or redefine the kernel (use regen_kernel only to change "
+        "kernel parameters, observing the EVM). Make one edit at a time and re-check. "
+        "Call done(status='success') once compile passes and golden_evm < 2%."
+    )
+    journal.append("code", "finding", "ReAct code agent: closed-loop wrapper verify/author")
+    res = core.react_loop(goal, harness, journal, agent="code", max_steps=max_steps)
+    print(f"[code_agent] ReAct code agent finished: {res}")
+    if res.get("fallback"):
+        print("[code_agent] No API key — using scripted refine path instead.")
+        return run()
+    return res
+
+
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--react" in sys.argv:
+        run_react()
+    else:
+        run()

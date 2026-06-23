@@ -596,5 +596,39 @@ def run() -> dict:
     return result
 
 
+def _load_agent_core():
+    import importlib.util
+    p = pathlib.Path(__file__).parent / "agent_core.py"
+    spec = importlib.util.spec_from_file_location("agent_core", p)
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
+
+
+def run_react(max_steps: int = 8):
+    """Deep (reason+act) verify: the agent runs the checks and REASONS a verdict,
+    drilling into any failure — instead of a fixed stage sequence. Read-only: it
+    verifies and diagnoses, never edits RTL. Falls back to the scripted run().
+    """
+    core    = _load_agent_core()
+    journal = core.Journal()
+    harness = core.ActionHarness(journal, agent="verify")
+    goal = (
+        "Verify generated/rtl/butterfold_top.v together with butterfold_kernel.v. "
+        "Run compile, then yosys_check, then golden_evm (EVM < 2% is the authoritative "
+        "pass). If all pass, call done(status='success'). If any fails, read the "
+        "relevant output to state the concrete root cause, then done(status='blocked') "
+        "with that diagnosis. You are READ-ONLY — do not edit any RTL."
+    )
+    res = core.react_loop(goal, harness, journal, agent="verify", max_steps=max_steps)
+    if res.get("fallback"):
+        print("[verify] No API key — using scripted verification pipeline instead.")
+        return run()
+    return res
+
+
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--react" in sys.argv:
+        run_react()
+    else:
+        run()
