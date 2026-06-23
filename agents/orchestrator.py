@@ -156,7 +156,11 @@ def node_debug(state: State) -> dict:
             {
                 "role": "system",
                 "content": (
-                    "You are a Verilog RTL debug agent. "
+                    "You are a Verilog RTL debug agent fixing the CONTROL WRAPPER "
+                    "module butterfold_top. The bit-exact datapath lives in a separate "
+                    "LOCKED module butterfold_kernel which is compiled alongside this file "
+                    "— do NOT redefine, include, or output butterfold_kernel, and preserve "
+                    "the `butterfold_kernel u_kernel (...)` instantiation and its connections. "
                     "Fix only what the errors indicate. "
                     "Preserve all port names, module names, and parameter values exactly. "
                     "Keep synthesizability rules: no initial blocks in RTL, no $display/$finish, "

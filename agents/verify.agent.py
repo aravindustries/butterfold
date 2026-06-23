@@ -44,6 +44,17 @@ def _run(cmd, timeout=120, **kwargs):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kwargs)
 
 
+def _rtl_sources() -> list:
+    """All synthesizable RTL files in generated/rtl (top + kernel + any submodules),
+    excluding testbenches. The hybrid design is multi-file, so every compile and
+    elaboration step must pass the whole set, not just butterfold_top.v."""
+    files = sorted(p for p in RTL_DIR.glob("*.v") if not p.name.startswith("tb_"))
+    # Ensure the top is present even if glob ordering changes; fall back to RTL_FILE.
+    if not files and RTL_FILE.exists():
+        files = [RTL_FILE]
+    return [str(p) for p in files]
+
+
 def _llm(system: str, user: str, max_tokens: int = 2048) -> str:
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     completion = client.chat.completions.create(
@@ -60,8 +71,8 @@ def _llm(system: str, user: str, max_tokens: int = 2048) -> str:
 # ─── Stage 1: Syntax check ────────────────────────────────────────────────────
 
 def stage_syntax(rtl_file: pathlib.Path) -> tuple[bool, str]:
-    """iverilog syntax-only pass with all warnings enabled."""
-    r = _run(["iverilog", "-g2012", "-Wall", "-t", "null", str(rtl_file)])
+    """iverilog syntax-only pass with all warnings enabled (top + kernel + submodules)."""
+    r = _run(["iverilog", "-g2012", "-Wall", "-t", "null", *_rtl_sources()])
     log = (r.stdout + r.stderr).strip()
     (LOG_DIR / "syntax.log").write_text(log)
     ok = r.returncode == 0
@@ -166,7 +177,7 @@ def stage_yosys(rtl_file: pathlib.Path) -> tuple[bool, str]:
     multi-driven nets, undeclared signals after elaboration, unresolved hierarchies.
     """
     print("[verify] Stage 3 — Yosys synthesis check ...")
-    script = YOSYS_SCRIPT.format(rtl=str(rtl_file))
+    script = YOSYS_SCRIPT.format(rtl=" ".join(_rtl_sources()))
     try:
         r = _run(["yosys", "-p", script], timeout=300)
     except FileNotFoundError:
@@ -238,7 +249,7 @@ def stage_simulate(rtl_file: pathlib.Path, tb_file: pathlib.Path) -> tuple[bool,
     """Compile with iverilog and run with vvp."""
     print(f"[verify] Stage 4b — Simulation (tb: {tb_file.relative_to(ROOT)}) ...")
     vvp_out   = LOG_DIR / "sim.vvp"
-    compile_r = _run(["iverilog", "-g2012", "-o", str(vvp_out), str(tb_file), str(rtl_file)])
+    compile_r = _run(["iverilog", "-g2012", "-o", str(vvp_out), str(tb_file), *_rtl_sources()])
     if compile_r.returncode != 0:
         log = (compile_r.stdout + compile_r.stderr).strip()
         print(f"[verify]   Compile FAILED:\n{log}")
@@ -415,7 +426,7 @@ def stage_golden_model_check(rtl_file: pathlib.Path) -> dict:
     tb_path.write_text(_golden_tb(input_bytes.tolist(), len(input_bytes)))
 
     vvp_out   = LOG_DIR / "golden_check.vvp"
-    compile_r = _run(["iverilog", "-g2012", "-o", str(vvp_out), str(tb_path), str(rtl_file)])
+    compile_r = _run(["iverilog", "-g2012", "-o", str(vvp_out), str(tb_path), *_rtl_sources()])
     if compile_r.returncode != 0:
         log = (compile_r.stdout + compile_r.stderr).strip()
         print("[verify]   Golden TB compile FAILED")

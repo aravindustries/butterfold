@@ -18,10 +18,20 @@ Run standalone:
 import os, sys, re, json, glob, pathlib, subprocess
 
 ROOT      = pathlib.Path(__file__).parent.parent
-RTL_FILE  = ROOT / "generated" / "rtl" / "butterfold_top.v"
+RTL_DIR   = ROOT / "generated" / "rtl"
+RTL_FILE  = RTL_DIR / "butterfold_top.v"
 SYNTH_DIR = ROOT / "generated" / "synth"
 LOG_DIR   = ROOT / "generated" / "logs"
 TOP       = "butterfold_top"
+
+
+def _rtl_sources() -> str:
+    """Space-joined list of all synthesizable RTL files (top + kernel + submodules),
+    excluding testbenches — the hybrid design is multi-file."""
+    files = sorted(p for p in RTL_DIR.glob("*.v") if not p.name.startswith("tb_"))
+    if not files and RTL_FILE.exists():
+        files = [RTL_FILE]
+    return " ".join(str(p) for p in files)
 
 # Where GF180 standard-cell liberty files commonly live in IIC-OSIC-TOOLS.
 _LIBERTY_GLOBS = [
@@ -87,7 +97,7 @@ def run() -> dict:
         print(f"[synth] GF180 liberty found — real area estimate")
         print(f"[synth]   {liberty}")
         script = (
-            f"read_verilog -sv {RTL_FILE}\n"
+            f"read_verilog -sv {_rtl_sources()}\n"
             f"synth -top {TOP} -flatten\n"
             f"dfflibmap -liberty {liberty}\n"
             f"abc -liberty {liberty}\n"
@@ -101,7 +111,7 @@ def run() -> dict:
         print("[synth] GF180 liberty not found — generic synthesis (abstract cell counts)")
         print("[synth]   (set PDK_ROOT or run LibreLane for real area — see librelane/README.md)")
         script = (
-            f"read_verilog -sv {RTL_FILE}\n"
+            f"read_verilog -sv {_rtl_sources()}\n"
             f"synth -top {TOP} -flatten\n"
             f"write_verilog -noattr {netlist}\n"
             f"stat\n"
