@@ -69,7 +69,14 @@ planner_mod = _load_module("planner",       "planner.py")
 code_mod    = _load_module("code_agent",   "code_agent.py")
 reflect_mod = _load_module("reflect_agent","reflect_agent.py")
 verify_mod  = _load_module("verify_agent", "verify.agent.py")
+debug_mod   = _load_module("debug_agent",  "debug_agent.py")
 synth_mod   = _load_module("synth_agent",  "synth_agent.py")
+
+
+def _deep(mod):
+    """Prefer an agent's deep (reason+act) run_react; each one falls back to its
+    scripted run() internally when no API key is set, so this is always safe."""
+    return mod.run_react if hasattr(mod, "run_react") else mod.run
 
 
 # ---------------------------------------------------------------------------
@@ -92,8 +99,8 @@ class State(TypedDict):
 # ---------------------------------------------------------------------------
 
 def node_planner(state: State) -> dict:
-    print("\n[orchestrator] ── Step 1: Planner ──────────────────────────")
-    plan = planner_mod.run()
+    print("\n[orchestrator] ── Step 1: Planner (deep) ───────────────────")
+    plan = _deep(planner_mod)()
     return {"plan": plan}
 
 
@@ -102,8 +109,8 @@ def node_planner(state: State) -> dict:
 # ---------------------------------------------------------------------------
 
 def node_code_agent(state: State) -> dict:
-    print("\n[orchestrator] ── Step 2: Code Agent ───────────────────────")
-    code_mod.run()
+    print("\n[orchestrator] ── Step 2: Code Agent (deep) ─────────────────")
+    _deep(code_mod)()
     return {"rtl_path": str(ROOT / "generated" / "rtl" / "butterfold_top.v")}
 
 
@@ -134,65 +141,14 @@ def node_verify(state: State) -> dict:
 
 def node_debug(state: State) -> dict:
     iteration = state["debug_iterations"] + 1
-    print(f"\n[orchestrator] ── Step 5: Debug (iteration {iteration}/{MAX_DEBUG_ITERATIONS}) ──")
+    print(f"\n[orchestrator] ── Step 5: Debug (deep, iteration {iteration}/{MAX_DEBUG_ITERATIONS}) ──")
 
-    errors     = "\n".join(state["verify_result"].get("errors", [])    or ["unknown error"])
-    fix_hints  = "\n".join(state["verify_result"].get("fix_hints", []) or [])
-    spec_issues = "\n".join(
-        f"[{i.get('severity','?').upper()}] {i.get('description','')}"
-        for i in state["verify_result"].get("spec_issues", [])
-        if i.get("severity") == "error"
-    )
-    rtl_file = ROOT / "generated" / "rtl" / "butterfold_top.v"
-    spec     = (ROOT / "modular_description.md").read_text()
-    rtl      = rtl_file.read_text()
-
-    client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=8192,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a Verilog RTL debug agent fixing the CONTROL WRAPPER "
-                    "module butterfold_top. The bit-exact datapath lives in a separate "
-                    "LOCKED module butterfold_kernel which is compiled alongside this file "
-                    "— do NOT redefine, include, or output butterfold_kernel, and preserve "
-                    "the `butterfold_kernel u_kernel (...)` instantiation and its connections. "
-                    "Fix only what the errors indicate. "
-                    "Preserve all port names, module names, and parameter values exactly. "
-                    "Keep synthesizability rules: no initial blocks in RTL, no $display/$finish, "
-                    "synchronous rst_n, posedge clk flip-flops, fixed-point arithmetic only. "
-                    "CRITICAL: NO SystemVerilog unpacked arrays, NO array slicing/range indexing, "
-                    "NO tasks/functions with array ports. Use ONLY Verilog-2005 constructs for iverilog. "
-                    "Return ONLY the corrected Verilog — no markdown fences, no explanation."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Original specification:\n{spec}\n\n"
-                    f"Current RTL:\n{rtl}\n\n"
-                    f"Verification errors:\n{errors}\n\n"
-                    + (f"Spec compliance issues:\n{spec_issues}\n\n" if spec_issues else "")
-                    + (f"Suggested fix hints:\n{fix_hints}\n\n" if fix_hints else "")
-                    + "Return the corrected Verilog."
-                ),
-            },
-        ],
-    )
-
-    fixed = completion.choices[0].message.content.strip()
-    if "```" in fixed:
-        fixed = fixed.split("```", 1)[1]
-        if fixed.lower().startswith(("verilog", "systemverilog", "sv")):
-            fixed = fixed.split("\n", 1)[1]
-        fixed = fixed.rsplit("```", 1)[0].strip()
-
-    rtl_file.write_text(fixed)
-    print(f"[orchestrator] RTL patched — returning to verify")
+    # Deep (reason+act) debug: the agent compiles, reads the actual error, makes a
+    # targeted wrapper edit, and re-checks golden_evm with memory of prior attempts.
+    # It reads the live verify_result.json itself; falls back to its scripted loop
+    # when no API key is set. The locked kernel is never touched.
+    debug_mod.run_react()
+    print(f"[orchestrator] Debug pass complete — returning to verify")
     return {"debug_iterations": iteration}
 
 
