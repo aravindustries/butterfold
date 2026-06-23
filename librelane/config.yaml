@@ -7,8 +7,11 @@ meta:
   flow: Classic
 
 DESIGN_NAME: butterfold_top
+# Multi-file hybrid design: the agent-authored wrapper + the LOCKED bit-exact
+# kernel must both be elaborated, or butterfold_kernel is undefined.
 VERILOG_FILES:
   - dir::../generated/rtl/butterfold_top.v
+  - dir::../generated/rtl/butterfold_kernel.v
 CLOCK_PORT: clk
 CLOCK_PERIOD: 50
 

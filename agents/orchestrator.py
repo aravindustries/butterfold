@@ -71,6 +71,7 @@ reflect_mod = _load_module("reflect_agent","reflect_agent.py")
 verify_mod  = _load_module("verify_agent", "verify.agent.py")
 debug_mod   = _load_module("debug_agent",  "debug_agent.py")
 synth_mod   = _load_module("synth_agent",  "synth_agent.py")
+librelane_mod = _load_module("librelane_agent", "librelane_agent.py")
 
 
 def _deep(mod):
@@ -89,6 +90,7 @@ class State(TypedDict):
     reflect_result:   Optional[dict]
     verify_result:    Optional[dict]
     synth_result:     Optional[dict]
+    gds_result:       Optional[dict]
     debug_iterations: int
     passed:           bool
     summary:          Optional[str]
@@ -167,6 +169,23 @@ def node_synth(state: State) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Node: librelane  (RTL->GDS; the final spec->silicon step, runs after synth)
+# ---------------------------------------------------------------------------
+
+def node_librelane(state: State) -> dict:
+    print("\n[orchestrator] ── Step 6: LibreLane RTL->GDS ────────────────")
+    # Gated by BUTTERFOLD_GDS=1 inside the agent (a full GDS run is long); skips
+    # cleanly otherwise so quick runs stay fast. This is what makes the flow
+    # one-button spec->GDS when you want the silicon.
+    try:
+        result = librelane_mod.run()
+    except Exception as exc:
+        print(f"[orchestrator] LibreLane skipped ({exc})")
+        result = {"gds_ran": False, "error": str(exc)}
+    return {"gds_result": result}
+
+
+# ---------------------------------------------------------------------------
 # Node: summarize
 # ---------------------------------------------------------------------------
 
@@ -207,6 +226,20 @@ def node_summarize(state: State) -> dict:
     else:
         synth_line = "not run"
 
+    # GDS / signoff line from the LibreLane step.
+    gds = state.get("gds_result") or {}
+    if gds.get("gds_ran"):
+        gm = gds.get("metrics", {})
+        gds_line = (f"GDS produced — die={gm.get('design__die__area', '?')}, "
+                    f"cells={gm.get('design__instance__count', '?')}, "
+                    f"DRC={gds.get('drc_violations', '?')}, LVS={gds.get('lvs_errors', '?')}")
+    elif gds.get("skipped"):
+        gds_line = f"not run ({gds['skipped']})"
+    elif gds.get("error"):
+        gds_line = f"failed ({gds['error']})"
+    else:
+        gds_line = "not run"
+
     stats = (
         f"Module       : {plan.get('module_name', 'butterfold_top')}\n"
         f"Subtasks     : {len(plan.get('subtasks', []))}\n"
@@ -216,6 +249,7 @@ def node_summarize(state: State) -> dict:
         f"Sim result   : {verify.get('sim_ok')}\n"
         f"Golden model : {golden_line}\n"
         f"Synthesis    : {synth_line}\n"
+        f"GDS (signoff): {gds_line}\n"
         f"Reflect      : {reflect_errors} advisory issue(s)\n"
         f"Debug iters  : {iters}\n"
         f"Final status : {'✓ PASSED' if passed else '✗ FAILED'}\n"
@@ -324,6 +358,7 @@ def build_graph() -> StateGraph:
     g.add_node("verify",     node_verify)
     g.add_node("debug",      node_debug)
     g.add_node("synth",      node_synth)
+    g.add_node("librelane",  node_librelane)
     g.add_node("summarize",  node_summarize)
 
     g.set_entry_point("planner")
@@ -338,7 +373,8 @@ def build_graph() -> StateGraph:
         "debug":     "debug",
     })
 
-    g.add_edge("synth",     "summarize")  # synthesis report feeds the summary
+    g.add_edge("synth",     "librelane")  # passed synthesis → push to GDS
+    g.add_edge("librelane", "summarize")  # GDS/signoff result feeds the summary
     g.add_edge("summarize", END)
 
     return g.compile()
@@ -351,6 +387,7 @@ def run():
         "reflect_result":   None,
         "verify_result":    None,
         "synth_result":     None,
+        "gds_result":       None,
         "debug_iterations": 0,
         "passed":           False,
         "summary":          None,
