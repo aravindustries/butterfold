@@ -34,6 +34,20 @@ N_TIME = M + CP_NORMAL        # 137 complex time samples per symbol (with CP)
 N_BYTES = 2 * N_TIME          # 274 interleaved I/Q bytes out
 
 
+# ── fixed-point ops (shared arithmetic the core reuses) ──────────────────────
+def sat8(x: int) -> int:
+    return max(-128, min(127, int(x)))
+
+def cmul_q17(a_re: int, a_im: int, b_re: int, b_im: int) -> tuple[int, int]:
+    """Signed Q1.7 complex multiply with round-and-saturate. Uses >>7 (÷128) with
+    round-to-nearest (+64), the natural hardware op; RTL must match this exactly.
+        p_re = sat8((a_re*b_re - a_im*b_im + 64) >> 7)
+        p_im = sat8((a_re*b_im + a_im*b_re + 64) >> 7)"""
+    accr = a_re * b_re - a_im * b_im
+    acci = a_re * b_im + a_im * b_re
+    return sat8((accr + 64) >> 7), sat8((acci + 64) >> 7)
+
+
 # ── per-module reference stages ──────────────────────────────────────────────
 # Each function is the numerical "golden" for one module's data path. Chaining
 # them in order == the whole chain (proved in the self-test below).

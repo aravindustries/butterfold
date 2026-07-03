@@ -32,6 +32,21 @@ def _write_words(path: pathlib.Path, data) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _emit_cmul_vectors(n: int = 64, seed: int = 7) -> int:
+    """N random signed-int8 (a_re,a_im,b_re,b_im) with expected Q1.7 products.
+    cmul_in.hex = 4 bytes/vector, cmul_out.hex = 2 bytes/vector."""
+    rng = np.random.default_rng(seed)
+    quads = rng.integers(-128, 128, size=(n, 4))
+    ins, outs = [], []
+    for a_re, a_im, b_re, b_im in quads:
+        pr, pi = reference.cmul_q17(int(a_re), int(a_im), int(b_re), int(b_im))
+        ins += [a_re, a_im, b_re, b_im]
+        outs += [pr, pi]
+    _write_bytes(VECDIR / "cmul_in.hex", ins)
+    _write_bytes(VECDIR / "cmul_out.hex", outs)
+    return n
+
+
 def _write_stage_json(path: pathlib.Path, arr) -> None:
     a = np.asarray(arr, complex)
     path.write_text(json.dumps([[float(v.real), float(v.imag)] for v in a]), encoding="utf-8")
@@ -55,6 +70,9 @@ def emit(seed: int = 42) -> dict:
         _write_words(VECDIR / f"{tag}_addr.hex", list(range(n)))
         _write_bytes(VECDIR / f"{tag}_re.hex", tre)
         _write_bytes(VECDIR / f"{tag}_im.hex", tim)
+
+    # complex_mul rung: random Q1.7 quads -> expected products (bit-exact gate).
+    ncmul = _emit_cmul_vectors()
 
     # Reference micro-op schedules (the scheduler must emit these; core executes).
     import schedule

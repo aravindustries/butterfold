@@ -17,6 +17,7 @@ from __future__ import annotations
 import sys, pathlib
 import module_spec
 import agent_core
+import helpers
 
 ROOT    = pathlib.Path(__file__).parent.parent
 RTL_DIR = ROOT / "generated" / "rtl"
@@ -47,6 +48,18 @@ def _deps(name: str) -> list[str]:
 def _golden_hint(name: str) -> str:
     """Per-module 'translate the golden, don't invent' hint. The functional
     testbench enforces it; the hint makes the target explicit."""
+    if name == "complex_mul":
+        return (
+            "\n\nIMPLEMENTATION HINT (match the golden exactly):\n"
+            "Signed Q1.7 complex multiply, purely COMBINATIONAL (use `assign`).\n"
+            "Treat all ports as signed. Compute with enough width, then round+saturate:\n"
+            "  accr = a_re*b_re - a_im*b_im;   // signed, ~18 bits\n"
+            "  acci = a_re*b_im + a_im*b_re;\n"
+            "  p_re = sat8((accr + 64) >>> 7); // round-to-nearest, arithmetic >>7 (div 128)\n"
+            "  p_im = sat8((acci + 64) >>> 7);\n"
+            "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
+            "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
+            "round correctly. Do NOT register — no clk/rst here.")
     if name == "twiddle_source":
         try:
             import reference
@@ -89,20 +102,28 @@ def _goal(name: str, contract: str, deps: list[str], doc: dict) -> str:
 
 def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
     _ensure_vectors()
-    mod       = doc["modules"][name]
-    contract  = module_spec.contract_text(mod)
-    skel      = module_spec.skeleton(mod)
-    deps      = _deps(name)
+    if helpers.is_helper(name):
+        contract, skel, deps, nports = (helpers.contract_text(name),
+                                        helpers.skeleton(name), [],
+                                        len(helpers.HELPERS[name]["ports"]))
+    else:
+        mod = doc["modules"][name]
+        contract, skel, deps, nports = (module_spec.contract_text(mod),
+                                        module_spec.skeleton(mod), _deps(name),
+                                        len(mod["ports"]))
     dep_files = [RTL_DIR / f"{d}.v" for d in deps]
     harness   = agent_core.ModuleHarness(name, contract, journal, skeleton=skel,
                                          dep_files=dep_files)
 
     hint = _golden_hint(name)
-    goal = _goal(name, contract, deps, doc) + hint
+    goal = (_goal(name, contract, deps, doc) if not helpers.is_helper(name)
+            else f"Author the synthesizable Verilog-2012 module `{name}` implementing "
+                 f"exactly this contract. Match every port name/direction/width.\n\n{contract}"
+            ) + hint
     # Functional rungs (golden-gated) need more iterations than a structural pass:
     # each fix costs write+compile+elaborate+run_tb (~4 steps).
     steps = 24 if hint else 14
-    print(f"[code_agent] authoring {name} ({len(mod['ports'])} ports)...")
+    print(f"[code_agent] authoring {name} ({nports} ports)...")
     res = agent_core.react_loop(goal, harness, journal, agent=name, max_steps=steps)
 
     # Safety net: if the agent finished without leaving a file, drop the skeleton
@@ -121,7 +142,7 @@ def run(only: str | None = None) -> dict:
     order   = [only] if only else doc["order"]
     results = {}
     for name in order:
-        if name not in doc["modules"]:
+        if name not in doc["modules"] and not helpers.is_helper(name):
             print(f"[code_agent] unknown module: {name}"); continue
         results[name] = author_module(name, doc, journal)
     ok = sum(1 for r in results.values() if r.get("ok"))
