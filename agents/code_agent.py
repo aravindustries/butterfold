@@ -57,10 +57,15 @@ def _golden_hint(name: str) -> str:
                 "twiddle_source is a ROM of quantized signed Q1.7 (int8) twiddles.\n"
                 "For tw_conjugate=0, output EXACTLY these values for tw_addr=0..11:\n"
                 f"{rows}\n"
-                "For tw_conjugate=1, keep tw_re and NEGATE tw_im (two's complement).\n"
-                "Hardcode this as a case statement on tw_addr; do NOT compute trig.\n"
-                "Assert tw_valid when the value is presented (a small fixed latency "
-                "after tw_req is fine). Addresses >= 12 may return 0.")
+                "For tw_conjugate=1, keep tw_re and NEGATE tw_im (two's complement: ~im + 1).\n"
+                "Addresses >= 12 return 0. Do NOT compute trig — hardcode the table.\n"
+                "STRUCTURE (avoid the non-blocking hazard): first compute base_re/base_im\n"
+                "COMBINATIONALLY from a case on tw_addr (e.g. `reg signed [7:0] base_re,\n"
+                "base_im; always @* case(tw_addr) ...`). Then in the clocked block register\n"
+                "ONCE:  tw_re <= base_re;  tw_im <= tw_conjugate ? (~base_im + 8'd1) : base_im;\n"
+                "NEVER assign tw_im (or any output reg) twice in the same always block — the\n"
+                "second assignment overrides the first and reads the stale registered value.\n"
+                "Assert tw_valid the cycle the registered output is valid (register tw_req).")
         except Exception:
             return ""
     return ""
@@ -92,9 +97,13 @@ def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
     harness   = agent_core.ModuleHarness(name, contract, journal, skeleton=skel,
                                          dep_files=dep_files)
 
-    goal = _goal(name, contract, deps, doc) + _golden_hint(name)
+    hint = _golden_hint(name)
+    goal = _goal(name, contract, deps, doc) + hint
+    # Functional rungs (golden-gated) need more iterations than a structural pass:
+    # each fix costs write+compile+elaborate+run_tb (~4 steps).
+    steps = 24 if hint else 14
     print(f"[code_agent] authoring {name} ({len(mod['ports'])} ports)...")
-    res = agent_core.react_loop(goal, harness, journal, agent=name)
+    res = agent_core.react_loop(goal, harness, journal, agent=name, max_steps=steps)
 
     # Safety net: if the agent finished without leaving a file, drop the skeleton
     # so downstream integration/elaboration still has a module.
