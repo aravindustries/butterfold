@@ -48,6 +48,26 @@ def cmul_q17(a_re: int, a_im: int, b_re: int, b_im: int) -> tuple[int, int]:
     return sat8((accr + 64) >> 7), sat8((acci + 64) >> 7)
 
 
+def sat16(x: int) -> int:
+    return max(-32768, min(32767, int(x)))
+
+def _rnd(x: int, s: int) -> int:
+    """Round-to-nearest arithmetic right shift by s (matches (x + 2^(s-1)) >>> s)."""
+    return (x + (1 << (s - 1))) >> s
+
+def butterfly_q511(top_re: int, top_im: int, bot_re: int, bot_im: int,
+                   w_re: int, w_im: int) -> tuple[int, int, int, int]:
+    """Radix-2 DIT butterfly on Q5.11 (16-bit) samples with a Q1.7 (8-bit) twiddle.
+    t = W*bottom (>>7 back to Q5.11); outputs = (top +/- t) >>1 (per-stage scale),
+    all round-and-saturate to 16 bits. RTL must match bit-exactly.
+        tr = _rnd(bot_re*w_re - bot_im*w_im, 7);  ti = _rnd(bot_re*w_im + bot_im*w_re, 7)
+        out_top = _rnd(top +/- t, 1)"""
+    tr = _rnd(bot_re * w_re - bot_im * w_im, 7)
+    ti = _rnd(bot_re * w_im + bot_im * w_re, 7)
+    return (sat16(_rnd(top_re + tr, 1)), sat16(_rnd(top_im + ti, 1)),
+            sat16(_rnd(top_re - tr, 1)), sat16(_rnd(top_im - ti, 1)))
+
+
 # ── per-module reference stages ──────────────────────────────────────────────
 # Each function is the numerical "golden" for one module's data path. Chaining
 # them in order == the whole chain (proved in the self-test below).

@@ -18,6 +18,15 @@ HELPERS = {
         "functions": ["Signed Q1.7 complex multiply with rounding and saturation.",
                       "Combinational shared multiplier reused by the DFT/FFT butterflies."],
     },
+    "butterfly": {
+        "ports": [("top_re", "input", 16), ("top_im", "input", 16),
+                  ("bot_re", "input", 16), ("bot_im", "input", 16),
+                  ("w_re", "input", 8), ("w_im", "input", 8),
+                  ("otop_re", "output", 16), ("otop_im", "output", 16),
+                  ("obot_re", "output", 16), ("obot_im", "output", 16)],
+        "functions": ["Radix-2 DIT butterfly on Q5.11 (16-bit) samples, Q1.7 twiddle.",
+                      "t = W*bottom (>>7); outputs = (top +/- t) >>1, round+saturate to 16b."],
+    },
 }
 
 

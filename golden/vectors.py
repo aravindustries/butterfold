@@ -47,6 +47,31 @@ def _emit_cmul_vectors(n: int = 64, seed: int = 7) -> int:
     return n
 
 
+def _write_words16(path: pathlib.Path, data) -> None:
+    """signed 16-bit values -> 4-hex (two's complement) per line."""
+    lines = [f"{int(v) & 0xFFFF:04x}" for v in data]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _emit_butterfly_vectors(n: int = 64, seed: int = 11) -> int:
+    """Random Q5.11 (top/bot, 16-bit) + Q1.7 twiddle -> expected 4 outputs.
+    bfly_in.hex = 6 words/vec (top_re,top_im,bot_re,bot_im,w_re,w_im),
+    bfly_out.hex = 4 words/vec (otop_re,otop_im,obot_re,obot_im)."""
+    rng = np.random.default_rng(seed)
+    ins, outs = [], []
+    for _ in range(n):
+        top_re, top_im = rng.integers(-4096, 4096, 2)      # modest Q5.11 magnitudes
+        bot_re, bot_im = rng.integers(-4096, 4096, 2)
+        w_re, w_im = rng.integers(-128, 128, 2)
+        o = reference.butterfly_q511(int(top_re), int(top_im), int(bot_re),
+                                     int(bot_im), int(w_re), int(w_im))
+        ins += [top_re, top_im, bot_re, bot_im, w_re, w_im]
+        outs += list(o)
+    _write_words16(VECDIR / "bfly_in.hex", ins)
+    _write_words16(VECDIR / "bfly_out.hex", outs)
+    return n
+
+
 def _write_stage_json(path: pathlib.Path, arr) -> None:
     a = np.asarray(arr, complex)
     path.write_text(json.dumps([[float(v.real), float(v.imag)] for v in a]), encoding="utf-8")
@@ -73,6 +98,7 @@ def emit(seed: int = 42) -> dict:
 
     # complex_mul rung: random Q1.7 quads -> expected products (bit-exact gate).
     ncmul = _emit_cmul_vectors()
+    _emit_butterfly_vectors()
 
     # Reference micro-op schedules (the scheduler must emit these; core executes).
     import schedule

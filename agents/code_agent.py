@@ -60,6 +60,18 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "butterfly":
+        return (
+            "\n\nIMPLEMENTATION HINT (match the golden exactly, all signed):\n"
+            "Radix-2 DIT butterfly, COMBINATIONAL. top_*/bot_* are Q5.11 signed 16-bit,\n"
+            "w_* are Q1.7 signed 8-bit. Use a round-to-nearest arithmetic shift helper\n"
+            "RND(x,s) = (x + (1<<(s-1))) >>> s. Compute:\n"
+            "  tr = RND(bot_re*w_re - bot_im*w_im, 7);  // Q5.11\n"
+            "  ti = RND(bot_re*w_im + bot_im*w_re, 7);\n"
+            "  otop_re = sat16(RND(top_re + tr, 1)); otop_im = sat16(RND(top_im + ti, 1));\n"
+            "  obot_re = sat16(RND(top_re - tr, 1)); obot_im = sat16(RND(top_im - ti, 1));\n"
+            "sat16 clamps to [-32768,32767]. Declare intermediates signed and wide enough\n"
+            "(bot*w needs ~26 bits). Use $signed()/>>>. No clk/rst — purely combinational.")
     if name == "twiddle_source":
         try:
             import reference
