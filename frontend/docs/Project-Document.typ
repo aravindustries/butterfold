@@ -116,6 +116,15 @@ With Q1.7/Q1.8 arithmetic defined, we can now look at the system that uses it.
 
 #pagebreak()
 
+= Ideal 5G flow
+#figure(
+  image("assets/5G-PHY-Ideal PHY Data-Flow.drawio.png", width: 86%),
+  caption: [
+    Folded PHY Top Level Architecture
+  ]
+)
+
+
 = Proposed Architecture
 #figure(
   image("assets/5G-PHY-Folded PHY Data-Flow.drawio.png", width: 86%),
@@ -213,6 +222,7 @@ In Rx mode, the block discards N_CP*2 samples (each number is made up of 1 compl
   [rst],            [Input],  [],
   [mode],           [Input],  [],
   [wr],             [Input],  [SRAM write enable],
+  [done],           [Output], [],
   [data_addr[6:0]], [Output], [],
 )
 There is a concern about timing between the SerToPar block asserting valid and the address increment. Care must be taken with the SRAM write enable, since the line transitions every alternate cycle.
