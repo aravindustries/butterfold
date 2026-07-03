@@ -87,6 +87,13 @@ def integration_check() -> dict:
 
 def run() -> dict:
     doc = module_spec.parse()
+    # Ensure functional testbenches have their golden vectors (idempotent).
+    try:
+        import sys
+        sys.path.insert(0, str(ROOT / "golden"))
+        import vectors; vectors.emit()
+    except Exception as exc:
+        print(f"[verify] (golden vectors not emitted: {exc})")
     print("[verify] Per-module checks (compile / elaborate / testbench)...")
     modules = {}
     for name in doc["order"]:

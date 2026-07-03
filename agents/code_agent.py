@@ -20,11 +20,50 @@ import agent_core
 
 ROOT    = pathlib.Path(__file__).parent.parent
 RTL_DIR = ROOT / "generated" / "rtl"
+sys.path.insert(0, str(ROOT / "golden"))
+
+_vectors_ready = False
+
+
+def _ensure_vectors() -> None:
+    """Emit the golden vectors once so the FUNCTIONAL testbenches have their
+    expected data while the agent authors (the tb run_tb gate reads them)."""
+    global _vectors_ready
+    if _vectors_ready:
+        return
+    try:
+        import vectors
+        vectors.emit()
+        _vectors_ready = True
+    except Exception as exc:
+        print(f"[code_agent] (golden vectors not emitted: {exc})")
 
 
 def _deps(name: str) -> list[str]:
     import planner
     return planner.DEPENDS.get(name, [])
+
+
+def _golden_hint(name: str) -> str:
+    """Per-module 'translate the golden, don't invent' hint. The functional
+    testbench enforces it; the hint makes the target explicit."""
+    if name == "twiddle_source":
+        try:
+            import reference
+            re, im = reference.twiddle_rom(reference.K)
+            rows = "\n".join(f"  {a}: tw_re={re[a]}, tw_im={im[a]}" for a in range(len(re)))
+            return (
+                "\n\nIMPLEMENTATION HINT (golden LUT — match exactly):\n"
+                "twiddle_source is a ROM of quantized signed Q1.7 (int8) twiddles.\n"
+                "For tw_conjugate=0, output EXACTLY these values for tw_addr=0..11:\n"
+                f"{rows}\n"
+                "For tw_conjugate=1, keep tw_re and NEGATE tw_im (two's complement).\n"
+                "Hardcode this as a case statement on tw_addr; do NOT compute trig.\n"
+                "Assert tw_valid when the value is presented (a small fixed latency "
+                "after tw_req is fine). Addresses >= 12 may return 0.")
+        except Exception:
+            return ""
+    return ""
 
 
 def _goal(name: str, contract: str, deps: list[str], doc: dict) -> str:
@@ -44,6 +83,7 @@ def _goal(name: str, contract: str, deps: list[str], doc: dict) -> str:
 
 
 def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
+    _ensure_vectors()
     mod       = doc["modules"][name]
     contract  = module_spec.contract_text(mod)
     skel      = module_spec.skeleton(mod)
@@ -52,8 +92,9 @@ def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
     harness   = agent_core.ModuleHarness(name, contract, journal, skeleton=skel,
                                          dep_files=dep_files)
 
+    goal = _goal(name, contract, deps, doc) + _golden_hint(name)
     print(f"[code_agent] authoring {name} ({len(mod['ports'])} ports)...")
-    res = agent_core.react_loop(_goal(name, contract, deps, doc), harness, journal, agent=name)
+    res = agent_core.react_loop(goal, harness, journal, agent=name)
 
     # Safety net: if the agent finished without leaving a file, drop the skeleton
     # so downstream integration/elaboration still has a module.
