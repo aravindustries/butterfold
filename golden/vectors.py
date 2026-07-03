@@ -11,7 +11,7 @@ Writes (hex, one value per line, for $readmemh):
 Run: python golden/vectors.py
 """
 from __future__ import annotations
-import pathlib
+import json, pathlib
 import numpy as np
 
 ROOT   = pathlib.Path(__file__).parent.parent
@@ -32,6 +32,11 @@ def _write_words(path: pathlib.Path, data) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _write_stage_json(path: pathlib.Path, arr) -> None:
+    a = np.asarray(arr, complex)
+    path.write_text(json.dumps([[float(v.real), float(v.imag)] for v in a]), encoding="utf-8")
+
+
 def emit(seed: int = 42) -> dict:
     VECDIR.mkdir(parents=True, exist_ok=True)
     in_bytes = reference.random_input_bytes(seed)
@@ -39,16 +44,28 @@ def emit(seed: int = 42) -> dict:
     _write_bytes(VECDIR / "top_in.hex",   in_bytes)
     _write_bytes(VECDIR / "top_gold.hex", tx["out_bytes"])
 
-    # twiddle_source: addresses 0..11 and expected {re,im} for the 12-pt LUT.
-    tre, tim = reference.twiddle_rom(reference.K)
-    _write_words(VECDIR / "twiddle_addr.hex", list(range(reference.K)))
-    _write_bytes(VECDIR / "twiddle_re.hex", tre)
-    _write_bytes(VECDIR / "twiddle_im.hex", tim)
+    # Per-stage golden (float) so the agent can localize WHERE the RTL breaks:
+    # after DFT-12, after subcarrier map, after IFFT-128, after CP insertion.
+    for name in ("spread", "grid", "time_no_cp", "time_with_cp"):
+        _write_stage_json(VECDIR / f"stage_{name}.json", tx[name])
+
+    # twiddle ROMs the transforms need: 12-pt (DFT) and 128-pt (FFT/IFFT).
+    for n, tag in ((reference.K, "twiddle"), (reference.M, "tw128")):
+        tre, tim = reference.twiddle_rom(n)
+        _write_words(VECDIR / f"{tag}_addr.hex", list(range(n)))
+        _write_bytes(VECDIR / f"{tag}_re.hex", tre)
+        _write_bytes(VECDIR / f"{tag}_im.hex", tim)
+
+    # Reference micro-op schedules (the scheduler must emit these; core executes).
+    import schedule
+    sched = schedule.emit()
 
     info = {"seed": seed, "top_in": 24, "top_gold": len(tx["out_bytes"]),
-            "twiddle_n": reference.K, "dir": str(VECDIR.relative_to(ROOT))}
-    print(f"[vectors] wrote top_in(24) top_gold({info['top_gold']}) "
-          f"twiddle({reference.K}) -> {info['dir']}")
+            "stages": ["spread", "grid", "time_no_cp", "time_with_cp"],
+            "twiddle_n": [reference.K, reference.M], "schedule": sched,
+            "dir": str(VECDIR.relative_to(ROOT))}
+    print(f"[vectors] wrote top_in(24) top_gold({info['top_gold']}) + 4 stage vectors "
+          f"+ tw ROMs(12,128) -> {info['dir']}")
     return info
 
 
