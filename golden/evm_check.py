@@ -18,10 +18,20 @@ EVM_GATE = 2.0
 
 
 def _read_hex_bytes(path: str) -> np.ndarray:
-    txt = pathlib.Path(path).read_text().split()
-    vals = [int(t, 16) for t in txt if t.strip()]
+    """Parse a hex byte file. Tolerates iverilog $writememh output, which
+    interleaves address comment lines like '// 0x00000010'."""
+    vals = []
+    for line in pathlib.Path(path).read_text().splitlines():
+        line = line.split("//")[0].strip()      # drop trailing/line comments
+        for t in line.split():
+            if t.lower().startswith("0x"):       # skip address markers
+                continue
+            try:
+                vals.append(int(t, 16))
+            except ValueError:
+                continue
     a = np.array(vals, dtype=np.int64)
-    a = np.where(a >= 128, a - 256, a)          # unsigned hex -> signed int8
+    a = np.where(a >= 128, a - 256, a)           # unsigned hex -> signed int8
     return a.astype(np.int8)
 
 
