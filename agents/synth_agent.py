@@ -138,12 +138,15 @@ def run() -> dict:
     log = (r.stdout + r.stderr)
     (LOG_DIR / "synth_full.log").write_text(log)
 
-    if r.returncode != 0 or "ERROR" in log.upper():
+    # A real Yosys error is a line beginning with "ERROR:" — do NOT match the bare
+    # substring "ERROR", because legitimate spec port names (iq_alignment_error,
+    # cp_error, config_error, error) contain it and would trigger a false failure.
+    real_errors = [ln.strip() for ln in log.splitlines()
+                   if re.match(r"\s*ERROR:", ln, flags=re.IGNORECASE)]
+    if r.returncode != 0 or real_errors:
         print("[synth] Synthesis FAILED — see generated/logs/synth_full.log")
-        for line in log.splitlines():
-            if "error" in line.lower():
-                print(f"[synth]   {line.strip()}")
-                break
+        if real_errors:
+            print(f"[synth]   {real_errors[0]}")
         result["error"] = "synth error"
         return result
 
