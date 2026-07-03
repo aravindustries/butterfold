@@ -6,7 +6,10 @@
 
 module tb_twiddle_source;
   reg         clk = 0, rst_n = 0, tw_req = 0, tw_conjugate = 0;
-  reg  [6:0]  tw_addr = 0;
+  // Init to an out-of-range address so the FIRST real lookup (addr 0) is a
+  // genuine transition — otherwise iverilog's `always @*` never fires at t=0
+  // for an unchanged input and the combinational LUT reads X (sim-only quirk).
+  reg  [6:0]  tw_addr = 7'h7f;
   wire [7:0]  tw_re, tw_im;
   wire        tw_valid;
 
@@ -21,13 +24,15 @@ module tb_twiddle_source;
 
   always #5 clk = ~clk;
 
+  // Drive and sample on the NEGEDGE so we never race the DUT's posedge
+  // non-blocking register updates (which would cause false failures).
   task check(input [6:0] addr, input conj);
     reg [7:0] want_re, want_im;
     begin
-      @(posedge clk); tw_addr <= addr; tw_conjugate <= conj; tw_req <= 1'b1;
-      @(posedge clk); tw_req <= 1'b0;
+      @(negedge clk); tw_addr = addr; tw_conjugate = conj; tw_req = 1'b1;
+      @(negedge clk); tw_req = 1'b0;         // tw_req was high across one posedge
       wc = 0;
-      while (!tw_valid && wc < 32) begin @(posedge clk); wc = wc + 1; end
+      while (!tw_valid && wc < 32) begin @(negedge clk); wc = wc + 1; end
       want_re = exp_re[addr];
       want_im = conj ? (~exp_im[addr] + 8'd1) : exp_im[addr];   // conjugate = negate imag
       if (!tw_valid) begin
