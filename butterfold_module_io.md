@@ -329,6 +329,11 @@ Fixed-point:
 - The unified core carries WIDENED internal precision (do not clip intermediate
   transform results to 8 bits); only the final time-domain output going to the
   TDIQ adapter is quantized to Q1.7 with saturation to [-128, 127].
+- Internal transform sample format is PINNED to signed 16-bit Q5.11 (5 integer
+  bits avoid mid-FFT saturation, 11 fractional bits give precision). Verified in
+  golden/fixedchain.py: this format yields EVM 0.28% vs the float golden (Q5.9/
+  14-bit gives 1.29%; formats with <5 integer bits saturate and fail). The DIT
+  IFFT's 1/128 is applied as one round-and->>1 per stage across the 7 stages.
 - Forward transforms are unscaled; the 128-pt IFFT includes the 1/128 scale
   (matching np.fft.ifft). One TX symbol => M + CP = 137 complex samples => 274
   interleaved output bytes.
