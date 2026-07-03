@@ -309,3 +309,45 @@ Optional scan/test:
 - scan_in_i              Input    Scan-chain input
 - scan_out_o             Output   Scan-chain output
 
+
+NUMERIC CONTRACT (functional verification)
+==========================================
+
+This section defines what "correct" means numerically, so RTL can be checked
+against the Python golden model (butterfold_sim / golden/reference.py).
+
+Transform math (frozen):
+- K = 12 subcarriers, M = 128 FFT/IFFT points, CP = 9 samples (normal), 10 (long).
+- Subcarrier mapping is CENTERED: first active bin START = (M - K) / 2 = 58,
+  i.e. the 12 spread samples occupy bins 58..69; all other bins are zero.
+- TX chain: DFT-12 (forward) -> centered map -> IFFT-128 -> CP insert.
+- RX chain: CP remove -> FFT-128 -> extract bins 58..69 -> IDFT-12 (inverse).
+
+Fixed-point:
+- External I/Q and inter-module complex samples are signed Q1.7 (int8), packed
+  {I[7:0], Q[7:0]}. Byte streams are interleaved I,Q,I,Q,...
+- The unified core carries WIDENED internal precision (do not clip intermediate
+  transform results to 8 bits); only the final time-domain output going to the
+  TDIQ adapter is quantized to Q1.7 with saturation to [-128, 127].
+- Forward transforms are unscaled; the 128-pt IFFT includes the 1/128 scale
+  (matching np.fft.ifft). One TX symbol => M + CP = 137 complex samples => 274
+  interleaved output bytes.
+
+Top command protocol (so the chip is drivable byte-by-byte):
+- The FIRST input byte on din is the command: 0x03 = run TX chain, 0x04 = run RX
+  chain (low 3 bits match the scheduler cmd_op encoding).
+- The following input bytes are the interleaved I/Q payload. TX: command + 24
+  payload bytes (12 complex). RX: command + 274 payload bytes (137 complex).
+- All input transfers use din_valid_i / din_ready_o handshake.
+- The result streams out on dout with dout_valid_o / dout_ready_i: TX emits 274
+  bytes, RX emits 24 bytes. done_irq_o pulses when the transaction completes.
+
+Acceptance (authoritative):
+- Feed a 24-byte TX input (12 complex Q1.7 samples) to the chip; capture the
+  274-byte output. Compare to the golden TX output.
+- PASS gate: EVM <= 2.0% versus the golden (this is the authoritative criterion).
+- Also REPORT the bit-exact int8 mismatch count (informational, not a gate).
+- Per-module: each module's testbench drives the input its Python golden model
+  (generated/golden/<module>.py) received and checks the RTL output against that
+  model's output (handshake/valid-driven sampling; EVM<=2% where complex).
+

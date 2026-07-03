@@ -19,7 +19,7 @@ GDS:  BUTTERFOLD_GDS=1 python agents/orchestrator.py
 """
 from __future__ import annotations
 import os, json, pathlib
-import planner, code_agent, verify_agent, synth_agent, agent_core, golden_agent
+import planner, code_agent, verify_agent, synth_agent, agent_core, golden_agent, functional_agent
 import module_spec
 
 ROOT    = pathlib.Path(__file__).parent.parent
@@ -84,11 +84,22 @@ def run() -> dict:
             if not failed:
                 break
 
-    _line("Step 6: Synthesis (area/timing)")
+    _line("Step 6: Functional gate (Phase 2: RTL vs golden, EVM<=2%)")
+    try:
+        func = functional_agent.run()
+        summary["functional"] = {"evm": func.get("evm_percent"),
+                                 "passed": func.get("passed"),
+                                 "mismatches": func.get("bit_exact_mismatches")}
+    except Exception as exc:
+        print(f"[functional] skipped ({exc})")
+        func = {"passed": None}
+        summary["functional"] = {"passed": None}
+
+    _line("Step 7: Synthesis (area/timing)")
     synth = synth_agent.run()
     summary["synth"] = synth.get("metrics", {})
 
-    _line("Step 7: LibreLane RTL->GDS")
+    _line("Step 8: LibreLane RTL->GDS")
     gds = {"skipped": True}
     if os.environ.get("BUTTERFOLD_GDS"):
         import librelane_agent
@@ -96,21 +107,24 @@ def run() -> dict:
     else:
         print("[librelane] Skipped - set BUTTERFOLD_GDS=1 to run the (long) GDS flow")
 
-    _line("Step 8: Summarize")
+    _line("Step 9: Summarize")
     passed = report.get("passed", False)
     summary.update({
         "verify_passed": passed,
         "gds": gds,
         "area_um2": synth.get("metrics", {}).get("chip_area_um2"),
     })
-    _write_summary(plan, report, synth, gds, golden)
+    _write_summary(plan, report, synth, gds, golden, func)
     gtag = {True: "golden OK", False: "golden FAIL", None: "golden n/a"}[summary.get("golden_passed")]
-    print(f"\n[orchestrator] RESULT: {'PASSED' if passed else 'NEEDS WORK'} "
-          f"(verify {'clean' if passed else 'has failures'}, {gtag})")
+    fev = summary.get("functional", {}).get("evm")
+    fpass = summary.get("functional", {}).get("passed")
+    ftag = "func n/a" if fpass is None else (f"func PASS EVM={fev}%" if fpass else f"func FAIL EVM={fev}%")
+    print(f"\n[orchestrator] RESULT: {'structural PASS' if passed else 'NEEDS WORK'} "
+          f"| {gtag} | {ftag}")
     return summary
 
 
-def _write_summary(plan, report, synth, gds, golden=None) -> None:
+def _write_summary(plan, report, synth, gds, golden=None, func=None) -> None:
     lines = ["# ButterFold Modular Workflow Summary", "",
              f"- **Spec (single source of truth)**: {plan['spec']}",
              f"- **Modules authored**: {len(plan['build_order'])}", ""]
@@ -132,6 +146,12 @@ def _write_summary(plan, report, synth, gds, golden=None) -> None:
     lines += ["", "## Top integration",
               f"- compile: {'OK' if integ.get('compile') else 'XX'}",
               f"- elaborate: {'OK' if integ.get('elaborate') else 'XX'}", ""]
+    if func is not None:
+        fp = func.get("passed")
+        lines += ["## Functional gate (Phase 2: RTL vs golden)",
+                  f"- EVM: {func.get('evm_percent')}%  (gate <= {func.get('evm_gate', 2.0)}%)",
+                  f"- bit-exact mismatches: {func.get('bit_exact_mismatches')}/{func.get('total_bytes')}",
+                  f"- functional pass: {'YES' if fp else ('NO' if fp is not None else 'n/a')}", ""]
     area = synth.get("metrics", {}).get("chip_area_um2")
     lines += ["## Synthesis", f"- GF180 area: {area} um^2" if area else "- (not run)", ""]
     if gds.get("skipped"):
