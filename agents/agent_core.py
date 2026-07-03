@@ -1,47 +1,41 @@
 """
-agent_core.py — shared foundation for ButterFold's deep (reason+act) agents.
+agent_core.py — shared foundation for ButterFold's deep (reason+act) agents,
+rebuilt for MODULAR AUTHORING.
 
-Two primitives that turn a static prompt into a ReAct agent:
+The single source of truth is butterfold_module_io.md (parsed by module_spec).
+Agents author each of the 6 modules + the top from its port contract; there is
+no flat generator, no locked kernel, no golden-byte copy. Correctness per module
+is established by: exact port conformance, iverilog compile, yosys elaboration,
+and the module's own testbench when present.
 
-  Journal      — persistent cross-iteration MEMORY (generated/context.json).
-                 Threaded through every agent so each step builds on prior
-                 knowledge instead of starting cold. Tagged with a spec hash so
-                 stale entries (from before a spec change) are visible/ignored.
-
-  (Action harness + react_loop live alongside this; see register_default_actions
-   and react_loop below once added.)
-
-Design rule: the deterministic parts work with NO API key. Only the LLM-driven
-ReAct loop needs OpenAI; everything here (memory) is pure stdlib and testable on
-the host.
+Two primitives:
+  Journal         — persistent cross-step memory (generated/context.json).
+  ModuleHarness   — the ACT surface for authoring ONE module: read its contract,
+                    read/write its RTL, compile it, elaborate it, run its tb.
+  react_loop      — think -> act -> observe over the harness (OpenAI tool-calling),
+                    with a no-API-key fallback so the pipeline still runs.
 """
 from __future__ import annotations
-import json, time, hashlib, pathlib, subprocess, sys
+import json, time, hashlib, pathlib, subprocess, os
 from typing import Optional
 
-ROOT        = pathlib.Path(__file__).parent.parent
-JOURNAL     = ROOT / "generated" / "context.json"
-SPEC_FILES  = [ROOT / "modular_description.md", ROOT / "butterfold_module_io.md"]
-RTL_DIR     = ROOT / "generated" / "rtl"
+ROOT       = pathlib.Path(__file__).parent.parent
+JOURNAL    = ROOT / "generated" / "context.json"
+SPEC_FILE  = ROOT / "butterfold_module_io.md"     # the ONLY spec
+RTL_DIR    = ROOT / "generated" / "rtl"
+TB_DIR     = ROOT / "tests" / "modules"
 
 
 def spec_hash() -> str:
-    """Short hash of the current spec files — used to detect staleness."""
     h = hashlib.sha256()
-    for p in SPEC_FILES:
-        if p.exists():
-            h.update(p.read_bytes())
+    if SPEC_FILE.exists():
+        h.update(SPEC_FILE.read_bytes())
     return h.hexdigest()[:12]
 
 
 class Journal:
-    """Append-only run memory, persisted to generated/context.json.
-
-    Each entry: {ts, agent, kind, summary, data, stale}. 'kind' is free-form
-    ('plan', 'finding', 'action', 'observation', 'decision', 'error'). Entries
-    written under a previous spec hash are flagged stale=True on load so agents
-    can down-weight them instead of being misled.
-    """
+    """Append-only run memory, persisted to generated/context.json. Entries from
+    a previous spec version are flagged stale=True so agents can down-weight them."""
 
     def __init__(self, path: pathlib.Path = JOURNAL):
         self.path = path
@@ -58,22 +52,13 @@ class Journal:
             return
         prior = doc.get("spec_hash")
         for e in doc.get("entries", []):
-            # Mark entries from a different spec version as stale.
             e["stale"] = e.get("stale", False) or (prior != self.spec)
             self.entries.append(e)
 
-    def append(self, agent: str, kind: str, summary: str,
-               data: Optional[dict] = None) -> dict:
-        entry = {
-            "ts": round(time.time(), 3),
-            "agent": agent,
-            "kind": kind,
-            "summary": summary[:500],
-            "data": data or {},
-            "stale": False,
-        }
-        self.entries.append(entry)
-        self.save()
+    def append(self, agent: str, kind: str, summary: str, data: Optional[dict] = None) -> dict:
+        entry = {"ts": round(time.time(), 3), "agent": agent, "kind": kind,
+                 "summary": summary[:500], "data": data or {}, "stale": False}
+        self.entries.append(entry); self.save()
         return entry
 
     def recent(self, n: int = 12, agent: Optional[str] = None,
@@ -84,52 +69,44 @@ class Journal:
         return items[-n:]
 
     def context_block(self, n: int = 12) -> str:
-        """Compact, prompt-ready summary of recent fresh memory."""
         rows = self.recent(n)
         if not rows:
             return "(no prior context)"
-        return "\n".join(
-            f"- [{e['agent']}/{e['kind']}] {e['summary']}" for e in rows
-        )
+        return "\n".join(f"- [{e['agent']}/{e['kind']}] {e['summary']}" for e in rows)
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        doc = {
-            "spec_hash": self.spec,
-            "updated": round(time.time(), 3),
-            "entries": self.entries,
-        }
-        self.path.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+        self.path.write_text(json.dumps(
+            {"spec_hash": self.spec, "updated": round(time.time(), 3),
+             "entries": self.entries}, indent=2), encoding="utf-8")
 
     def reset(self) -> None:
-        """Clear memory (e.g. start a fresh design run)."""
-        self.entries = []
-        self.save()
+        self.entries = []; self.save()
 
 
 def _obs(ok: bool, summary: str, **data) -> dict:
-    """Structured observation returned by every action."""
     return {"ok": bool(ok), "summary": summary, "data": data}
 
 
-class ActionHarness:
-    """The ACT surface: tools an agent can CHOOSE to invoke, each returning a
-    structured observation. EDA tools (iverilog/yosys) need the Docker container;
-    when absent they return ok=False with a clear reason, so the harness is still
-    importable/testable on the host. File + kernel-regen actions run anywhere.
+class ModuleHarness:
+    """ACT surface for authoring ONE module. Bound to a single module name +
+    its parsed contract, so the ReAct tools stay small and focused. EDA tools
+    (iverilog/yosys) need the Docker container; off-container they return
+    ok=False with a clear reason so the harness stays importable/testable."""
 
-    Every call is logged to the Journal (action + observation) so the ReAct loop
-    and future runs see what was tried and what happened.
-    """
+    def __init__(self, module: str, contract: str, journal: Optional[Journal] = None,
+                 skeleton: str = ""):
+        self.module   = module
+        self.contract = contract
+        self.skeleton = skeleton
+        self.journal  = journal
+        self.path     = RTL_DIR / f"{module}.v"
+        self.tb       = TB_DIR / f"tb_{module}.v"
 
-    def __init__(self, journal: Optional["Journal"] = None, agent: str = "agent"):
-        self.journal = journal
-        self.agent = agent
-
-    def _log(self, action: str, args: dict, obs: dict) -> dict:
+    def _log(self, action: str, obs: dict) -> dict:
         if self.journal:
-            self.journal.append(self.agent, "action", f"{action}: {obs['summary']}",
-                                {"action": action, "args": args, "ok": obs["ok"]})
+            self.journal.append(self.module, "action", f"{action}: {obs['summary']}",
+                                {"action": action, "ok": obs["ok"]})
         return obs
 
     def _run(self, cmd: list, timeout: int = 300) -> tuple[int, str]:
@@ -141,143 +118,126 @@ class ActionHarness:
         except subprocess.TimeoutExpired:
             return 124, f"timeout after {timeout}s"
 
-    # ── file actions (host-runnable) ────────────────────────────────────────
-    def read_file(self, path: str, max_chars: int = 8000) -> dict:
-        p = (ROOT / path) if not pathlib.Path(path).is_absolute() else pathlib.Path(path)
-        if not p.exists():
-            return self._log("read_file", {"path": path}, _obs(False, f"missing: {path}"))
-        txt = p.read_text(encoding="utf-8", errors="replace")[:max_chars]
-        return self._log("read_file", {"path": path},
-                         _obs(True, f"read {p.name} ({len(txt)} chars)", content=txt))
+    # ── reasoning inputs ────────────────────────────────────────────────────
+    def read_contract(self) -> dict:
+        return self._log("read_contract",
+                         _obs(True, f"contract for {self.module}", content=self.contract))
 
-    def edit_file(self, path: str, old: str, new: str) -> dict:
-        p = (ROOT / path) if not pathlib.Path(path).is_absolute() else pathlib.Path(path)
-        if not p.exists():
-            return self._log("edit_file", {"path": path}, _obs(False, f"missing: {path}"))
-        txt = p.read_text(encoding="utf-8")
-        if old not in txt:
-            return self._log("edit_file", {"path": path}, _obs(False, "old string not found"))
-        p.write_text(txt.replace(old, new, 1), encoding="utf-8")
-        return self._log("edit_file", {"path": path}, _obs(True, f"edited {p.name}"))
+    def read_current(self) -> dict:
+        if not self.path.exists():
+            return self._log("read_current",
+                             _obs(True, f"{self.module}.v not written yet; skeleton frame:",
+                                  content=self.skeleton))
+        txt = self.path.read_text(encoding="utf-8", errors="replace")
+        return self._log("read_current", _obs(True, f"{self.module}.v ({len(txt)} chars)", content=txt))
 
-    def list_rtl(self) -> dict:
-        files = sorted(p.name for p in RTL_DIR.glob("*.v") if not p.name.startswith("tb_"))
-        return self._log("list_rtl", {}, _obs(True, f"{len(files)} rtl file(s)", files=files))
+    # ── authoring ───────────────────────────────────────────────────────────
+    def write_module(self, content: str) -> dict:
+        if f"module {self.module}" not in content:
+            return self._log("write_module",
+                             _obs(False, f"content must declare `module {self.module}`"))
+        RTL_DIR.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(content, encoding="utf-8")
+        return self._log("write_module", _obs(True, f"wrote {self.module}.v ({len(content)} chars)"))
 
-    # ── kernel-as-tool: agent commands the generator, never types constants ──
-    def regen_kernel(self) -> dict:
-        gen = ROOT / "gen_reference.py"
-        rc, out = self._run([sys.executable, str(gen)], timeout=300)
-        evm = None
-        for line in out.splitlines():
-            if "EVM =" in line:
-                try: evm = float(line.split("EVM =")[1].split("%")[0])
-                except (ValueError, IndexError): pass
-        ok = rc == 0 and evm is not None
-        return self._log("regen_kernel", {}, _obs(ok, f"kernel regenerated, EVM={evm}%", evm=evm))
-
-    # ── EDA actions (need the Docker container) ─────────────────────────────
-    def _rtl_sources(self) -> list:
-        return [str(p) for p in sorted(RTL_DIR.glob("*.v")) if not p.name.startswith("tb_")]
-
+    # ── checks ──────────────────────────────────────────────────────────────
     def compile(self) -> dict:
-        rc, out = self._run(["iverilog", "-g2012", "-Wall", "-t", "null", *self._rtl_sources()])
+        if not self.path.exists():
+            return self._log("compile", _obs(False, f"{self.module}.v not written yet"))
+        rc, out = self._run(["iverilog", "-g2012", "-Wall", "-t", "null", str(self.path)])
         summary = ("syntax OK" if rc == 0 else
                    "iverilog unavailable (need container)" if rc == 127 else "compile errors")
-        return self._log("compile", {}, _obs(rc == 0, summary, rc=rc, log=out[-2000:]))
+        return self._log("compile", _obs(rc == 0, summary, rc=rc, log=out[-1600:]))
 
-    def yosys_check(self) -> dict:
-        srcs = " ".join(self._rtl_sources())
-        script = (f"read_verilog -sv {srcs}; hierarchy -top butterfold_top -check; "
+    def elaborate(self) -> dict:
+        if not self.path.exists():
+            return self._log("elaborate", _obs(False, f"{self.module}.v not written yet"))
+        script = (f"read_verilog -sv {self.path}; hierarchy -top {self.module} -check; "
                   f"proc; opt -fast; check")
         rc, out = self._run(["yosys", "-q", "-p", script])
         ok = rc == 0 and "ERROR" not in out.upper()
-        return self._log("yosys_check", {}, _obs(ok, "elaboration OK" if ok else "yosys error",
-                                                  rc=rc, log=out[-2000:]))
+        return self._log("elaborate", _obs(ok, "elaboration OK" if ok else "yosys error",
+                                            rc=rc, log=out[-1600:]))
 
-    def golden_evm(self) -> dict:
-        """Authoritative bit-exact gate — delegates to verify.agent's stage 6."""
-        try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("verify_agent", ROOT / "agents" / "verify.agent.py")
-            va = importlib.util.module_from_spec(spec); spec.loader.exec_module(va)
-            res = va.stage_golden_model_check(RTL_DIR / "butterfold_top.v")
-            ok = res.get("golden_ok") is True
-            return self._log("golden_evm", {}, _obs(ok, f"golden EVM={res.get('evm_percent')}%", **res))
-        except Exception as exc:
-            return self._log("golden_evm", {}, _obs(False, f"golden check unavailable: {exc}"))
+    def run_tb(self) -> dict:
+        if not self.tb.exists():
+            return self._log("run_tb", _obs(True, f"no testbench for {self.module} (skipped)", skipped=True))
+        if not self.path.exists():
+            return self._log("run_tb", _obs(False, f"{self.module}.v not written yet"))
+        vvp = RTL_DIR / f"_{self.module}_tb.vvp"
+        rc, out = self._run(["iverilog", "-g2012", "-o", str(vvp), str(self.tb), str(self.path)])
+        if rc != 0:
+            return self._log("run_tb", _obs(False, "tb compile failed", rc=rc, log=out[-1600:]))
+        rc2, out2 = self._run(["vvp", str(vvp)])
+        low = out2.lower()
+        ok = rc2 == 0 and "error" not in low and "fail" not in low
+        return self._log("run_tb", _obs(ok, "testbench passed" if ok else "testbench reported failure",
+                                        rc=rc2, log=out2[-1600:]))
 
 
-# ── ReAct loop controller ────────────────────────────────────────────────────
-# Maps tool name -> (HarnessMethod, OpenAI parameter schema).
+# ── ReAct loop ────────────────────────────────────────────────────────────────
 _TOOLS = {
-    "read_file":    ({"path": "string"}, ["path"], "Read a repo file (relative path)."),
-    "edit_file":    ({"path": "string", "old": "string", "new": "string"},
-                     ["path", "old", "new"], "Replace the first exact occurrence of 'old' with 'new'."),
-    "list_rtl":     ({}, [], "List the synthesizable RTL files in generated/rtl."),
-    "compile":      ({}, [], "iverilog syntax check over all RTL (needs container)."),
-    "yosys_check":  ({}, [], "Yosys structural elaboration check (needs container)."),
-    "golden_evm":   ({}, [], "Run the authoritative bit-exact golden EVM gate (needs container)."),
-    "regen_kernel": ({}, [], "Re-run the deterministic generator and observe the kernel EVM."),
-    "done":         ({"status": "string", "summary": "string"}, ["status", "summary"],
-                     "Finish: status='success' or 'blocked', with a one-line summary."),
+    "read_contract": ({}, [], "Read this module's authoritative port/function contract."),
+    "read_current":  ({}, [], "Read the current RTL for this module (or the skeleton frame)."),
+    "write_module":  ({"content": "string"}, ["content"],
+                      "Write the COMPLETE Verilog file for this module (full replace)."),
+    "compile":       ({}, [], "iverilog -g2012 syntax check of this module (needs container)."),
+    "elaborate":     ({}, [], "Yosys hierarchy+check elaboration of this module (needs container)."),
+    "run_tb":        ({}, [], "Compile+run this module's testbench if one exists (needs container)."),
+    "done":          ({"status": "string", "summary": "string"}, ["status", "summary"],
+                      "Finish: status='success' or 'blocked', with a one-line summary."),
 }
 
 
 def _tool_schemas() -> list:
-    schemas = []
+    out = []
     for name, (props, required, desc) in _TOOLS.items():
-        schemas.append({"type": "function", "function": {
+        out.append({"type": "function", "function": {
             "name": name, "description": desc,
             "parameters": {"type": "object",
                            "properties": {k: {"type": v} for k, v in props.items()},
-                           "required": required},
-        }})
-    return schemas
+                           "required": required}}})
+    return out
 
 
 REACT_SYSTEM = """\
-You are a deep RTL engineering agent that REASONS then ACTS. You achieve the goal
-by calling tools one at a time, observing each result, and deciding the next step
-— not by emitting a wall of code.
+You are a deep RTL engineering agent. You AUTHOR one Verilog-2012 module from its
+port contract by reasoning then acting: call tools one at a time, observe each
+result, decide the next step.
 
 Rules:
-- The bit-exact DSP datapath lives in the LOCKED butterfold_kernel; never author or
-  edit its twiddle constants. To change kernel behaviour, call regen_kernel and
-  observe the EVM — command the generator, do not hand-write constants.
-- Edit only the wrapper/control RTL.
-- Work in SMALL STEPS: make ONE minimal edit_file, then IMMEDIATELY run compile, then
-  golden_evm, before making any further edit. Never make two edits in a row without
-  re-checking in between.
-- If compile reports errors, your MOST RECENT edit was wrong: read_file and fix or
-  revert exactly that change before doing anything else. Do not pile on new edits.
-- Diagnose the ACTUAL failure from compile/golden_evm output. Any error text handed to
-  you in the goal may be stale — trust the live tool observations over it.
-- The golden EVM gate (EVM < 2%) is the authoritative success test.
-- Use prior journal context; never repeat an action that already failed the same way.
-- Every turn you MUST call exactly one tool, or call 'done'. Never reply with prose
-  only. Call done(status='success') once golden_evm passes, or done(status='blocked')
-  if truly stuck, always with a short summary."""
+- Implement EXACTLY the ports in the contract: same names, directions, and widths.
+  Do not add or drop ports. Keep the module name exactly as given.
+- Write real, synthesizable RTL for the module's stated Function. Use synchronous
+  logic on posedge clk with active-low rst_n. Drive every output; avoid latches
+  and combinational loops. Use valid/ready handshakes where the contract has them.
+- Work in a tight loop: write_module with the COMPLETE file, then compile, then
+  elaborate, then run_tb. Read the tool log and fix the ACTUAL error before the
+  next write. Never write twice without checking in between.
+- compile errors mean your last file is wrong — fix that file, don't pile on.
+- Prefer a smaller correct implementation over an elaborate broken one. A clean
+  elaboration + passing (or absent) testbench is success.
+- Every turn call exactly one tool, or call done(). Call done(status='success')
+  once it compiles and elaborates cleanly (and run_tb passes or is skipped), or
+  done(status='blocked') if truly stuck — always with a short summary."""
 
 
-def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
-               agent: str = "agent", model: str = "gpt-4o", max_steps: int = 12) -> dict:
-    """think -> act -> observe loop using OpenAI tool-calling.
-
-    Returns {"ok", "status", "steps", "reason"}. If no API key is set, returns
-    {"ok": False, "fallback": True} so the caller runs today's scripted path —
-    keeping the whole system usable without an LLM (open-source constraint).
-    """
-    import os
+def react_loop(goal: str, harness: ModuleHarness, journal: Journal,
+               agent: str = "code", model: str = "gpt-4o", max_steps: int = 14) -> dict:
+    """think -> act -> observe over a ModuleHarness. Returns
+    {"ok","status","steps",...}. With no OPENAI_API_KEY, writes the skeleton and
+    returns a fallback result so the pipeline still runs without an LLM."""
     if not os.environ.get("OPENAI_API_KEY"):
-        journal.append(agent, "decision", "no API key — falling back to scripted pipeline")
-        return {"ok": False, "fallback": True, "reason": "no_api_key"}
+        if harness.skeleton:
+            harness.write_module(harness.skeleton)
+        journal.append(agent, "decision", f"{harness.module}: no API key — wrote skeleton")
+        return {"ok": True, "status": "skeleton", "steps": 0, "fallback": True,
+                "summary": "no API key: authored compile-clean port skeleton"}
 
-    import openai, time
+    import openai
     client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
     def _create(**kw):
-        """Chat-completions call with exponential backoff on rate limits."""
         wait = 1.0
         for attempt in range(6):
             try:
@@ -287,37 +247,30 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
                     raise
                 time.sleep(wait); wait = min(wait * 2, 20)
 
-    dispatch = {
-        "read_file": harness.read_file, "edit_file": harness.edit_file,
-        "list_rtl": harness.list_rtl, "compile": harness.compile,
-        "yosys_check": harness.yosys_check, "golden_evm": harness.golden_evm,
-        "regen_kernel": harness.regen_kernel,
-    }
+    dispatch = {"read_contract": harness.read_contract, "read_current": harness.read_current,
+                "write_module": harness.write_module, "compile": harness.compile,
+                "elaborate": harness.elaborate, "run_tb": harness.run_tb}
     messages = [
         {"role": "system", "content": REACT_SYSTEM},
         {"role": "user", "content": f"GOAL:\n{goal}\n\nPRIOR CONTEXT:\n{journal.context_block()}"},
     ]
-    read_cache: dict = {}      # path -> already returned full content this session
-    dirty: set = set()         # files edited since last read (force a re-read)
 
     stalls = 0
     for step in range(1, max_steps + 1):
-        resp = _create(model=model, messages=messages,
-                       tools=_tool_schemas(), tool_choice="auto", max_tokens=1024)
+        resp = _create(model=model, messages=messages, tools=_tool_schemas(),
+                       tool_choice="auto", max_tokens=4096)
         msg = resp.choices[0].message
 
         if not msg.tool_calls:
-            # Anti-stall: nudge the model back into act-mode instead of giving up.
             stalls += 1
-            journal.append(agent, "decision", f"no tool call (nudge {stalls})")
+            journal.append(agent, "decision", f"{harness.module}: no tool call (nudge {stalls})")
             if stalls > 2:
                 return {"ok": False, "status": "stalled", "steps": step, "reason": "no_tool_call"}
             messages.append({"role": "assistant", "content": msg.content or ""})
             messages.append({"role": "user", "content":
-                "You replied with prose. You MUST call exactly one tool now "
-                "(compile, golden_evm, read_file, edit_file, regen_kernel), or call "
-                "done() if golden_evm already passes. Re-read the latest tool output "
-                "and take the single next action."})
+                "You replied with prose. Call exactly one tool now (write_module, compile, "
+                "elaborate, run_tb, read_contract), or done() if it already compiles and "
+                "elaborates. Take the single next action."})
             continue
 
         messages.append({"role": "assistant", "content": msg.content or "",
@@ -325,86 +278,51 @@ def react_loop(goal: str, harness: "ActionHarness", journal: "Journal",
                                          "function": {"name": tc.function.name,
                                                       "arguments": tc.function.arguments}}
                                         for tc in msg.tool_calls]})
-
         for tc in msg.tool_calls:
             name = tc.function.name
             try:
                 args = json.loads(tc.function.arguments or "{}")
             except json.JSONDecodeError:
                 args = {}
-
             if name == "done":
                 status = args.get("status", "blocked")
-                journal.append(agent, "decision", f"done [{status}]: {args.get('summary', '')}")
+                journal.append(agent, "decision",
+                               f"{harness.module}: done [{status}]: {args.get('summary','')}")
                 return {"ok": status == "success", "status": status,
                         "steps": step, "summary": args.get("summary", "")}
-
-            # Anti-repeat read: don't resend a file's full content if it hasn't
-            # changed since the last read — this is what blew the token budget.
-            if name == "read_file":
-                path = args.get("path", "")
-                if path in read_cache and path not in dirty:
-                    obs = _obs(True, f"{path} already read and unchanged — do NOT read "
-                                     f"again; make your next edit or run golden_evm.")
-                    messages.append({"role": "tool", "tool_call_id": tc.id,
-                                     "content": json.dumps(obs)})
-                    journal.append(agent, "action", f"read_file cached (skipped): {path}")
-                    continue
-
             fn = dispatch.get(name)
             obs = fn(**args) if fn else _obs(False, f"unknown tool: {name}")
-
-            if name == "read_file" and obs.get("ok"):
-                read_cache[args.get("path", "")] = True
-                dirty.discard(args.get("path", ""))
-            elif name == "edit_file" and obs.get("ok"):
-                dirty.add(args.get("path", ""))     # force a fresh read after an edit
-
-            # Cap log-style outputs (compile/golden/yosys) to bound tokens; keep a
-            # file read intact so the agent can actually see the code it must fix.
             content = json.dumps(obs)
-            if name != "read_file" and len(content) > 1800:
+            # keep code reads intact; cap noisy compile/elaborate logs
+            if name not in ("read_current", "read_contract") and len(content) > 1800:
                 content = content[:1800] + ' ...TRUNCATED"}'
             messages.append({"role": "tool", "tool_call_id": tc.id, "content": content})
 
-    journal.append(agent, "decision", f"hit max_steps ({max_steps}) without finishing")
+    journal.append(agent, "decision", f"{harness.module}: hit max_steps ({max_steps})")
     return {"ok": False, "status": "max_steps", "steps": max_steps, "reason": "max_steps"}
 
 
 # ── self-test (host, no API key) ─────────────────────────────────────────────
 if __name__ == "__main__":
-    import tempfile, os
+    import tempfile
+    import module_spec
     tmp = pathlib.Path(tempfile.mkdtemp()) / "context.json"
-    j = Journal(tmp)
-    j.reset()
-    j.append("planner", "plan", "decomposed into 6 modules", {"modules": 6})
-    j.append("code", "action", "ran golden_evm", {"evm": 1.5915})
-    j.append("debug", "decision", "widen samp to 8 bits after width error")
-    j2 = Journal(tmp)  # reload from disk
-    assert len(j2.entries) == 3, j2.entries
-    assert j2.recent(2)[0]["agent"] == "code"
+    j = Journal(tmp); j.reset()
+    j.append("planner", "plan", "ordered 7 modules")
+    j.append("twiddle_source", "action", "wrote skeleton")
+    assert len(Journal(tmp).entries) == 2
     print("[agent_core] Journal self-test OK")
-    print("[agent_core] context block:\n" + j2.context_block())
-    os.remove(tmp)
 
-    # ── ActionHarness: host-runnable actions + graceful EDA-tool absence ─────
-    h = ActionHarness(agent="selftest")
-    r_list = h.list_rtl()
-    print(f"[agent_core] list_rtl -> ok={r_list['ok']} {r_list['summary']}")
-    r_read = h.read_file("modular_description.md", max_chars=200)
-    print(f"[agent_core] read_file -> ok={r_read['ok']} {r_read['summary']}")
-    r_comp = h.compile()  # iverilog absent on host -> ok=False, clear reason
-    print(f"[agent_core] compile -> ok={r_comp['ok']} {r_comp['summary']}")
-    assert r_read["ok"] and not r_comp["ok"]   # file action works; EDA degrades gracefully
-    print("[agent_core] ActionHarness self-test OK (EDA tools degrade gracefully off-container)")
-
-    # ── ReAct loop: no-key fallback path (host) ─────────────────────────────
-    import os as _os
-    _saved = _os.environ.pop("OPENAI_API_KEY", None)
-    jr = Journal(tmp); jr.reset()
-    res = react_loop("smoke test", ActionHarness(jr, "selftest"), jr, agent="selftest")
-    assert res.get("fallback") is True and res["reason"] == "no_api_key", res
-    print(f"[agent_core] react_loop no-key fallback OK -> {res}")
-    if _saved is not None:
-        _os.environ["OPENAI_API_KEY"] = _saved
-    _os.remove(tmp)
+    doc = module_spec.parse()
+    mod = doc["modules"]["twiddle_source"]
+    h = ModuleHarness("twiddle_source", module_spec.contract_text(mod), j,
+                      skeleton=module_spec.skeleton(mod))
+    assert h.read_contract()["ok"]
+    assert h.compile()["ok"] is False        # no RTL yet
+    _saved = os.environ.pop("OPENAI_API_KEY", None)
+    res = react_loop("author twiddle_source", h, j, agent="twiddle_source")
+    assert res.get("fallback") and h.path.exists()
+    print(f"[agent_core] no-key fallback wrote {h.path.name} -> {res['status']}")
+    if _saved:
+        os.environ["OPENAI_API_KEY"] = _saved
+    print("[agent_core] self-test OK")

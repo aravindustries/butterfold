@@ -1,487 +1,80 @@
 """
-Verilog Code Agent — iterates through the task plan and generates synthesizable
-Verilog RTL for each subtask, then assembles a combined top-level file.
+code_agent.py — modular RTL authoring agent.
 
-Deep-agent pattern: each subtask goes through a generate → critique → revise
-inner loop before the output is accepted. This catches port mismatches, wrong
-bit widths, and unsynthesizable constructs before iverilog ever sees the file.
+For each module in the build order, the deep (ReAct) agent authors the complete
+Verilog file from that module's port/function contract (parsed from
+butterfold_module_io.md), checking itself with compile / elaborate / testbench
+between edits. No flat generator, no locked kernel: every module is written from
+its contract.
 
-Input : generated/plan.json + modular_description.md
-        (optional) 3GPP_ButterFold_Spec_Extract.md  — loaded automatically if present
-Output: generated/rtl/<subtask_id>.v  +  generated/rtl/butterfold_top.v
+With no OPENAI_API_KEY, each module falls back to its compile-clean port skeleton
+so the pipeline still produces elaborable RTL end-to-end.
+
+Run all modules:      python code_agent.py
+Run one module:       python code_agent.py --module twiddle_source
 """
-import os, sys, json, pathlib, time
-import openai
-from dotenv import load_dotenv
+from __future__ import annotations
+import sys, pathlib
+import module_spec
+import agent_core
 
-ROOT = pathlib.Path(__file__).parent.parent
-load_dotenv(ROOT / ".env")
-
-PLAN_PATH      = ROOT / "generated" / "plan.json"
-SPEC_PATH      = ROOT / "modular_description.md"
-GPP_PATH       = ROOT / "3GPP_ButterFold_Spec_Extract.md"
-REFERENCE_PATH = ROOT / "butterfold_reference.v"   # flat fallback (unchanged)
-KERNEL_REF     = ROOT / "butterfold_kernel.v"       # LOCKED bit-exact datapath
-TOP_REF        = ROOT / "butterfold_top.v"          # hierarchical wrapper reference
-RTL_DIR        = ROOT / "generated" / "rtl"
-
-MAX_RETRIES = 5
-INITIAL_WAIT = 1
+ROOT    = pathlib.Path(__file__).parent.parent
+RTL_DIR = ROOT / "generated" / "rtl"
 
 
-def _call_with_retry(func, *args, **kwargs):
-    """Retry OpenAI API calls with exponential backoff on rate limit errors."""
-    wait_time = INITIAL_WAIT
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            return func(*args, **kwargs)
-        except openai.RateLimitError as e:
-            if attempt == MAX_RETRIES:
-                raise
-            print(f"[code_agent] Rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {wait_time}s...")
-            time.sleep(wait_time)
-            wait_time *= 2  # exponential backoff
+def _deps(name: str) -> list[str]:
+    import planner
+    return planner.DEPENDS.get(name, [])
 
 
-SYSTEM_PROMPT = """\
-You are a Verilog RTL refinement agent. You are given a reference implementation
-and asked to improve it, not generate from scratch.
-
-Your tasks may include:
-1. Optimize for area (reduce bit widths, simplify logic)
-2. Optimize for timing (add pipelining, reduce critical paths)
-3. Fix bugs or incomplete sections (marked with comments like "// TODO" or "// SIMPLIFIED")
-4. Add missing features while preserving the core algorithm
-
-Hard rules:
-- Preserve all port names, module names, and external interfaces exactly
-- Preserve the overall architecture and state machine structure
-- No `initial` blocks in RTL (testbenches only)
-- No SystemVerilog unpacked arrays, array slicing, or array function ports
-- Synchronous active-low reset (rst_n)
-- All flip-flops on posedge clk
-- Fixed-point arithmetic only — no real/float keywords
-- Use only Verilog-2005 constructs for iverilog compatibility
-- Return ONLY the complete corrected Verilog file — no explanation, no markdown fences"""
-
-CRITIQUE_PROMPT = """\
-You are a senior RTL reviewer. Given a Verilog module and its specification,
-list every issue you find. Be specific — include line or signal names.
-
-Categories to check:
-1. Verilog-2005 compliance: NO unpacked arrays (logic x [0:N]), NO array slicing (x[0:N]),
-   NO arrays in task/function ports, NO real/float keywords
-2. Synthesizability: initial blocks, $display, real/float types, unsupported constructs
-3. Port compliance: do all ports in the spec appear with correct widths?
-4. Reset compliance: is reset synchronous active-low (rst_n)?
-5. Arithmetic: are all operations fixed-point? Any implicit width mismatches?
-6. Spec compliance: does the logic match the described algorithm?
-
-If there are NO issues, respond with exactly: NO_ISSUES
-Otherwise list issues one per line, prefixed with the category name."""
-
-REVISE_PROMPT = """\
-You are a Verilog RTL debug agent.
-Given a Verilog module, a list of reviewer issues, and the original spec,
-return a corrected version of the complete Verilog file.
-
-Rules:
-- Address every listed issue
-- Preserve all port names and module names exactly
-- CRITICAL: use ONLY Verilog-2005 constructs — NO unpacked arrays, NO array slicing, NO array ports
-- If you see "unpacked dimensions" errors, replace unpacked arrays with packed arrays or element-by-element loops
-- If you see "Array cannot be indexed by a range", use individual element assignments instead
-- Return ONLY the corrected Verilog — no markdown fences, no explanation"""
+def _goal(name: str, contract: str, deps: list[str]) -> str:
+    dep = (f"\nThis module instantiates and wires these already-authored submodules "
+           f"(read their files under generated/rtl if needed): {', '.join(deps)}."
+           if deps else "")
+    return (f"Author the synthesizable Verilog-2012 module `{name}` implementing exactly "
+            f"this contract. Match every port name/direction/width.{dep}\n\n{contract}")
 
 
-def _strip_fences(text: str) -> str:
-    if "```" not in text:
-        return text.strip()
-    text = text.split("```", 1)[1]
-    if text.lower().startswith(("verilog", "systemverilog", "sv")):
-        text = text.split("\n", 1)[1]
-    return text.rsplit("```", 1)[0].strip()
+def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
+    mod      = doc["modules"][name]
+    contract = module_spec.contract_text(mod)
+    skel     = module_spec.skeleton(mod)
+    deps     = _deps(name)
+    harness  = agent_core.ModuleHarness(name, contract, journal, skeleton=skel)
 
+    print(f"[code_agent] authoring {name} ({len(mod['ports'])} ports)...")
+    res = agent_core.react_loop(_goal(name, contract, deps), harness, journal, agent=name)
 
-def _load_gpp_context() -> str:
-    """Load extracted 3GPP spec if available; return empty string otherwise."""
-    if GPP_PATH.exists():
-        content = GPP_PATH.read_text().strip()
-        print(f"[code_agent] Loaded 3GPP context from {GPP_PATH.name} "
-              f"({len(content)} chars)")
-        return content
-    return ""
-
-
-def refine_from_reference(client, spec, plan, reference_rtl, gpp_context=""):
-    """Deep-agent refinement: take reference RTL and improve it."""
-    constraints = plan.get("hardware_constraints", {})
-
-    context_parts = [
-        f"Specification:\n{spec}",
-    ]
-    if gpp_context:
-        context_parts.append(f"3GPP standard reference:\n{gpp_context}")
-    context_parts += [
-        f"Hardware constraints:\n{json.dumps(constraints, indent=2)}",
-        f"Design plan:\n{json.dumps(plan, indent=2)}",
-        f"Reference RTL (to refine, not replace):\n{reference_rtl}",
-    ]
-    user_content = "\n\n".join(context_parts)
-
-    # --- Stage 1: Review and suggest improvements ---
-    print(f"[code_agent]   stage1: analyzing reference RTL")
-    review_completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=2048,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a senior hardware architect reviewing a Verilog reference implementation. "
-                    "Identify areas for improvement: incomplete sections (marked // SIMPLIFIED or // TODO), "
-                    "potential bugs, optimization opportunities, or missing functionality. "
-                    "Be specific about what needs improvement and how. Return a list of issues."
-                ),
-            },
-            {"role": "user", "content": user_content},
-        ],
-    )
-    review = review_completion.choices[0].message.content.strip()
-    print(f"[code_agent]   stage1: review complete ({len(review)} chars)")
-
-    # --- Stage 2: Refine the RTL based on review ---
-    print(f"[code_agent]   stage2: refining RTL")
-    refine_completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=8192,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a Verilog RTL refinement expert. "
-                    "Given a reference implementation and a list of improvement areas, "
-                    "produce an improved version of the complete Verilog file. "
-                    "Preserve the module interface and overall architecture. "
-                    "Replace // SIMPLIFIED sections with correct implementations. "
-                    "Return ONLY the complete refined Verilog file — no markdown, no explanation."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Specification:\n{spec}\n\n"
-                    f"Areas for improvement:\n{review}\n\n"
-                    f"Reference RTL to refine:\n{reference_rtl}\n\n"
-                    f"Produce the refined Verilog."
-                ),
-            },
-        ],
-    )
-    refined = _strip_fences(refine_completion.choices[0].message.content)
-    print(f"[code_agent]   stage2: refined to {refined.count(chr(10))} lines")
-
-    return refined
-
-
-WRAPPER_SYSTEM = """\
-You are a Verilog RTL refinement agent working ONLY on the control WRAPPER of a
-DFT-s-OFDM transform core (module butterfold_top).
-
-The bit-exact DSP datapath — twiddle ROMs, the shared complex multiplier, and the
-round-shift/saturate — lives in a SEPARATE, LOCKED module `butterfold_kernel`
-that you must NOT modify, redefine, or include. The wrapper only INSTANTIATES it.
-
-The wrapper owns the logic LLM agents can safely author:
-  - the block-streaming FSM (load -> DFT -> IFFT -> emit)
-  - the input deserializer (24 bytes -> 12 complex symbols)
-  - the cyclic-prefix + centered-map address generator (samp, tau, w_idx)
-  - the output serializer (I then Q bytes)
-
-Hard rules (a violation breaks the golden-model EVM check):
-  - Preserve module name `butterfold_top` and ALL of its ports exactly
-  - Preserve the `butterfold_kernel u_kernel ( ... )` instantiation and every port
-    connection exactly — same signal names, same semantics
-  - Do NOT output, include, or redefine module `butterfold_kernel`
-  - Preserve the cyclic-prefix ordering  tau = (samp < CP) ? samp+(M-CP) : samp-CP
-    and the centered-map index  w_idx = ((START+ifft_j)*tau) & 7'h7f  — both frozen
-  - No initial blocks in RTL, synchronous active-low reset, posedge clk flip-flops,
-    fixed-point only, Verilog-2005 only (no unpacked arrays / slicing / array ports)
-  - Return ONLY the complete butterfold_top.v — no markdown fences, no explanation"""
-
-
-def refine_wrapper(client, spec, plan, wrapper_rtl, kernel_src, gpp_context=""):
-    """Agentic authoring of the control wrapper around the locked kernel.
-
-    Two-stage deep-agent loop: analyze the wrapper for improvements, then produce a
-    refined wrapper. The kernel is passed READ-ONLY so the model knows the exact port
-    interface it must preserve. Returns the refined butterfold_top.v text.
-    """
-    constraints = plan.get("hardware_constraints", {})
-    subtasks    = [t for t in plan.get("subtasks", [])
-                   if t.get("id") != "transform_engine"]   # kernel covers that one
-
-    context_parts = [f"Specification:\n{spec}"]
-    if gpp_context:
-        context_parts.append(f"3GPP standard reference:\n{gpp_context}")
-    context_parts += [
-        f"Hardware constraints:\n{json.dumps(constraints, indent=2)}",
-        f"Wrapper subtasks to satisfy:\n{json.dumps(subtasks, indent=2)}",
-        f"LOCKED kernel interface (READ-ONLY, do not modify or redefine):\n{kernel_src}",
-        f"Current wrapper RTL to refine:\n{wrapper_rtl}",
-    ]
-    user_content = "\n\n".join(context_parts)
-
-    # --- Stage 1: analyze the wrapper (not the kernel) ---
-    print("[code_agent]   wrapper stage1: analyzing control wrapper")
-    review = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=1536,
-        messages=[
-            {"role": "system", "content": (
-                "You are a senior RTL architect. Review ONLY the control wrapper "
-                "(FSM, input deserializer, CP/centered-map addressing, output "
-                "serializer) of butterfold_top. The butterfold_kernel datapath is "
-                "locked — do not comment on it. List concrete, safe improvements that "
-                "preserve the module ports and the kernel instantiation exactly.")},
-            {"role": "user", "content": user_content},
-        ],
-    ).choices[0].message.content.strip()
-    print(f"[code_agent]   wrapper stage1: review complete ({len(review)} chars)")
-
-    # --- Stage 2: refine the wrapper, kernel untouched ---
-    print("[code_agent]   wrapper stage2: refining control wrapper")
-    refined = _strip_fences(_call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=8192,
-        messages=[
-            {"role": "system", "content": WRAPPER_SYSTEM},
-            {"role": "user", "content": (
-                f"Specification:\n{spec}\n\n"
-                f"Improvement notes:\n{review}\n\n"
-                f"LOCKED kernel interface (do not modify or redefine):\n{kernel_src}\n\n"
-                f"Wrapper to refine:\n{wrapper_rtl}\n\n"
-                f"Return the complete refined butterfold_top.v.")},
-        ],
-    ).choices[0].message.content)
-    print(f"[code_agent]   wrapper stage2: refined to {refined.count(chr(10))} lines")
-    return refined
-
-
-def _wrapper_is_sane(text: str) -> bool:
-    """Cheap guardrails before accepting an LLM wrapper (golden check still gates)."""
-    return (
-        "module butterfold_top" in text            # keeps the top module
-        and "butterfold_kernel" in text            # still instantiates the kernel
-        and "module butterfold_kernel" not in text # must NOT redefine the locked kernel
-        and "initial" not in text                  # no initial blocks in RTL
-    )
-
-
-def generate_subtask(client, spec, plan, subtask, prior_rtl="", gpp_context=""):
-    """Deep-agent inner loop: generate → critique → revise (if needed)."""
-    constraints = plan.get("hardware_constraints", {})
-
-    context_parts = [f"Full specification:\n{spec}"]
-    if gpp_context:
-        context_parts.append(f"3GPP standard reference (for algorithm accuracy):\n{gpp_context}")
-    context_parts += [
-        f"Hardware constraints:\n{json.dumps(constraints, indent=2)}",
-        f"Overall plan:\n{json.dumps(plan, indent=2)}",
-    ]
-    if prior_rtl:
-        context_parts.append(f"Previously generated RTL (for interface consistency):\n{prior_rtl}")
-    context_parts.append(
-        f"Subtask to implement now:\n{json.dumps(subtask, indent=2)}\n\n"
-        f"Constraint basis: {subtask.get('constraint_basis', '')}\n"
-        f"Waveform properties to preserve: {constraints.get('waveform_properties', [])}"
-    )
-    user_content = "\n\n".join(context_parts)
-
-    # --- Stage 1: Generate ---
-    completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=8192,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": user_content},
-        ],
-    )
-    rtl = _strip_fences(completion.choices[0].message.content)
-    print(f"[code_agent]   stage1: generated {rtl.count(chr(10))} lines")
-
-    # --- Stage 2: Critique (deep-agent self-review) ---
-    critique_completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=1024,
-        messages=[
-            {"role": "system", "content": CRITIQUE_PROMPT},
-            {"role": "user",   "content": f"Spec:\n{spec}\n\nVerilog to review:\n{rtl}"},
-        ],
-    )
-    critique = critique_completion.choices[0].message.content.strip()
-
-    if critique == "NO_ISSUES":
-        print(f"[code_agent]   stage2: critique clean — no revision needed")
-        return rtl
-
-    print(f"[code_agent]   stage2: critique found issues — revising")
-
-    # --- Stage 3: Revise ---
-    revise_completion = _call_with_retry(
-        client.chat.completions.create,
-        model="gpt-4o",
-        max_tokens=8192,
-        messages=[
-            {"role": "system", "content": REVISE_PROMPT},
-            {"role": "user",   "content": (
-                f"Original spec:\n{spec}\n\n"
-                f"Reviewer issues:\n{critique}\n\n"
-                f"Verilog to fix:\n{rtl}"
-            )},
-        ],
-    )
-    revised = _strip_fences(revise_completion.choices[0].message.content)
-    print(f"[code_agent]   stage3: revised to {revised.count(chr(10))} lines")
-    return revised
-
-
-def _ensure_reference() -> bool:
-    """(Re)generate the reference RTL from gen_reference.py if possible.
-
-    The generator self-validates its fixed-point datapath against butterfold_sim
-    (the golden model) before emitting Verilog, then writes three artifacts:
-      - butterfold_reference.v : flat single-module fallback (unchanged)
-      - butterfold_kernel.v    : LOCKED bit-exact datapath (ROMs + multiplier + round)
-      - butterfold_top.v       : hierarchical wrapper reference instantiating the kernel
-    This is the 'generator-based methodology' the project targets — the hard DSP
-    kernel is generated+verified, never hallucinated.
-    """
-    gen = ROOT / "gen_reference.py"
-    if not gen.exists():
-        return KERNEL_REF.exists() and TOP_REF.exists()
-    try:
-        import subprocess
-        r = subprocess.run([sys.executable, str(gen)], cwd=str(ROOT),
-                           capture_output=True, text=True, timeout=300)
-        for line in r.stdout.splitlines():
-            if line.strip():
-                print(f"[code_agent]   {line.strip()}")
-    except Exception as exc:
-        print(f"[code_agent]   gen_reference.py skipped ({exc})")
-    return KERNEL_REF.exists() and TOP_REF.exists()
-
-
-def run():
-    if not PLAN_PATH.exists():
-        raise FileNotFoundError("generated/plan.json not found — run planner.py first")
-
-    RTL_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Regenerate (and self-validate) the golden-matched DSP kernel + wrapper reference.
-    print("[code_agent] Generating validated DSP kernel via gen_reference.py")
-    if not _ensure_reference():
-        raise FileNotFoundError(
-            f"Kernel/top reference not found and could not be generated "
-            f"({KERNEL_REF.name}, {TOP_REF.name})")
-
-    # ── The bit-exact kernel is copied VERBATIM and never LLM-edited. One wrong
-    #    twiddle entry breaks the EVM floor, so the agent is not allowed near it.
-    kernel_dst = RTL_DIR / "butterfold_kernel.v"
-    kernel_src = KERNEL_REF.read_text()
-    kernel_dst.write_text(kernel_src)
-    print(f"[code_agent] Copied LOCKED kernel → {kernel_dst.relative_to(ROOT)} "
-          f"({kernel_src.count(chr(10))} lines, not LLM-edited)")
-
-    # ── The control wrapper IS authored by the agent: the LLM refines the
-    #    hierarchical reference, preserving ports + the kernel instantiation. The
-    #    golden-model EVM check (verify) and debug loop gate any regression; if
-    #    refinement fails or is unavailable we fall back to the proven reference.
-    top_ref  = TOP_REF.read_text()
-    top_dst  = RTL_DIR / "butterfold_top.v"
-
-    if os.environ.get("OPENAI_API_KEY"):
-        try:
-            spec = SPEC_PATH.read_text()
-            plan = json.loads(PLAN_PATH.read_text())
-            gpp  = _load_gpp_context()
-            client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-            refined = refine_wrapper(client, spec, plan, top_ref, kernel_src, gpp)
-            if _wrapper_is_sane(refined):
-                top_dst.write_text(refined)
-                print(f"[code_agent] Wrote AGENT-REFINED wrapper → {top_dst.relative_to(ROOT)} "
-                      f"({refined.count(chr(10))} lines)")
-            else:
-                top_dst.write_text(top_ref)
-                print("[code_agent] Refined wrapper failed sanity guards — using reference wrapper")
-        except Exception as exc:
-            top_dst.write_text(top_ref)
-            print(f"[code_agent] Wrapper refinement skipped ({exc}) — using reference wrapper")
-    else:
-        # Open-source path: no API key required — emit the validated reference wrapper.
-        top_dst.write_text(top_ref)
-        print(f"[code_agent] No OPENAI_API_KEY — wrote validated reference wrapper "
-              f"→ {top_dst.relative_to(ROOT)} ({top_ref.count(chr(10))} lines)")
-
-
-def _load_agent_core():
-    import importlib.util
-    core_path = pathlib.Path(__file__).parent / "agent_core.py"
-    spec = importlib.util.spec_from_file_location("agent_core", core_path)
-    mod  = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def run_react(max_steps: int = 12):
-    """Deep (reason+act) code agent: CLOSED-loop wrapper authoring.
-
-    Unlike run() (refine once, open-loop, hope it passes), this seeds the locked
-    kernel + reference wrapper, then drives the action harness to verify and, if
-    needed, repair the wrapper until golden_evm passes — verifying its own output
-    instead of trusting a single refine pass. The kernel stays locked; the agent
-    may only command regen_kernel to change kernel parameters.
-    """
-    if not PLAN_PATH.exists():
-        raise FileNotFoundError("generated/plan.json not found — run planner first")
-    RTL_DIR.mkdir(parents=True, exist_ok=True)
-    if not _ensure_reference():
-        raise FileNotFoundError("kernel/top reference could not be generated")
-
-    # Deterministic setup: lock the kernel, seed the reference wrapper as a start.
-    (RTL_DIR / "butterfold_kernel.v").write_text(KERNEL_REF.read_text())
-    (RTL_DIR / "butterfold_top.v").write_text(TOP_REF.read_text())
-
-    core    = _load_agent_core()
-    journal = core.Journal()
-    harness = core.ActionHarness(journal, agent="code")
-    goal = (
-        "Deliver generated/rtl/butterfold_top.v: a control wrapper that instantiates "
-        "the LOCKED butterfold_kernel and passes the golden EVM gate (EVM < 2%). A "
-        "correct reference wrapper is already in place — VERIFY it with compile then "
-        "golden_evm. You MAY improve wrapper clarity, but golden_evm must stay < 2% "
-        "and you must NOT edit or redefine the kernel (use regen_kernel only to change "
-        "kernel parameters, observing the EVM). Make one edit at a time and re-check. "
-        "Call done(status='success') once compile passes and golden_evm < 2%."
-    )
-    journal.append("code", "finding", "ReAct code agent: closed-loop wrapper verify/author")
-    res = core.react_loop(goal, harness, journal, agent="code", max_steps=max_steps)
-    print(f"[code_agent] ReAct code agent finished: {res}")
-    if res.get("fallback"):
-        print("[code_agent] No API key — using scripted refine path instead.")
-        return run()
+    # Safety net: if the agent finished without leaving a file, drop the skeleton
+    # so downstream integration/elaboration still has a module.
+    if not harness.path.exists():
+        harness.write_module(skel)
+        res["summary"] = (res.get("summary", "") + " | skeleton written as fallback").strip()
+    print(f"[code_agent]   {name}: {res.get('status','?')} "
+          f"({res.get('summary','').strip()[:80]})")
     return res
 
 
+def run(only: str | None = None) -> dict:
+    doc     = module_spec.parse()
+    journal = agent_core.Journal()
+    order   = [only] if only else doc["order"]
+    results = {}
+    for name in order:
+        if name not in doc["modules"]:
+            print(f"[code_agent] unknown module: {name}"); continue
+        results[name] = author_module(name, doc, journal)
+    ok = sum(1 for r in results.values() if r.get("ok"))
+    print(f"[code_agent] authored {len(results)} module(s); {ok} reached success status")
+    return {"results": results, "rtl_dir": str(RTL_DIR)}
+
+
+def run_react(only: str | None = None) -> dict:
+    return run(only)
+
+
 if __name__ == "__main__":
-    import sys
-    if "--react" in sys.argv:
-        run_react()
-    else:
-        run()
+    only = None
+    if "--module" in sys.argv:
+        only = sys.argv[sys.argv.index("--module") + 1]
+    run(only)
