@@ -19,7 +19,7 @@ GDS:  BUTTERFOLD_GDS=1 python agents/orchestrator.py
 """
 from __future__ import annotations
 import os, json, pathlib
-import planner, code_agent, verify_agent, synth_agent, agent_core
+import planner, code_agent, verify_agent, synth_agent, agent_core, golden_agent
 import module_spec
 
 ROOT    = pathlib.Path(__file__).parent.parent
@@ -49,10 +49,19 @@ def run() -> dict:
     _line("Step 2: Code agents (author every module)")
     code_agent.run()
 
-    _line("Step 3: Verify (per-module + integration)")
+    _line("Step 3: Golden models (Phase 1: daisy chain vs whole-chain golden)")
+    try:
+        golden = golden_agent.run()
+        summary["golden_passed"] = golden.get("passed", False)
+    except Exception as exc:
+        print(f"[golden] skipped ({exc})")
+        golden = {"passed": None}
+        summary["golden_passed"] = None
+
+    _line("Step 4: Verify (per-module + integration)")
     report = verify_agent.run()
 
-    _line("Step 4: Repair failing modules")
+    _line("Step 5: Repair failing modules")
     doc = module_spec.parse()
 
     def _to_repair(rep: dict) -> list[str]:
@@ -75,11 +84,11 @@ def run() -> dict:
             if not failed:
                 break
 
-    _line("Step 5: Synthesis (area/timing)")
+    _line("Step 6: Synthesis (area/timing)")
     synth = synth_agent.run()
     summary["synth"] = synth.get("metrics", {})
 
-    _line("Step 6: LibreLane RTL->GDS")
+    _line("Step 7: LibreLane RTL->GDS")
     gds = {"skipped": True}
     if os.environ.get("BUTTERFOLD_GDS"):
         import librelane_agent
@@ -87,23 +96,31 @@ def run() -> dict:
     else:
         print("[librelane] Skipped - set BUTTERFOLD_GDS=1 to run the (long) GDS flow")
 
-    _line("Step 7: Summarize")
+    _line("Step 8: Summarize")
     passed = report.get("passed", False)
     summary.update({
         "verify_passed": passed,
         "gds": gds,
         "area_um2": synth.get("metrics", {}).get("chip_area_um2"),
     })
-    _write_summary(plan, report, synth, gds)
+    _write_summary(plan, report, synth, gds, golden)
+    gtag = {True: "golden OK", False: "golden FAIL", None: "golden n/a"}[summary.get("golden_passed")]
     print(f"\n[orchestrator] RESULT: {'PASSED' if passed else 'NEEDS WORK'} "
-          f"(verify {'clean' if passed else 'has failures'})")
+          f"(verify {'clean' if passed else 'has failures'}, {gtag})")
     return summary
 
 
-def _write_summary(plan, report, synth, gds) -> None:
+def _write_summary(plan, report, synth, gds, golden=None) -> None:
     lines = ["# ButterFold Modular Workflow Summary", "",
              f"- **Spec (single source of truth)**: {plan['spec']}",
              f"- **Modules authored**: {len(plan['build_order'])}", ""]
+    if golden is not None:
+        c = golden.get("compliance", {})
+        gp = golden.get("passed")
+        lines += ["## Golden models (Phase 1: daisy chain vs whole-chain golden)",
+                  f"- decomposition compliant: {'YES' if gp else ('NO' if gp is not None else 'n/a')}",
+                  f"- TX max stage error: {c.get('tx', {}).get('max_err')}",
+                  f"- RX max stage error: {c.get('rx', {}).get('max_err')}", ""]
     lines.append("## Per-module verification")
     lines.append("| module | compile | elaborate | testbench |")
     lines.append("|---|---|---|---|")
