@@ -26,12 +26,18 @@ TOP       = "butterfold_top"
 
 
 def _rtl_sources() -> str:
-    """Space-joined list of all synthesizable RTL files (top + kernel + submodules),
-    excluding testbenches — the hybrid design is multi-file."""
-    files = sorted(p for p in RTL_DIR.glob("*.v") if not p.name.startswith("tb_"))
+    """Space-joined list of the authored module files only. Uses the known module
+    set from the spec so stale files (old kernels, tb_*) lingering in the
+    gitignored generated/rtl are never swept into synthesis."""
+    import importlib.util
+    ms_path = ROOT / "agents" / "module_spec.py"
+    spec = importlib.util.spec_from_file_location("module_spec", ms_path)
+    ms = importlib.util.module_from_spec(spec); spec.loader.exec_module(ms)
+    names = ms.parse()["modules"].keys()
+    files = [RTL_DIR / f"{n}.v" for n in names if (RTL_DIR / f"{n}.v").exists()]
     if not files and RTL_FILE.exists():
         files = [RTL_FILE]
-    return " ".join(str(p) for p in files)
+    return " ".join(str(p) for p in sorted(files))
 
 # Where GF180 standard-cell liberty files commonly live in IIC-OSIC-TOOLS.
 _LIBERTY_GLOBS = [

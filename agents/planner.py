@@ -15,6 +15,12 @@ import module_spec
 ROOT     = pathlib.Path(__file__).parent.parent
 OUT_PATH = ROOT / "generated" / "plan.json"
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 # Which modules each module instantiates (drives depends_on + top integration).
 DEPENDS = {
     "twiddle_source":            [],

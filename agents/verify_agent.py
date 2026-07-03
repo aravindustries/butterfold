@@ -33,7 +33,10 @@ def _run(cmd: list, timeout: int = 300) -> tuple[int, str]:
 
 
 def _rtl_files() -> list[pathlib.Path]:
-    return sorted(p for p in RTL_DIR.glob("*.v") if not p.name.startswith("_"))
+    """Only the authored module files — never testbenches (tb_*) or scratch (_*)
+    that may linger in the gitignored generated/rtl from earlier runs."""
+    names = set(module_spec.parse()["modules"].keys())
+    return sorted(RTL_DIR / f"{n}.v" for n in names if (RTL_DIR / f"{n}.v").exists())
 
 
 def check_module(name: str) -> dict:

@@ -25,6 +25,13 @@ SPEC_FILE  = ROOT / "butterfold_module_io.md"     # the ONLY spec
 RTL_DIR    = ROOT / "generated" / "rtl"
 TB_DIR     = ROOT / "tests" / "modules"
 
+# Load OPENAI_API_KEY from .env so the ReAct loop is driven when a key exists.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 
 def spec_hash() -> str:
     h = hashlib.sha256()
