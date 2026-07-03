@@ -54,17 +54,24 @@ def run() -> dict:
 
     _line("Step 4: Repair failing modules")
     doc = module_spec.parse()
-    failed = [n for n in doc["order"] if n != "butterfold_top" and _module_failed(report, n)]
+
+    def _to_repair(rep: dict) -> list[str]:
+        bad = [n for n in doc["order"] if n != "butterfold_top" and _module_failed(rep, n)]
+        integ = rep.get("integration", {})
+        if not (integ.get("compile") and integ.get("elaborate")):
+            bad.append("butterfold_top")   # integration/wiring failure -> re-author the top
+        return bad
+
+    failed = _to_repair(report)
     if not failed:
-        print("[orchestrator] no module failed verify — nothing to repair")
+        print("[orchestrator] verify clean — nothing to repair")
     else:
         for attempt in range(1, MAX_REPAIR + 1):
             print(f"[orchestrator] repair attempt {attempt}: re-authoring {failed}")
             for name in failed:
                 code_agent.author_module(name, doc, journal)
             report = verify_agent.run()  # re-verify once after re-authoring the batch
-            failed = [n for n in doc["order"]
-                      if n != "butterfold_top" and _module_failed(report, n)]
+            failed = _to_repair(report)
             if not failed:
                 break
 

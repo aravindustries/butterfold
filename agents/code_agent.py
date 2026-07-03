@@ -27,23 +27,33 @@ def _deps(name: str) -> list[str]:
     return planner.DEPENDS.get(name, [])
 
 
-def _goal(name: str, contract: str, deps: list[str]) -> str:
-    dep = (f"\nThis module instantiates and wires these already-authored submodules "
-           f"(read their files under generated/rtl if needed): {', '.join(deps)}."
-           if deps else "")
+def _goal(name: str, contract: str, deps: list[str], doc: dict) -> str:
+    if not deps:
+        return (f"Author the synthesizable Verilog-2012 module `{name}` implementing exactly "
+                f"this contract. Match every port name/direction/width.\n\n{contract}")
+    # For an integrating module, give the EXACT submodule contracts so it wires
+    # real port names (never guessed) and instantiates the modules by name.
+    sub = "\n\n".join(module_spec.contract_text(doc["modules"][d]) for d in deps)
     return (f"Author the synthesizable Verilog-2012 module `{name}` implementing exactly "
-            f"this contract. Match every port name/direction/width.{dep}\n\n{contract}")
+            f"this contract. Match every port name/direction/width. This is the top: it must "
+            f"INSTANTIATE and wire the submodules below using their EXACT port names — do not "
+            f"invent ports. The submodule files already exist in generated/rtl and are compiled "
+            f"alongside your module, so instantiate them directly.\n\n"
+            f"=== THIS MODULE ({name}) CONTRACT ===\n{contract}\n\n"
+            f"=== SUBMODULE CONTRACTS TO INSTANTIATE ===\n{sub}")
 
 
 def author_module(name: str, doc: dict, journal: agent_core.Journal) -> dict:
-    mod      = doc["modules"][name]
-    contract = module_spec.contract_text(mod)
-    skel     = module_spec.skeleton(mod)
-    deps     = _deps(name)
-    harness  = agent_core.ModuleHarness(name, contract, journal, skeleton=skel)
+    mod       = doc["modules"][name]
+    contract  = module_spec.contract_text(mod)
+    skel      = module_spec.skeleton(mod)
+    deps      = _deps(name)
+    dep_files = [RTL_DIR / f"{d}.v" for d in deps]
+    harness   = agent_core.ModuleHarness(name, contract, journal, skeleton=skel,
+                                         dep_files=dep_files)
 
     print(f"[code_agent] authoring {name} ({len(mod['ports'])} ports)...")
-    res = agent_core.react_loop(_goal(name, contract, deps), harness, journal, agent=name)
+    res = agent_core.react_loop(_goal(name, contract, deps, doc), harness, journal, agent=name)
 
     # Safety net: if the agent finished without leaving a file, drop the skeleton
     # so downstream integration/elaboration still has a module.

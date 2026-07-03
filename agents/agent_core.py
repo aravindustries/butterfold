@@ -102,13 +102,16 @@ class ModuleHarness:
     ok=False with a clear reason so the harness stays importable/testable."""
 
     def __init__(self, module: str, contract: str, journal: Optional[Journal] = None,
-                 skeleton: str = ""):
+                 skeleton: str = "", dep_files: Optional[list] = None):
         self.module   = module
         self.contract = contract
         self.skeleton = skeleton
         self.journal  = journal
         self.path     = RTL_DIR / f"{module}.v"
         self.tb       = TB_DIR / f"tb_{module}.v"
+        # Already-authored submodule files this module instantiates, so compile /
+        # elaborate / testbench can resolve the hierarchy (needed for the top).
+        self.dep      = [str(p) for p in (dep_files or []) if pathlib.Path(p).exists()]
 
     def _log(self, action: str, obs: dict) -> dict:
         if self.journal:
@@ -151,7 +154,7 @@ class ModuleHarness:
     def compile(self) -> dict:
         if not self.path.exists():
             return self._log("compile", _obs(False, f"{self.module}.v not written yet"))
-        rc, out = self._run(["iverilog", "-g2012", "-Wall", "-t", "null", str(self.path)])
+        rc, out = self._run(["iverilog", "-g2012", "-Wall", "-t", "null", str(self.path), *self.dep])
         summary = ("syntax OK" if rc == 0 else
                    "iverilog unavailable (need container)" if rc == 127 else "compile errors")
         return self._log("compile", _obs(rc == 0, summary, rc=rc, log=out[-1600:]))
@@ -159,7 +162,8 @@ class ModuleHarness:
     def elaborate(self) -> dict:
         if not self.path.exists():
             return self._log("elaborate", _obs(False, f"{self.module}.v not written yet"))
-        script = (f"read_verilog -sv {self.path}; hierarchy -top {self.module} -check; "
+        srcs = " ".join([str(self.path), *self.dep])
+        script = (f"read_verilog -sv {srcs}; hierarchy -top {self.module} -check; "
                   f"proc; opt -fast; check")
         rc, out = self._run(["yosys", "-q", "-p", script])
         ok = rc == 0 and "ERROR" not in out.upper()
@@ -172,7 +176,7 @@ class ModuleHarness:
         if not self.path.exists():
             return self._log("run_tb", _obs(False, f"{self.module}.v not written yet"))
         vvp = RTL_DIR / f"_{self.module}_tb.vvp"
-        rc, out = self._run(["iverilog", "-g2012", "-o", str(vvp), str(self.tb), str(self.path)])
+        rc, out = self._run(["iverilog", "-g2012", "-o", str(vvp), str(self.tb), str(self.path), *self.dep])
         if rc != 0:
             return self._log("run_tb", _obs(False, "tb compile failed", rc=rc, log=out[-1600:]))
         rc2, out2 = self._run(["vvp", str(vvp)])
