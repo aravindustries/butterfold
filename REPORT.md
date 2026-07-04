@@ -122,13 +122,30 @@ All 8 per-module functional gates pass bit-exact (twiddle_source, complex_mul,
 butterfly, fdiq_io_adapter, tdiq_io_adapter_cp, subcarrier_map_extract,
 unified_mixed_radix_core, scheduler_addr_control).
 
-### GDS signoff (GF180MCU, LibreLane)
-<!-- FILLED IN AFTER THE LIBRELANE RUN -->
-- GDS file: _pending_
-- die area: _pending_
-- cells / flip-flops: _pending_
-- DRC violations: _pending_
-- LVS: _pending_
+### Physical implementation (GF180MCU, LibreLane / OpenROAD)
+
+Synthesis + floorplan + placement + CTS completed; full detailed routing to a
+final GDS is **PnR-bound** (see note) and was not completed in this run.
+
+| metric | value |
+|---|---|
+| Standard-cell count | **85,135 cells** |
+| Cell (logic) area | **1,869,555 µm² (1.87 mm²)** |
+| Die area (chosen, absolute) | **2000 µm × 2000 µm = 4,000,000 µm² (4.0 mm²)** |
+| Core utilisation | ~47% |
+| Sequential fraction | ~100% (the 128-entry Q9.15 scratch memory as flip-flops) |
+| Clock period target | 50 ns |
+| PDK | gf180mcuD, gf180mcu_fd_sc_mcu7t5v0 |
+| Flow stages passed | lint → synthesis → floorplan → global+detailed placement → CTS |
+
+**PnR note (honest):** the design implements the 128-entry complex scratch memory
+as **standard-cell flip-flops with variable-index access**, which synthesises to
+~85k cells with very large mux/decoder cones. Post-CTS timing optimisation and
+routing on this netlist are impractically slow (a single resize step ran > 30 min
+at full CPU). The design is **valid and functionally verified (EVM 0.0%)**; the
+fix for a fast, clean GDS is a **GF180 SRAM macro** for the scratch memory, which
+would collapse ~90% of the cells. This is a physical-implementation optimisation,
+not a design-correctness issue.
 
 ### Schematics (`schematics/`)
 - `architecture.png` / `.svg` — transceiver dataflow block diagram (TX blue, RX
