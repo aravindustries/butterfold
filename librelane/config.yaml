@@ -16,10 +16,11 @@ CLOCK_PORT: clk_i
 CLOCK_PERIOD: 50
 
 # Die area: the integrated top holds a 128-entry x 24-bit complex scratch memory
-# (~6k flip-flops) plus the shared multiplier + twiddle ROMs, so it needs far more
-# room than the earlier ~900-FF flat core. 1200x1200 keeps utilisation comfortable.
+# (~6k flip-flops as standard cells) plus the shared multiplier + twiddle ROMs.
+# At 1200x1200 with wide margins global placement hit 131% utilisation, so give it
+# a generous 2000x2000 die; ~0.45mm^2 of cells then sits at comfortable utilisation.
 FP_SIZING: absolute
-DIE_AREA: [0.0, 0.0, 1200.0, 1200.0]
+DIE_AREA: [0.0, 0.0, 2000.0, 2000.0]
 
 # Don't treat lint-level synth warnings as fatal. The 69 "checks" here are all
 # memory-inference artifacts on the spread_re/spread_im/inbuf register arrays
@@ -75,8 +76,9 @@ CTS_SINK_CLUSTERING_MAX_DIAMETER: 60
 CTS_OBSTRUCTION_AWARE: true
 CTS_APPLY_NDR: none
 
-# Margins.
+# Margins -- keep modest so the large memory-heavy core has room (wide L/R margins
+# were shrinking the core and driving utilisation over 100%).
 TOP_MARGIN_MULT: 1
 BOTTOM_MARGIN_MULT: 1
-LEFT_MARGIN_MULT: 6
-RIGHT_MARGIN_MULT: 6
+LEFT_MARGIN_MULT: 2
+RIGHT_MARGIN_MULT: 2

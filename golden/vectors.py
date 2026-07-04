@@ -123,6 +123,11 @@ def emit(seed: int = 42) -> dict:
         _write_bytes(VECDIR / f"{tag}_re.hex", tre)
         _write_bytes(VECDIR / f"{tag}_im.hex", tim)
 
+    # RX gate golden: feed the TX output (top_gold) into the RX chain -> 24 bytes.
+    import rx_exec
+    rxo = rx_exec.rx_rx(tx["out_bytes"])
+    _write_bytes(VECDIR / "rx_gold.hex", [v for pair in rxo for v in pair])
+
     # complex_mul rung: random Q1.7 quads -> expected products (bit-exact gate).
     ncmul = _emit_cmul_vectors()
     _emit_butterfly_vectors()
