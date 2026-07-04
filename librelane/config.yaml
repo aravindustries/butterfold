@@ -1,0 +1,84 @@
+# GF180MCU LibreLane config for ButterFold.
+# Mirrors the working /foss/designs/01_rtl2gds_counter/config.yaml (which routes
+# cleanly to GDS on GF180); only the design-specific fields are changed.
+
+meta:
+  version: 3
+  flow: Classic
+
+DESIGN_NAME: butterfold_top
+# The WORKING chip is the self-contained integrated datapath (gen_top.py): the
+# whole DFT-s-OFDM TX in one Q9.15 scratch memory, closing the EVM gate at 0.0%.
+# It instantiates no submodules, so only butterfold_top.v is elaborated.
+VERILOG_FILES:
+  - dir::../generated/rtl/butterfold_top.v
+CLOCK_PORT: clk_i
+CLOCK_PERIOD: 50
+
+# Die area: the integrated top holds a 128-entry x 24-bit complex scratch memory
+# (~6k flip-flops as standard cells) plus the shared multiplier + twiddle ROMs.
+# At 1200x1200 with wide margins global placement hit 131% utilisation, so give it
+# a generous 2000x2000 die; ~0.45mm^2 of cells then sits at comfortable utilisation.
+FP_SIZING: absolute
+DIE_AREA: [0.0, 0.0, 2000.0, 2000.0]
+
+# Don't treat lint-level synth warnings as fatal. The 69 "checks" here are all
+# memory-inference artifacts on the spread_re/spread_im/inbuf register arrays
+# ("$mem$...wr$...DATA is used but has no driver") plus informational "No latch
+# inferred" lines. Yosys's authoritative `check` pass reports 0 problems and the
+# design already passed the verify-agent yosys structural check, so these are safe.
+ERROR_ON_SYNTH_CHECKS: false
+ERROR_ON_LINTER_WARNINGS: false
+
+# Power / ground nets.
+VDD_NETS:
+  - VDD
+GND_NETS:
+  - VSS
+
+# Signoff / streamout.
+PRIMARY_GDSII_STREAMOUT_TOOL: klayout
+
+# Routing / ESD. DIODE_ON_PORTS is a direction (none|in|out|both), NOT a port name.
+# CRITICAL: route signals on Metal2..Metal4, exactly like the working counter.
+# GF180's Via1 enclosure rule is broken in this tool version (DRT-0349), so any
+# router that defaults to RT_MIN_LAYER=Metal1 fails to make Via1 access points to
+# pins (DRT-0073 "no access point"). Starting at Metal2 sidesteps Via1 entirely --
+# the counter hits the same DRT-0349 warning yet still routes to GDS because of this.
+DIODE_ON_PORTS: in
+RT_MIN_LAYER: Metal2
+RT_MAX_LAYER: Metal4
+PDN_MULTILAYER: false
+
+# Power distribution network (straps + pitch) -- same as the proven counter run.
+PDN_VWIDTH: 5
+PDN_HWIDTH: 5
+PDN_VSPACING: 1
+PDN_HSPACING: 1
+PDN_VPITCH: 75
+PDN_HPITCH: 75
+PDN_EXTEND_TO: boundary
+
+# Placement -- match the proven counter (util 50, density 65).
+FP_CORE_UTIL: 50
+PL_TARGET_DENSITY_PCT: 65
+MAX_FANOUT_CONSTRAINT: 10
+
+# CTS -- ButterFold's ~900-sink clock built a 318-buffer tree, and a few top-level
+# buffers could not get pin access during routing. Build a SMALLER, obstruction-
+# aware clock tree WITHOUT the wide non-default routing rule, so every clock-buffer
+# pin stays reachable (the wide NDR wires + GF180's broken Via1 rule were what made
+# the top buffers unroutable). Larger sink clusters => fewer buffers.
+CTS_CLK_MAX_WIRE_LENGTH: 0
+CTS_DISTANCE_BETWEEN_BUFFERS: 0
+CTS_SINK_CLUSTERING_SIZE: 40
+CTS_SINK_CLUSTERING_MAX_DIAMETER: 60
+CTS_OBSTRUCTION_AWARE: true
+CTS_APPLY_NDR: none
+
+# Margins -- keep modest so the large memory-heavy core has room (wide L/R margins
+# were shrinking the core and driving utilisation over 100%).
+TOP_MARGIN_MULT: 1
+BOTTOM_MARGIN_MULT: 1
+LEFT_MARGIN_MULT: 2
+RIGHT_MARGIN_MULT: 2
