@@ -70,12 +70,19 @@ The core + scheduler were reachable because the golden emits a *verified
 address sequence" and the core's became "execute one butterfly over memory" —
 turning "invent an FFT" into transcription of a verified reference.
 
-## Working chip — end-to-end EVM gate CLOSED at 0.0%
+## Working chip — a full DFT-s-OFDM TRANSCEIVER, both directions EVM-clean
 
-The full DFT-s-OFDM TX transform now runs end to end and matches the golden model
-**bit-for-bit**: feeding a 24-byte symbol produces the 274-byte output with
-**EVM = 0.0%, 0/274 mismatches** (gate ≤ 2%; all test seeds pass, worst 1.28%).
-The chip computes the transform.
+The chip transmits **and** receives, both bit-exact to the golden model:
+
+| direction | transform | result |
+|---|---|---|
+| **TX** (cmd 0x03) | 24B → DFT-12 → map → IFFT-128 → CP → 274B | **EVM 0.0%, 0/274** |
+| **RX** (cmd 0x04) | 274B → drop CP → FFT-128 → extract → IDFT-12 → 24B | **EVM 0.0%, 0/24** |
+| **Loopback** | TX → RX recovers the original symbols | **EVM 1.20%** ✅ |
+
+Both paths share one Q9.15 scratch memory, twiddle ROMs, and butterfly (FFT vs
+IFFT via a mode flag). All test seeds pass the ≤ 2% gate (TX worst 1.28%, RX
+worst 1.51%). The chip genuinely computes the 5G transform in both directions.
 
 **A precision finding along the way:** the spec's int8 (Q1.7) inter-module
 interfaces cannot reach EVM ≤ 2% — the DFT-spread values saturate. We proved (by
