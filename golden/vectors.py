@@ -72,6 +72,22 @@ def _emit_butterfly_vectors(n: int = 64, seed: int = 11) -> int:
     return n
 
 
+def _emit_core_vectors(seed: int = 42) -> int:
+    """Load grid (128 int8 {I8,Q8} words), the 448 uops (top/bot/w_re/w_im), and
+    the expected 128 int8 output words, for the core FFT-engine gate."""
+    import core_exec
+    r = core_exec.run(seed)
+    _write_words16(VECDIR / "core_load.hex",
+                   [((i & 0xFF) << 8) | (q & 0xFF) for (i, q) in r["grid_in"]])
+    _write_words16(VECDIR / "core_out.hex",
+                   [((i & 0xFF) << 8) | (q & 0xFF) for (i, q) in r["out_int8"]])
+    _write_words16(VECDIR / "core_uop_top.hex", [o["top"] for o in r["uops"]])
+    _write_words16(VECDIR / "core_uop_bot.hex", [o["bot"] for o in r["uops"]])
+    _write_bytes(VECDIR / "core_uop_wre.hex", [o["w_re"] for o in r["uops"]])
+    _write_bytes(VECDIR / "core_uop_wim.hex", [o["w_im"] for o in r["uops"]])
+    return len(r["uops"])
+
+
 def _write_stage_json(path: pathlib.Path, arr) -> None:
     a = np.asarray(arr, complex)
     path.write_text(json.dumps([[float(v.real), float(v.imag)] for v in a]), encoding="utf-8")
@@ -99,6 +115,9 @@ def emit(seed: int = 42) -> dict:
     # complex_mul rung: random Q1.7 quads -> expected products (bit-exact gate).
     ncmul = _emit_cmul_vectors()
     _emit_butterfly_vectors()
+
+    # unified_mixed_radix_core: load grid, 448 uops, expected int8 output.
+    _emit_core_vectors()
 
     # Reference micro-op schedules (the scheduler must emit these; core executes).
     import schedule

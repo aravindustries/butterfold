@@ -1,132 +1,93 @@
-// tb_unified_mixed_radix_core.v  —  GENERATED testbench SKELETON by harness_agent.py
-// Source of truth: butterfold_module_io.md  (regenerate; do not hand-edit headers).
-// Module 'unified_mixed_radix_core' is not yet implemented — this skeleton makes it independently
-// checkable the moment its RTL exists. Fill in the TODO checks per the spec.
+// tb_unified_mixed_radix_core.v — FUNCTIONAL testbench (IFFT-128 engine).
+// Loads the 128-sample bit-reversed grid, drives the 448 radix-2 butterfly
+// micro-ops (addresses + twiddles from the golden schedule), reads the 128
+// results, and checks them bit-exactly against golden/core_exec (core_out.hex).
+// Run from repo root.
 `timescale 1ns/1ps
+`define N    128
+`define NUOP 448
 
 module tb_unified_mixed_radix_core;
-  integer errors = 0;
-  reg timeout_hit = 0;
+  reg         clk = 0, rst_n = 0;
+  reg         uop_valid = 0;  wire uop_ready;
+  reg  [1:0]  uop_radix = 2;  reg uop_inverse = 1;  reg [2:0] uop_scale_shift = 1;  reg uop_last = 0;
+  reg  [6:0]  src_addr_0 = 0, src_addr_1 = 0, src_addr_2 = 0;
+  reg  [6:0]  dst_addr_0 = 0, dst_addr_1 = 0, dst_addr_2 = 0;
+  reg  [7:0]  twiddle_re = 0, twiddle_im = 0;  reg twiddle_valid = 0;
+  reg  [6:0]  load_addr = 0;  reg [15:0] load_data = 0;  reg load_valid = 0;  wire load_ready;
+  reg  [6:0]  read_addr = 0;  reg read_req = 0;  wire [15:0] read_data;  wire read_valid;
+  wire        uop_done, overflow, saturation_occurred;
 
-  // ── DUT signals (from butterfold_module_io.md) ──────────────────────────
-  reg  clk;
-  reg  rst_n;
-  reg  uop_valid;
-  wire uop_ready;
-  reg  [1:0] uop_radix;
-  reg  uop_inverse;
-  reg  [2:0] uop_scale_shift;
-  reg  uop_last;
-  reg  [6:0] src_addr_0;
-  reg  [6:0] src_addr_1;
-  reg  [6:0] src_addr_2;
-  reg  [6:0] dst_addr_0;
-  reg  [6:0] dst_addr_1;
-  reg  [6:0] dst_addr_2;
-  reg  [7:0] twiddle_re;
-  reg  [7:0] twiddle_im;
-  reg  twiddle_valid;
-  reg  [6:0] load_addr;
-  reg  [15:0] load_data;
-  reg  load_valid;
-  wire load_ready;
-  reg  [6:0] read_addr;
-  reg  read_req;
-  wire [15:0] read_data;
-  wire read_valid;
-  wire uop_done;
-  wire overflow;
-  wire saturation_occurred;
-
-  // ── DUT instantiation (port names from the I/O contract) ────────────────
   unified_mixed_radix_core dut (
-    .clk(clk),
-    .rst_n(rst_n),
-    .uop_valid(uop_valid),
-    .uop_ready(uop_ready),
-    .uop_radix(uop_radix),
-    .uop_inverse(uop_inverse),
-    .uop_scale_shift(uop_scale_shift),
-    .uop_last(uop_last),
-    .src_addr_0(src_addr_0),
-    .src_addr_1(src_addr_1),
-    .src_addr_2(src_addr_2),
-    .dst_addr_0(dst_addr_0),
-    .dst_addr_1(dst_addr_1),
-    .dst_addr_2(dst_addr_2),
-    .twiddle_re(twiddle_re),
-    .twiddle_im(twiddle_im),
-    .twiddle_valid(twiddle_valid),
-    .load_addr(load_addr),
-    .load_data(load_data),
-    .load_valid(load_valid),
-    .load_ready(load_ready),
-    .read_addr(read_addr),
-    .read_req(read_req),
-    .read_data(read_data),
-    .read_valid(read_valid),
-    .uop_done(uop_done),
-    .overflow(overflow),
-    .saturation_occurred(saturation_occurred)
+    .clk(clk), .rst_n(rst_n),
+    .uop_valid(uop_valid), .uop_ready(uop_ready), .uop_radix(uop_radix),
+    .uop_inverse(uop_inverse), .uop_scale_shift(uop_scale_shift), .uop_last(uop_last),
+    .src_addr_0(src_addr_0), .src_addr_1(src_addr_1), .src_addr_2(src_addr_2),
+    .dst_addr_0(dst_addr_0), .dst_addr_1(dst_addr_1), .dst_addr_2(dst_addr_2),
+    .twiddle_re(twiddle_re), .twiddle_im(twiddle_im), .twiddle_valid(twiddle_valid),
+    .load_addr(load_addr), .load_data(load_data), .load_valid(load_valid), .load_ready(load_ready),
+    .read_addr(read_addr), .read_req(read_req), .read_data(read_data), .read_valid(read_valid),
+    .uop_done(uop_done), .overflow(overflow), .saturation_occurred(saturation_occurred)
   );
 
   always #5 clk = ~clk;
 
-  // valid/ready handshake on 'uop': hold valid until ready
-  task drive_uop;
-    begin
-      uop_valid = 1'b1;
-      @(posedge clk); while (!uop_ready) @(posedge clk);
-      uop_valid = 1'b0;
-    end
-  endtask
-  // valid/ready handshake on 'load': hold valid until ready
-  task drive_load;
-    begin
-      load_valid = 1'b1;
-      @(posedge clk); while (!load_ready) @(posedge clk);
-      load_valid = 1'b0;
-    end
-  endtask
+  reg [15:0] gload [0:`N-1];
+  reg [15:0] gout  [0:`N-1];
+  reg [15:0] utop  [0:`NUOP-1];
+  reg [15:0] ubot  [0:`NUOP-1];
+  reg [7:0]  uwre  [0:`NUOP-1];
+  reg [7:0]  uwim  [0:`NUOP-1];
+  integer    i, errors = 0;
 
-  // ── Stimulus ────────────────────────────────────────────────────────────
   initial begin
-      clk = 0;
-      rst_n = 0;
-      uop_valid = 0;
-      uop_radix = 0;
-      uop_inverse = 0;
-      uop_scale_shift = 0;
-      uop_last = 0;
-      src_addr_0 = 0;
-      src_addr_1 = 0;
-      src_addr_2 = 0;
-      dst_addr_0 = 0;
-      dst_addr_1 = 0;
-      dst_addr_2 = 0;
-      twiddle_re = 0;
-      twiddle_im = 0;
-      twiddle_valid = 0;
-      load_addr = 0;
-      load_data = 0;
-      load_valid = 0;
-      read_addr = 0;
+    $readmemh("tests/vectors/core_load.hex",    gload);
+    $readmemh("tests/vectors/core_out.hex",     gout);
+    $readmemh("tests/vectors/core_uop_top.hex", utop);
+    $readmemh("tests/vectors/core_uop_bot.hex", ubot);
+    $readmemh("tests/vectors/core_uop_wre.hex", uwre);
+    $readmemh("tests/vectors/core_uop_wim.hex", uwim);
+
+    rst_n = 0; repeat (4) @(negedge clk); rst_n = 1;
+
+    // 1) load 128 samples
+    for (i = 0; i < `N; i = i + 1) begin
+      @(negedge clk); load_addr = i; load_data = gload[i]; load_valid = 1;
+      @(posedge clk); while (load_ready !== 1'b1) @(posedge clk);
+    end
+    @(negedge clk); load_valid = 0;
+
+    // 2) run 448 butterfly micro-ops (in-place: dst == src), one per cycle.
+    // Hold uop_valid high and present a new op each cycle; uop_ready is high, so
+    // the core consumes exactly one op per posedge.
+    for (i = 0; i < `NUOP; i = i + 1) begin
+      @(negedge clk);
+      src_addr_0 = utop[i][6:0]; dst_addr_0 = utop[i][6:0];
+      src_addr_1 = ubot[i][6:0]; dst_addr_1 = ubot[i][6:0];
+      twiddle_re = uwre[i]; twiddle_im = uwim[i]; twiddle_valid = 1;
+      uop_radix = 2; uop_inverse = 1; uop_scale_shift = 1;
+      uop_last = (i == `NUOP-1); uop_valid = 1;
+    end
+    @(negedge clk); uop_valid = 0; twiddle_valid = 0;
+    repeat (4) @(negedge clk);            // let the last write settle
+
+    // 3) read back 128 results and compare
+    for (i = 0; i < `N; i = i + 1) begin
+      @(negedge clk); read_addr = i; read_req = 1;
+      @(negedge clk); while (read_valid !== 1'b1) @(negedge clk);
+      if (read_data !== gout[i]) begin
+        errors = errors + 1;
+        if (errors <= 8) $display("FAIL out[%0d]: got %04h want %04h", i, read_data, gout[i]);
+      end
       read_req = 0;
-      rst_n = 1'b0; repeat(4) @(posedge clk); rst_n = 1'b1;
+    end
 
-      // TODO: drive module-specific stimulus (use drive_<iface> helpers above)
-      // TODO: $display("PASS") only when all spec checks pass; bump 'errors' otherwise
-
-      repeat(50) @(posedge clk);
-      if (errors == 0) $display("PASS: tb_unified_mixed_radix_core skeleton ran (add real checks)");
-      else             $display("FAIL: tb_unified_mixed_radix_core (%0d errors)", errors);
-      $finish;
+    if (errors == 0) $display("PASS: tb_unified_mixed_radix_core (IFFT-128, 448 uops)");
+    else             $display("FAIL: tb_unified_mixed_radix_core (%0d errors)", errors);
+    $finish;
   end
 
-  // ── Watchdog ────────────────────────────────────────────────────────────
   initial begin
-    #500000; timeout_hit = 1;
-    $display("FAIL: tb_unified_mixed_radix_core TIMEOUT");
-    $finish;
+    #20000000; $display("FAIL: tb_unified_mixed_radix_core TIMEOUT"); $finish;
   end
 endmodule

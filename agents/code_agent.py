@@ -60,6 +60,27 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "unified_mixed_radix_core":
+        return (
+            "\n\nIMPLEMENTATION HINT (the gate checks the radix-2 IFFT engine over memory):\n"
+            "Scratch memory: two 128-entry signed 16-bit arrays mre[0:127], mim[0:127]\n"
+            "(real and imag, Q5.11). Set load_ready = 1 and uop_ready = 1 (continuous\n"
+            "assigns). One clocked always block on posedge clk / negedge rst_n:\n"
+            "  LOAD: if (load_valid && load_ready) widen int8->Q5.11 by <<4:\n"
+            "        mre[load_addr] <= $signed(load_data[15:8]) <<< 4;\n"
+            "        mim[load_addr] <= $signed(load_data[7:0])  <<< 4;\n"
+            "  UOP (one butterfly per cycle): if (uop_valid && uop_ready), read\n"
+            "        top = m[src_addr_0], bot = m[src_addr_1] (blocking temps), then\n"
+            "        tr = ($signed(botr)*$signed(twiddle_re) - $signed(boti)*$signed(twiddle_im) + 64) >>> 7;\n"
+            "        ti = ($signed(botr)*$signed(twiddle_im) + $signed(boti)*$signed(twiddle_re) + 64) >>> 7;\n"
+            "        m_re[dst_addr_0] <= sat16(($signed(topr)+tr+1) >>> 1);  // and +ti for imag\n"
+            "        m_re[dst_addr_1] <= sat16(($signed(topr)-tr+1) >>> 1);  // and -ti for imag\n"
+            "        pulse uop_done <= 1. (dst==src for in-place; reads see old values.)\n"
+            "  READ: if (read_req) read_data <= {narrow(mre[read_addr]), narrow(mim[read_addr])};\n"
+            "        read_valid <= 1;  where narrow(v)=sat8((v+8)>>>4) back to int8.\n"
+            "Use signed math and wide (32-bit) intermediates for tr/ti. Provide sat16 and\n"
+            "narrow (sat8) helper functions. Default uop_done/read_valid <= 0 each cycle.\n"
+            "Tie overflow/saturation_occurred and the unused radix-3 (src/dst_addr_2) to 0.")
     if name == "subcarrier_map_extract":
         return (
             "\n\nIMPLEMENTATION HINT (TX map path is what the gate checks):\n"
