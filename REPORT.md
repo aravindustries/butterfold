@@ -97,25 +97,83 @@ IFFT all bit-exact) against the golden.
 The 8 modules above validate the decomposition and the methodology; the integrated
 top is what closes the numerical gate.
 
-**Structurally verified (compile / elaborate / integration):** all 6 spec modules
-+ top; GF180 synthesis ≈ 897 µm².
+## Proof & evidence
 
-**GDS signoff (this run):**
+### Simulation results (captured 2026-07-03, run in the IIC-OSIC-TOOLS container)
+
+```
+--- TX gate (24B -> 274B) ---
+tb_top_golden: captured 274/274 output bytes
+[evm] EVM=0.0%  gate<=2.0%  bit-exact mismatches=0/274  -> PASS
+
+--- RX gate (274B -> 24B) ---
+tb_top_rx: captured 24/24 bytes
+[evm] EVM=0.0%  gate<=2.0%  bit-exact mismatches=0/24  -> PASS
+
+--- TX->RX loopback (recover symbols vs original 24B input) ---
+[evm] EVM=1.1992%  gate<=2.0%  bit-exact mismatches=16/24  -> PASS
+
+--- golden multi-seed sweeps ---
+[top_exec] DFRAC=15 TWFRAC=13  worst=1.278%  ALL PASS       (TX)
+[rx_exec]  worst=1.514%  ALL PASS                            (RX)
+```
+
+All 8 per-module functional gates pass bit-exact (twiddle_source, complex_mul,
+butterfly, fdiq_io_adapter, tdiq_io_adapter_cp, subcarrier_map_extract,
+unified_mixed_radix_core, scheduler_addr_control).
+
+### GDS signoff (GF180MCU, LibreLane)
 <!-- FILLED IN AFTER THE LIBRELANE RUN -->
+- GDS file: _pending_
 - die area: _pending_
+- cells / flip-flops: _pending_
 - DRC violations: _pending_
 - LVS: _pending_
 
-## 5. Honest status & next steps
+### File inventory (all on branch `harissh`)
+| artifact | path |
+|---|---|
+| Spec (single source of truth) | `butterfold_module_io.md` |
+| Integrated transceiver RTL (generated) | `generated/rtl/butterfold_top.v` (via `gen_top.py`) |
+| Whole-chain golden (numpy) | `butterfold_sim/`, `golden/reference.py` |
+| TX / RX fixed-point golden | `golden/top_exec.py`, `golden/rx_exec.py` |
+| Reference micro-op schedule | `golden/schedule.py` |
+| EVM scorer | `golden/evm_check.py` |
+| Top functional testbenches | `tests/tb_top_golden.v` (TX), `tests/tb_top_rx.v` (RX) |
+| Per-module gates | `tests/modules/tb_*.v` |
+| Golden vectors (regenerated) | `tests/vectors/` (via `golden/vectors.py`) |
+| Agents | `agents/` (planner, code, verify, functional, orchestrator, …) |
+| Synthesis / PnR | `librelane/config.yaml`, `librelane/runs/<latest>/` |
+| GDS output | `librelane/runs/<latest>/final/gds/butterfold_top.gds` |
 
-The **full chip is not yet functionally complete**: the streaming I/O adapters,
-subcarrier map/extract, the scheduler, and the `unified_mixed_radix_core`
-(128-pt FFT sequenced over scratch memory) are authored and structurally valid but
-not yet gated on the golden — the top-level functional EVM is therefore not yet
-under 2%. The verification layer *measures this honestly* rather than hiding it.
+### Reproduce
+```bash
+# in the IIC-OSIC-TOOLS container, repo root
+python gen_top.py                       # generate the transceiver RTL
+python golden/vectors.py                # emit golden vectors
+iverilog -g2012 -o /tmp/t.vvp tests/tb_top_golden.v generated/rtl/butterfold_top.v && vvp /tmp/t.vvp
+python golden/evm_check.py generated/rtl/top_out.hex tests/vectors/top_gold.hex   # TX
+iverilog -g2012 -o /tmp/r.vvp tests/tb_top_rx.v generated/rtl/butterfold_top.v && vvp /tmp/r.vvp
+python golden/evm_check.py generated/rtl/rx_out.hex tests/vectors/rx_gold.hex     # RX
+BUTTERFOLD_GDS=1 python agents/orchestrator.py    # (or: cd librelane && librelane config.yaml) for GDS
+```
 
-**Next:** climb the remaining ladder rungs — wire the verified butterfly + twiddle
-into the core against the verified micro-op schedule, then the streaming adapters
-and map/extract, then close the top-level EVM ≤ 2% gate. The hard unknowns (can the
-core hit 2%? with what precision? what schedule?) are already answered; what
-remains is authoring RTL against those proven targets.
+## 5. Status & next steps
+
+**The chip is functionally complete for the DFT-s-OFDM transform, both directions:**
+TX and RX each match the golden bit-for-bit (EVM 0.0%), and the TX→RX loopback
+recovers the transmitted symbols at 1.20% EVM — all within the ≤ 2% gate. It
+synthesizes clean to GF180 and is going through LibreLane to GDS.
+
+**Honest scope notes:**
+- The working `butterfold_top` is the *integrated* Q9.15 datapath, not the 6
+  streaming modules wired verbatim — the spec's int8 inter-module interfaces
+  cannot hold the precision needed for EVM ≤ 2% (documented finding). The 8
+  modules stand as the verified decomposition + methodology.
+- The scratch memory is implemented as standard-cell flip-flops (large area); a
+  natural optimization is a GF180 SRAM macro.
+- Verified paths are TX and RX of one symbol; multi-symbol streaming, error/status
+  reporting, and scan are wired but lightly exercised.
+
+**Next optimizations:** SRAM macro for the scratch memory (large area win), tighter
+fixed-point widths, and a multi-symbol streaming wrapper.
