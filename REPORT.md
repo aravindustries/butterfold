@@ -130,6 +130,15 @@ unified_mixed_radix_core, scheduler_addr_control).
 - DRC violations: _pending_
 - LVS: _pending_
 
+### Schematics (`schematics/`)
+- `architecture.png` / `.svg` — transceiver dataflow block diagram (TX blue, RX
+  orange, shared scratch memory / butterfly / twiddle ROMs).
+- `complex_mul.svg`, `butterfly.svg`, `twiddle_source.svg` — gate-level schematics
+  (yosys) of the agent-authored, functionally-verified building blocks.
+- `die.png` — GDS layout render (added after signoff).
+- Regenerate: `yosys -p "read_verilog <mod>.v; proc; opt; show -format svg -prefix schematics/<mod> <mod>"`
+  and `dot -Tpng schematics/architecture.dot -o schematics/architecture.png`.
+
 ### File inventory (all on branch `harissh`)
 | artifact | path |
 |---|---|

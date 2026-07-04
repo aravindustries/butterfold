@@ -1,0 +1,42 @@
+digraph butterfold {
+  rankdir=LR;
+  graph [fontname="Helvetica", labelloc=t,
+         label="ButterFold — integrated DFT-s-OFDM transceiver (Q9.15 shared datapath)"];
+  node  [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor="#eef4ff"];
+  edge  [fontname="Helvetica", fontsize=10];
+
+  din  [label="din[7:0]\ndin_valid/ready", shape=cds, fillcolor="#fff2cc"];
+  dout [label="dout[7:0]\ndout_valid/ready", shape=cds, fillcolor="#fff2cc"];
+
+  subgraph cluster_shared {
+    label="shared resources"; style="rounded,dashed"; color="#888888";
+    mem  [label="scratch memory\n128 x Q9.15 complex\n(gr[], gi[])", fillcolor="#e2f0d9"];
+    tw   [label="twiddle ROMs\nw12 / w128 (Q1.13)", fillcolor="#e2f0d9"];
+    bfly [label="butterfly\n(top +/- W*bot)\nFFT / IFFT via mode", fillcolor="#e2f0d9"];
+  }
+
+  fsm  [label="control FSM\nIDLE > LOAD > ... > OUT\ncmd 0x03=TX  0x04=RX", fillcolor="#dae3f3"];
+
+  // TX path
+  dft  [label="DFT-12\n(MAC, Q1.13 tw)"];
+  map  [label="centered map\nSTART=58 + bit-reverse"];
+  ifft [label="IFFT-128\n448 butterflies, >>1/stage"];
+  cp   [label="CP insert (9)\nnarrow -> int8"];
+
+  // RX path
+  cpr  [label="CP remove (9)\nbit-reverse"];
+  fft  [label="FFT-128\n448 butterflies (fwd)"];
+  ext  [label="extract bins\n58..69"];
+  idft [label="IDFT-12\n(MAC, /12)"];
+
+  din -> fsm;
+  fsm -> dft   [label="TX", color="#2e75b6"];
+  dft -> map -> ifft -> cp -> dout [color="#2e75b6"];
+
+  fsm -> cpr   [label="RX", color="#c55a11"];
+  cpr -> fft -> ext -> idft -> dout [color="#c55a11"];
+
+  { dft ifft fft idft } -> bfly [style=dotted, dir=none, color="#888888"];
+  { dft ifft fft idft } -> mem  [style=dotted, dir=none, color="#888888"];
+  { dft ifft fft idft } -> tw   [style=dotted, dir=none, color="#888888"];
+}
