@@ -75,7 +75,16 @@ def _golden_hint(name: str) -> str:
             "    last one (input sample index 136).\n"
             "  - busy while active; done when complete.\n"
             "Drive every output; tie unused TX-path outputs (tdiq_out_*, "
-            "tx_symbol_rd_*) to 0. Assign each output reg only ONCE per always block.")
+            "tx_symbol_rd_*) to 0. Assign each output reg only ONCE per always block.\n"
+            "USE THE SIMPLE STRUCTURE (do not over-engineer with enums/next_state):\n"
+            "one flag `active`, a `have_i` flag, an 8-bit `scount`. Set\n"
+            "tdiq_in_ready = active as a continuous `assign` (NOT a register), so it\n"
+            "is high the moment the block starts. One clocked always block:\n"
+            "  if cp_start && !cp_insert && !active -> active<=1, busy<=1, scount<=0;\n"
+            "  else if active && tdiq_in_valid && tdiq_in_ready: toggle have_i, and on\n"
+            "  the Q byte, if scount>=cp_len emit rx_symbol, set last at scount==136,\n"
+            "  finish at scount==136, scount<=scount+1. Default rx_symbol_valid<=0 each\n"
+            "  cycle. This is the SAME shape as fdiq_io_adapter.")
     if name == "fdiq_io_adapter":
         return (
             "\n\nIMPLEMENTATION HINT (TX packing path is what the gate checks):\n"
