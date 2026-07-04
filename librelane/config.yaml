@@ -7,25 +7,19 @@ meta:
   flow: Classic
 
 DESIGN_NAME: butterfold_top
-# Modular design: every agent-authored module must be elaborated together so the
-# butterfold_top hierarchy resolves. One entry per module in generated/rtl.
+# The WORKING chip is the self-contained integrated datapath (gen_top.py): the
+# whole DFT-s-OFDM TX in one Q9.15 scratch memory, closing the EVM gate at 0.0%.
+# It instantiates no submodules, so only butterfold_top.v is elaborated.
 VERILOG_FILES:
-  - dir::../generated/rtl/twiddle_source.v
-  - dir::../generated/rtl/unified_mixed_radix_core.v
-  - dir::../generated/rtl/subcarrier_map_extract.v
-  - dir::../generated/rtl/fdiq_io_adapter.v
-  - dir::../generated/rtl/tdiq_io_adapter_cp.v
-  - dir::../generated/rtl/scheduler_addr_control.v
   - dir::../generated/rtl/butterfold_top.v
-CLOCK_PORT: clk
+CLOCK_PORT: clk_i
 CLOCK_PERIOD: 50
 
-# Die area: 700x700 um absolute. ButterFold is ~900 flip-flops + one shared 24x12
-# complex multiplier + twiddle/index ROMs, so it needs much more room than the
-# 4-flop counter (300x300). Generous area keeps routing easy; bump up if placement
-# reports congestion, or down if you want a tighter area number.
+# Die area: the integrated top holds a 128-entry x 24-bit complex scratch memory
+# (~6k flip-flops) plus the shared multiplier + twiddle ROMs, so it needs far more
+# room than the earlier ~900-FF flat core. 1200x1200 keeps utilisation comfortable.
 FP_SIZING: absolute
-DIE_AREA: [0.0, 0.0, 700.0, 700.0]
+DIE_AREA: [0.0, 0.0, 1200.0, 1200.0]
 
 # Don't treat lint-level synth warnings as fatal. The 69 "checks" here are all
 # memory-inference artifacts on the spread_re/spread_im/inbuf register arrays
