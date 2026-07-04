@@ -60,6 +60,23 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "scheduler_addr_control":
+        return (
+            "\n\nIMPLEMENTATION HINT (the gate checks the IFFT-128 uop address sequence):\n"
+            "On cmd_op==3'b010 (IFFT) with cmd_valid && cmd_ready, generate the 448\n"
+            "radix-2 DIT butterfly micro-ops, ONE PER CYCLE, via nested counters:\n"
+            "  stage 0..6 (outer), group grp (middle), kk (inner). Let\n"
+            "  half = (7'd1 << stage), m = (8'd1 << (stage+1)).\n"
+            "  Emit (combinational from the current counters, while active):\n"
+            "    uop_valid = active; src_addr_0 = dst_addr_0 = grp + kk;\n"
+            "    src_addr_1 = dst_addr_1 = grp + half + kk;\n"
+            "    tw_addr = kk << (6 - stage);  uop_inverse=1; uop_radix=2;\n"
+            "    uop_scale_shift=1; tw_conjugate=1; cmd_ready = ~active.\n"
+            "  Advance each cycle when active && uop_ready: if kk==half-1 -> kk<=0 and\n"
+            "  if grp+m>=128 -> grp<=0 and (stage==6 ? active<=0 : stage<=stage+1) else\n"
+            "  grp<=grp+m; else kk<=kk+1. Keep a 9-bit cnt 0..447; uop_last at cnt==447.\n"
+            "Tie map_*/cp_*/bank/status and radix-3 addr_2 to constants (first_subcarrier=58,\n"
+            "cp_len=9). One clocked always for the counters; outputs are continuous assigns.")
     if name == "unified_mixed_radix_core":
         return (
             "\n\nIMPLEMENTATION HINT (the gate checks the radix-2 IFFT engine over memory):\n"

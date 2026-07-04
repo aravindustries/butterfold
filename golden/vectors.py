@@ -72,6 +72,17 @@ def _emit_butterfly_vectors(n: int = 64, seed: int = 11) -> int:
     return n
 
 
+def _emit_sched_vectors() -> int:
+    """The IFFT-128 micro-op sequence the scheduler must emit: for each of the 448
+    butterflies, (src_addr_0=top, src_addr_1=bot, tw_addr=tw_idx)."""
+    import schedule
+    ops = schedule.fft_schedule(128)
+    _write_words16(VECDIR / "sched_top.hex",   [o["top"]    for o in ops])
+    _write_words16(VECDIR / "sched_bot.hex",   [o["bot"]    for o in ops])
+    _write_words16(VECDIR / "sched_twidx.hex", [o["tw_idx"] for o in ops])
+    return len(ops)
+
+
 def _emit_core_vectors(seed: int = 42) -> int:
     """Load grid (128 int8 {I8,Q8} words), the 448 uops (top/bot/w_re/w_im), and
     the expected 128 int8 output words, for the core FFT-engine gate."""
@@ -118,6 +129,7 @@ def emit(seed: int = 42) -> dict:
 
     # unified_mixed_radix_core: load grid, 448 uops, expected int8 output.
     _emit_core_vectors()
+    _emit_sched_vectors()
 
     # Reference micro-op schedules (the scheduler must emit these; core executes).
     import schedule
