@@ -45,15 +45,25 @@ Correctness is defined by a **golden model** and enforced at two levels:
 
 ## 4. Status
 
-**Functionally verified (agent-authored, bit-exact to golden):**
-| block | check | result |
+**Functionally verified — agent-authored, checked against the golden model:**
+| module / block | functional check | result |
 |---|---|---|
-| `twiddle_source` | 12-entry Q1.7 LUT + conjugation | ✅ PASS |
-| `complex_mul` | Q1.7 complex multiply (64 vectors) | ✅ PASS |
-| `butterfly` | Q5.11 radix-2 DIT (64 vectors) | ✅ PASS |
+| `twiddle_source` | 12-entry Q1.7 LUT + conjugation, bit-exact | ✅ PASS |
+| `complex_mul` | Q1.7 complex multiply, 64 vectors bit-exact | ✅ PASS |
+| `butterfly` | Q5.11 radix-2 DIT, 64 vectors bit-exact | ✅ PASS |
+| `fdiq_io_adapter` | TX byte→complex packing (12 samples) | ✅ PASS |
+| `tdiq_io_adapter_cp` | RX CP removal (274 bytes → 128 samples) | ✅ PASS |
+| `subcarrier_map_extract` | TX map (12 → centered 128-bin grid) | ✅ PASS |
 
-These three are the complete **arithmetic core** of the FFT. Each was authored by
-the LLM agent from a golden hint and passed its functional gate.
+**6 modules functionally verified** — the complete FFT arithmetic (twiddle +
+multiply + butterfly) and 3 of the 6 top-level datapath modules. Every one was
+authored by the LLM agent from a golden hint and passes a functional testbench
+that checks it against the Python golden.
+
+**Remaining (structurally valid; functional gate in progress):**
+`scheduler_addr_control` (emits the reference micro-op schedule) and
+`unified_mixed_radix_core` (executes the 448-butterfly IFFT / DFT over scratch
+memory) — the hardest module — plus closing the top-level EVM ≤ 2% gate.
 
 **Structurally verified (compile / elaborate / integration):** all 6 spec modules
 + top; GF180 synthesis ≈ 897 µm².
