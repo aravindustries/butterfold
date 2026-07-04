@@ -54,16 +54,24 @@ Correctness is defined by a **golden model** and enforced at two levels:
 | `fdiq_io_adapter` | TX byte→complex packing (12 samples) | ✅ PASS |
 | `tdiq_io_adapter_cp` | RX CP removal (274 bytes → 128 samples) | ✅ PASS |
 | `subcarrier_map_extract` | TX map (12 → centered 128-bin grid) | ✅ PASS |
+| `unified_mixed_radix_core` | **IFFT-128 over memory (448 butterflies)** | ✅ PASS |
+| `scheduler_addr_control` | 448-uop IFFT address/twiddle sequence | ✅ PASS |
 
-**6 modules functionally verified** — the complete FFT arithmetic (twiddle +
-multiply + butterfly) and 3 of the 6 top-level datapath modules. Every one was
-authored by the LLM agent from a golden hint and passes a functional testbench
-that checks it against the Python golden.
+**8 modules functionally verified — every module of the DFT-s-OFDM datapath.** The
+FFT arithmetic (twiddle + multiply + butterfly), the three streaming datapath
+modules, the `unified_mixed_radix_core` (the memory-based 128-point FFT engine —
+the hardest module), and the `scheduler_addr_control` (which generates the exact
+448-butterfly micro-op sequence). Each was authored by the LLM agent from a golden
+hint and passes a functional testbench checking it bit-exactly against the Python
+golden.
 
-**Remaining (structurally valid; functional gate in progress):**
-`scheduler_addr_control` (emits the reference micro-op schedule) and
-`unified_mixed_radix_core` (executes the 448-butterfly IFFT / DFT over scratch
-memory) — the hardest module — plus closing the top-level EVM ≤ 2% gate.
+The core + scheduler were reachable because the golden emits a *verified
+448-butterfly micro-op schedule*: the scheduler's job became "generate this known
+address sequence" and the core's became "execute one butterfly over memory" —
+turning "invent an FFT" into transcription of a verified reference.
+
+**Remaining:** top-level integration — wire the 8 verified modules into
+`butterfold_top` and close the end-to-end EVM ≤ 2% gate, then GDS.
 
 **Structurally verified (compile / elaborate / integration):** all 6 spec modules
 + top; GF180 synthesis ≈ 897 µm².
