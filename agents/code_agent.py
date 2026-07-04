@@ -78,9 +78,17 @@ def _golden_hint(name: str) -> str:
             "        pulse uop_done <= 1. (dst==src for in-place; reads see old values.)\n"
             "  READ: if (read_req) read_data <= {narrow(mre[read_addr]), narrow(mim[read_addr])};\n"
             "        read_valid <= 1;  where narrow(v)=sat8((v+8)>>>4) back to int8.\n"
-            "Use signed math and wide (32-bit) intermediates for tr/ti. Provide sat16 and\n"
-            "narrow (sat8) helper functions. Default uop_done/read_valid <= 0 each cycle.\n"
-            "Tie overflow/saturation_occurred and the unused radix-3 (src/dst_addr_2) to 0.")
+            "Use signed math and wide (32-bit) intermediates for tr/ti.\n"
+            "CRITICAL SIGNEDNESS (a common bug that makes every output saturate to 0x7f):\n"
+            "  - declare the memories signed: `reg signed [15:0] mre[0:127], mim[0:127];`\n"
+            "  - declare temps signed: `reg signed [15:0] topr,topi,botr,boti; reg signed [31:0] tr,ti;`\n"
+            "  - the helper FUNCTION INPUTS must be signed too, e.g.\n"
+            "      function signed [15:0] sat16(input signed [31:0] x); ...\n"
+            "      function signed [7:0]  narrow(input signed [15:0] v);\n"
+            "        reg signed [31:0] r; begin r=(v+8)>>>4; narrow=(r>127)?8'sd127:(r<-128)?-8'sd128:r[7:0]; end\n"
+            "    If inputs are unsigned, negatives compare as huge and clamp to max.\n"
+            "Default uop_done/read_valid <= 0 each cycle. Tie overflow/saturation_occurred\n"
+            "and the unused radix-3 (src/dst_addr_2) to 0.")
     if name == "subcarrier_map_extract":
         return (
             "\n\nIMPLEMENTATION HINT (TX map path is what the gate checks):\n"
