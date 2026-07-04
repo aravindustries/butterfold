@@ -60,6 +60,22 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "tdiq_io_adapter_cp":
+        return (
+            "\n\nIMPLEMENTATION HINT (RX CP-removal path is what the gate checks):\n"
+            "Synchronous FSM. On `cp_start` with cp_insert=0 (RX), pack the incoming\n"
+            "time-domain byte stream (I then Q per sample) into complex samples and\n"
+            "REMOVE the cyclic prefix:\n"
+            "  - hold tdiq_in_ready high while active; accept a byte on\n"
+            "    tdiq_in_valid && tdiq_in_ready; first byte = I, second = Q.\n"
+            "  - count samples 0..136 (137 total). DROP the first cp_len samples\n"
+            "    (the CP, cp_len=9). For sample index >= cp_len, emit\n"
+            "    rx_symbol_data <= {I,Q} with rx_symbol_valid pulsed one cycle.\n"
+            "  - that yields exactly 128 output samples; assert rx_symbol_last on the\n"
+            "    last one (input sample index 136).\n"
+            "  - busy while active; done when complete.\n"
+            "Drive every output; tie unused TX-path outputs (tdiq_out_*, "
+            "tx_symbol_rd_*) to 0. Assign each output reg only ONCE per always block.")
     if name == "fdiq_io_adapter":
         return (
             "\n\nIMPLEMENTATION HINT (TX packing path is what the gate checks):\n"
