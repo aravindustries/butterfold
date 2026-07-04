@@ -1,66 +1,42 @@
-# ButterFold — agentic modular RTL flow
+# ButterFold — modular DFT-s-OFDM chip (GF180 PPA)
 
-A minimum-area 5G-NR-inspired DFT-s-OFDM transform core, built by deep
-(reason+act) agents that **author each hardware module from a single spec** and
-carry it through to GDS.
+A 5G-NR-inspired **DFT-s-OFDM** transform chip (K=12 subcarriers, M=128 FFT/IFFT,
+CP=9/10), decomposed into the **six hardware modules** specified in
+`butterfold_module_io.md` and integrated into one top (`rtl/butterfold_top.v`).
 
-## Single source of truth
+This repo carries the RTL plus a fast **area / timing / power** flow on the open
+**GF180MCU** PDK, comparing two ways to build the FFT scratch memory — a flip-flop
+**register file** vs a **GF180 SRAM macro**.
 
-Everything is generated from **`butterfold_module_io.md`** — the port/function
-contract for the 6 modules + the top level. There is no second spec, no flat
-generator, and no hand-locked kernel: every module is written from its contract
-and checked on its own.
-
-The 6 modules (+ top):
-
+## The 6 modules (+ top)
 | module | role |
 |---|---|
-| `twiddle_source` | quantized twiddle factors (with conjugation for inverse) |
-| `unified_mixed_radix_core` | shared radix-2/3 butterfly + complex multiplier over scratch memory |
+| `scheduler_addr_control` | sequences DFT-12 / FFT-128 / IFFT-128; generates addresses, CP and mapping control |
+| `unified_mixed_radix_core` | 128×16 complex scratch memory + shared complex multiplier + radix-2 butterfly |
+| `twiddle_source` | quantized Q1.7 twiddle ROM (with conjugation for inverse) |
 | `subcarrier_map_extract` | TX map / RX extract between 12 subcarriers and the 128-bin grid |
 | `fdiq_io_adapter` | frequency-domain I/Q byte ↔ 16-bit complex packing |
-| `tdiq_io_adapter_cp` | time-domain I/Q packing + CP insert/remove (9/10 samples) |
-| `scheduler_addr_control` | sequences DFT-12 / FFT-128 / IFFT-128, addresses, CP, mapping |
-| `butterfold_top` | wires all six together to the chip interface |
+| `tdiq_io_adapter_cp` | time-domain I/Q packing + CP insert/remove |
+| `butterfold_top` | wires all six to the chip interface |
 
-## Pipeline (one button)
+## Layout
+| path | what |
+|---|---|
+| `butterfold_module_io.md` | the spec — single source of truth |
+| `rtl/` | the 6 modules + structural top (register-file memory) |
+| `rtl_sram/` | SRAM-macro core variant (4× GF180 `sram128x8`) + macro blackbox |
+| `scripts/` | PPA + schematic-generation flows |
+| `schematics/` | architecture + netlist schematics |
+| `butterfold_sim/` | Python cycle / fixed-point transform model |
+| `PPA.md` | how to reproduce the area/timing/power numbers |
+| `REPORT.md` | results + explanations |
 
-```
-butterfold_module_io.md
-      │  module_spec.py        parse the spec into structured contracts
-      ▼
-   planner.py                  ordered module build plan
-      ▼
-   code_agent.py               ReAct agent AUTHORS each module (compile→elaborate→tb loop)
-      ▼
-   verify_agent.py             per-module compile/elaborate/testbench + top integration
-      ▼   (repair: re-author any failing module)
-   synth_agent.py              Yosys full synthesis → GF180 area
-      ▼
-   librelane_agent.py          RTL→GDS signoff  (only if BUTTERFOLD_GDS=1)
-      ▼
-   generated/summary.md
-```
-
-## Run (inside the IIC-OSIC-TOOLS container)
-
+## Run the PPA (inside the IIC-OSIC-TOOLS container, from repo root)
 ```bash
-python agents/orchestrator.py                 # spec → verified, synthesized RTL
-BUTTERFOLD_GDS=1 python agents/orchestrator.py # …all the way to GDS (long)
+bash scripts/ppa_regfile.sh    # register-file memory -> area, timing, power, schematic
+bash scripts/ppa_sram.sh       # SRAM-macro memory    -> area, timing, power
+bash scripts/gen_schematics.sh # (re)generate the schematics
 ```
 
-Individual stages also run standalone, e.g.:
-
-```bash
-python agents/module_spec.py                  # show the parsed contract + a skeleton
-python agents/planner.py                       # write generated/plan.json
-python agents/code_agent.py --module twiddle_source
-python agents/verify_agent.py
-```
-
-## Agents (no API key required)
-
-`OPENAI_API_KEY` (in `.env`) drives the ReAct authoring loop. **Without a key**,
-each module falls back to a compile-clean port skeleton, so the whole pipeline
-still runs end-to-end and produces elaborable RTL — the LLM only makes the bodies
-real. See `REPO_LAYOUT.md` for the canonical-vs-mirror repo rule.
+See **[REPORT.md](REPORT.md)** for the numbers and **[PPA.md](PPA.md)** for the
+per-metric commands.

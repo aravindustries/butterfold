@@ -1,205 +1,154 @@
-# ButterFold — Progress Report
+# ButterFold — Modular Chip PPA Report
 
-**Design:** minimum-area 5G-NR-inspired DFT-s-OFDM transform core (K=12 subcarriers,
-M=128 FFT, CP=9), built by an **agentic RTL flow** from a single specification.
+**Design:** a 5G-NR-inspired **DFT-s-OFDM** transform chip (K=12 subcarriers,
+M=128 FFT/IFFT, CP=9/10), decomposed into the **six hardware modules** defined in
+`butterfold_module_io.md` and integrated into one top, `rtl/butterfold_top.v`.
 
-## 1. What ButterFold is
+**This report** presents the **area / timing / power** of that modular chip on the
+**GF180MCU** open PDK, comparing the two ways of building the FFT scratch memory —
+a flip-flop **register file** vs a **GF180 SRAM macro**. Every number here is
+measured (yosys + OpenSTA); the commands are in [`PPA.md`](PPA.md) and reproduce
+these values exactly.
 
-A one-button **spec → silicon** flow driven from a single source of truth,
-`butterfold_module_io.md`. Deep (reason+act) LLM agents author each hardware
-module from its port/function contract; a fully deterministic golden-model layer
-judges correctness. The split is deliberate: **agents create, deterministic code
-verifies** — the correctness oracle is never an LLM.
+> Scope: this is a **synthesis-level (pre-layout) PPA study**. Functional
+> golden-EVM closure of the modular RTL is a separate track and is **not** claimed
+> here — see §6.
 
-## 2. Pipeline
+---
 
-```
-butterfold_module_io.md (single spec)
-  → planner            ordered module build plan
-  → code agents        ReAct agents AUTHOR each module (write→compile→elaborate→test loop)
-  → golden Phase 1     per-module Python models, daisy-chained, checked vs the
-                       whole-chain golden (butterfold_sim)  — PASS ~1e-14 (TX+RX)
-  → verify             per-module compile / elaborate / functional testbench + integration
-  → functional gate    RTL vs golden, EVM ≤ 2% (Phase 2)
-  → synthesis          Yosys GF180 area
-  → LibreLane          RTL → GDS signoff (DRC / LVS)
-```
+## 1. Architecture
 
-## 3. Verification methodology (the core contribution)
+![ButterFold modular architecture](schematics/architecture.svg)
+*`schematics/architecture.svg` — the six modules and how they connect.*
 
-Correctness is defined by a **golden model** and enforced at two levels:
-
-- **Phase 1 (decomposition):** independent per-module Python models chained in the
-  scheduler's order reproduce the whole-chain golden to ~1e-14 — proving the module
-  breakdown is numerically faithful (TX and RX).
-- **Phase 2 (RTL functional gate):** each module's Verilog testbench drives the
-  exact input its golden model received and checks the RTL output **bit-exactly**;
-  the whole chip is gated on **EVM ≤ 2%** at the top (24-byte in → 274-byte out).
-- **Reference micro-op schedule:** the 128-pt IFFT is emitted as 448 explicit
-  butterfly micro-ops (verified to reproduce the transform to 5.7e-17), so the
-  FFT core RTL *transcribes a known schedule* rather than inventing FFT addressing.
-- **Fixed-point format proven before RTL:** a precision sweep pins the core's
-  internal format to **signed 16-bit Q5.11**, which achieves **EVM 0.28%** vs the
-  float golden (formats with <5 integer bits saturate and fail) — so the datapath
-  has a target proven to clear the 2% gate before any RTL is written.
-
-## 4. Status
-
-**Functionally verified — agent-authored, checked against the golden model:**
-| module / block | functional check | result |
-|---|---|---|
-| `twiddle_source` | 12-entry Q1.7 LUT + conjugation, bit-exact | ✅ PASS |
-| `complex_mul` | Q1.7 complex multiply, 64 vectors bit-exact | ✅ PASS |
-| `butterfly` | Q5.11 radix-2 DIT, 64 vectors bit-exact | ✅ PASS |
-| `fdiq_io_adapter` | TX byte→complex packing (12 samples) | ✅ PASS |
-| `tdiq_io_adapter_cp` | RX CP removal (274 bytes → 128 samples) | ✅ PASS |
-| `subcarrier_map_extract` | TX map (12 → centered 128-bin grid) | ✅ PASS |
-| `unified_mixed_radix_core` | **IFFT-128 over memory (448 butterflies)** | ✅ PASS |
-| `scheduler_addr_control` | 448-uop IFFT address/twiddle sequence | ✅ PASS |
-
-**8 modules functionally verified — every module of the DFT-s-OFDM datapath.** The
-FFT arithmetic (twiddle + multiply + butterfly), the three streaming datapath
-modules, the `unified_mixed_radix_core` (the memory-based 128-point FFT engine —
-the hardest module), and the `scheduler_addr_control` (which generates the exact
-448-butterfly micro-op sequence). Each was authored by the LLM agent from a golden
-hint and passes a functional testbench checking it bit-exactly against the Python
-golden.
-
-The core + scheduler were reachable because the golden emits a *verified
-448-butterfly micro-op schedule*: the scheduler's job became "generate this known
-address sequence" and the core's became "execute one butterfly over memory" —
-turning "invent an FFT" into transcription of a verified reference.
-
-## Working chip — a full DFT-s-OFDM TRANSCEIVER, both directions EVM-clean
-
-The chip transmits **and** receives, both bit-exact to the golden model:
-
-| direction | transform | result |
-|---|---|---|
-| **TX** (cmd 0x03) | 24B → DFT-12 → map → IFFT-128 → CP → 274B | **EVM 0.0%, 0/274** |
-| **RX** (cmd 0x04) | 274B → drop CP → FFT-128 → extract → IDFT-12 → 24B | **EVM 0.0%, 0/24** |
-| **Loopback** | TX → RX recovers the original symbols | **EVM 1.20%** ✅ |
-
-Both paths share one Q9.15 scratch memory, twiddle ROMs, and butterfly (FFT vs
-IFFT via a mode flag). All test seeds pass the ≤ 2% gate (TX worst 1.28%, RX
-worst 1.51%). The chip genuinely computes the 5G transform in both directions.
-
-**A precision finding along the way:** the spec's int8 (Q1.7) inter-module
-interfaces cannot reach EVM ≤ 2% — the DFT-spread values saturate. We proved (by
-sweep in `golden/top_exec.py`) that the transform must carry **Q9.15 data with
-Q1.13 twiddles** through a *shared scratch memory*. So the working `butterfold_top`
-is an integrated datapath (DFT-12 → centered map → bit-reverse → 448-butterfly
-IFFT-128 → CP) over a single 128-entry Q9.15 memory, with int8 only at the din/dout
-boundary. It was built by proving the fixed-point algorithm in Python first, then
-generating RTL to mirror it and verifying **every stage** (DFT, map, bit-reverse,
-IFFT all bit-exact) against the golden.
-
-The 8 modules above validate the decomposition and the methodology; the integrated
-top is what closes the numerical gate.
-
-## Proof & evidence
-
-### Simulation results (captured 2026-07-03, run in the IIC-OSIC-TOOLS container)
-
-```
---- TX gate (24B -> 274B) ---
-tb_top_golden: captured 274/274 output bytes
-[evm] EVM=0.0%  gate<=2.0%  bit-exact mismatches=0/274  -> PASS
-
---- RX gate (274B -> 24B) ---
-tb_top_rx: captured 24/24 bytes
-[evm] EVM=0.0%  gate<=2.0%  bit-exact mismatches=0/24  -> PASS
-
---- TX->RX loopback (recover symbols vs original 24B input) ---
-[evm] EVM=1.1992%  gate<=2.0%  bit-exact mismatches=16/24  -> PASS
-
---- golden multi-seed sweeps ---
-[top_exec] DFRAC=15 TWFRAC=13  worst=1.278%  ALL PASS       (TX)
-[rx_exec]  worst=1.514%  ALL PASS                            (RX)
-```
-
-All 8 per-module functional gates pass bit-exact (twiddle_source, complex_mul,
-butterfly, fdiq_io_adapter, tdiq_io_adapter_cp, subcarrier_map_extract,
-unified_mixed_radix_core, scheduler_addr_control).
-
-### Physical implementation (GF180MCU, LibreLane / OpenROAD)
-
-Synthesis + floorplan + placement + CTS completed; full detailed routing to a
-final GDS is **PnR-bound** (see note) and was not completed in this run.
-
-| metric | value |
+| Module (RTL) | Role |
 |---|---|
-| Standard-cell count | **85,135 cells** |
-| Cell (logic) area | **1,869,555 µm² (1.87 mm²)** |
-| Die area (chosen, absolute) | **2000 µm × 2000 µm = 4,000,000 µm² (4.0 mm²)** |
-| Core utilisation | ~47% |
-| Sequential fraction | ~100% (the 128-entry Q9.15 scratch memory as flip-flops) |
-| Clock period target | 50 ns |
-| PDK | gf180mcuD, gf180mcu_fd_sc_mcu7t5v0 |
-| Flow stages passed | lint → synthesis → floorplan → global+detailed placement → CTS |
+| `scheduler_addr_control` | Control brain — sequences DFT-12 / FFT-128 / IFFT-128, generates memory + twiddle addresses, drives map / CP control. |
+| `unified_mixed_radix_core` | Datapath — **128×16 complex scratch memory** + shared complex multiplier + radix-2 butterfly + scale/round/saturate. Executes scheduler micro-ops. |
+| `twiddle_source` | Quantized Q1.7 twiddle ROM, with conjugation for inverse transforms. |
+| `subcarrier_map_extract` | Centered subcarrier map (TX) / extract (RX) — bins 58..69 of a 128-bin grid. |
+| `fdiq_io_adapter` | Frequency-domain I/Q byte pack/unpack (the 12 QAM samples). |
+| `tdiq_io_adapter_cp` | Time-domain I/Q byte pack/unpack + cyclic-prefix insert/remove (9 or 10). |
 
-**PnR note (honest):** the design implements the 128-entry complex scratch memory
-as **standard-cell flip-flops with variable-index access**, which synthesises to
-~85k cells with very large mux/decoder cones. Post-CTS timing optimisation and
-routing on this netlist are impractically slow (a single resize step ran > 30 min
-at full CPU). The design is **valid and functionally verified (EVM 0.0%)**; the
-fix for a fast, clean GDS is a **GF180 SRAM macro** for the scratch memory, which
-would collapse ~90% of the cells. This is a physical-implementation optimisation,
-not a design-correctness issue.
+`butterfold_top` wires these together with a thin glue layer (command capture,
+memory address pointers, stream muxing). The chip is driven byte-by-byte on
+`din`/`dout`: the first byte is the command (`0x03`=TX, `0x04`=RX).
 
-### Schematics (`schematics/`)
-- `architecture.png` / `.svg` — transceiver dataflow block diagram (TX blue, RX
-  orange, shared scratch memory / butterfly / twiddle ROMs).
-- `complex_mul.svg`, `butterfly.svg`, `twiddle_source.svg` — gate-level schematics
-  (yosys) of the agent-authored, functionally-verified building blocks.
-- `die.png` — GDS layout render (added after signoff).
-- Regenerate: `yosys -p "read_verilog <mod>.v; proc; opt; show -format svg -prefix schematics/<mod> <mod>"`
-  and `dot -Tpng schematics/architecture.dot -o schematics/architecture.png`.
+The **only** structural difference between the two builds below is inside
+`unified_mixed_radix_core` — the scratch memory. Everything else is identical.
 
-### File inventory (all on branch `harissh`)
-| artifact | path |
+---
+
+## 2. PPA methodology
+
+Fast, pre-layout, no place-and-route required (~1–2 min each):
+
+| Metric | Tool | How |
+|---|---|---|
+| **Area** | yosys | `synth` → `dfflibmap`/`abc` map to `gf180mcu_fd_sc_mcu7t5v0`, then `stat -liberty`. SRAM macros add their LEF footprint. |
+| **Timing** | OpenSTA | map netlist, `create_clock` 50 ns, `report_checks`/`report_worst_slack`. |
+| **Power** | OpenSTA | `report_power` (internal + switching + leakage, default activity). |
+| **Schematic** | yosys `show` + graphviz | module-instance and datapath views. |
+
+PDK: `gf180mcuD` · std cells `gf180mcu_fd_sc_mcu7t5v0` · SRAM `gf180mcu_fd_ip_sram__sram128x8m8wm1` · corner `tt_025C_5v00`.
+
+---
+
+## 3. Results
+
+| Metric | ① Register file (flip-flops) | ② SRAM macro (4× `sram128x8`) |
+|---|---|---|
+| **Total area** | **1.098 mm²** | **0.558 mm²** |
+| — std-cell logic | 1.098 mm² (49,322 cells) | 0.094 mm² (4,251 cells) |
+| — memory | 4096 FFs + access logic (in logic above) | 0.465 mm² (4 macros) |
+| **Setup** @ 50 ns (20 MHz) | **FAIL** −1993 ns (artifact, see §4) | **MET** +26.5 ns |
+| **Hold** | MET +0.84 ns | MET +0.62 ns |
+| **Max data-path / Fmax** | un-timeable pre-layout | **23.3 ns → ≈ 42 MHz** |
+| **Power** (default activity) | ~151 mW | ~66 mW |
+| **Critical path** | min-gate driving 4096 mem cells | 16×8 complex multiplier (the real datapath) |
+
+Each SRAM macro footprint = 431.86 µm × 268.88 µm = 116,119 µm²; 4 macros (real/imag
+× hi/lo byte) = 464,474 µm² = 0.465 mm².
+
+---
+
+## 4. Why the SRAM version wins
+
+The register-file core stores the 128×16 scratch memory as **4096 flip-flops with
+an async 128:1 read mux and three write-port address decoders**. That *access
+logic* — not the storage — is the problem:
+
+- **Area:** the mux/decoder cones balloon the std-cell logic to **1.098 mm²**
+  (75% is combinational).
+- **Timing:** a minimum-size gate ends up driving all 4096 memory cells with no
+  buffering, so pre-layout STA shows a single stage at **1754 ns** — the −1993 ns
+  "violation" is this **unbuffered high-fanout artifact**, not a real Fmax. PnR
+  buffering would help, but it can never make this structure competitive.
+
+The SRAM core (`rtl_sram/unified_mixed_radix_core.v`) replaces the array with **4
+real single-port synchronous SRAM macros** and a **5-cycle butterfly FSM**
+(read src0 → read src1 → compute → write dst0 → write dst1). Result:
+
+- The mux/decoder logic **disappears** → std-cell logic drops to **0.094 mm²**.
+- Timing **closes**: the critical path is now the genuine **16×8 complex
+  multiplier (~23 ns)** → **Fmax ≈ 42 MHz**.
+- Power **more than halves** (151 → 66 mW), now dominated by the SRAM macros.
+
+**Counter-intuitive note:** for a memory this small (4096 bits), the SRAM *storage*
+(0.465 mm²) is actually larger than the flip-flop *storage* (0.261 mm²) — GF180 SRAM
+macros carry big fixed periphery. The win is **deleting the multiport access logic**
+and **getting characterized timing**, not the storage density.
+
+---
+
+## 5. Schematics (`schematics/`)
+
+| File | What it shows |
+|---|---|
+| `architecture.svg` / `.png` | Block diagram of the 6-module chip (from `architecture.dot`). |
+| `butterfold_top.svg` | yosys `show` of the integrated top — the 6 module instances wired together. |
+| `core_sram.svg` | yosys `show` of the SRAM core — the 4 SRAM macros + the butterfly FSM and multiplier. |
+
+Regenerate with `bash scripts/gen_schematics.sh` (inside the container).
+
+---
+
+## 6. Honest scope
+
+- **Pre-layout** estimate (ideal wires, no clock tree). The SRAM version's critical
+  path is clean logic, so its 23 ns is trustworthy; the register-file "violation"
+  is a fanout artifact. Post-layout signoff needs a LibreLane PnR→GDS run.
+- **PPA only.** Functional golden-EVM verification of the modular RTL is out of
+  scope here. Because the authored FDIQ/TDIQ adapters don't yet drive their output
+  bytes, `dout` is structurally constant; an **observability tie-off** on the scan
+  pin keeps the datapath from being optimized away so the area/power are faithful.
+- Power is a **default-switching-activity** estimate; the SRAM macro power assumes
+  the RAMs are clocked every cycle, so a real workload draws less.
+
+---
+
+## 7. Reproduce
+
+```bash
+git clone https://github.com/aravindustries/butterfold.git
+cd butterfold && git checkout harissh
+# --- inside the IIC-OSIC-TOOLS container (yosys, sta, GF180 PDK) ---
+bash scripts/ppa_regfile.sh     # register-file memory -> area, timing, power, schematic
+bash scripts/ppa_sram.sh        # SRAM-macro memory    -> area, timing, power
+bash scripts/gen_schematics.sh  # (re)generate the schematics
+```
+
+Full details and per-metric commands: [`PPA.md`](PPA.md).
+
+### File inventory
+| Artifact | Path |
 |---|---|
 | Spec (single source of truth) | `butterfold_module_io.md` |
-| Integrated transceiver RTL (generated) | `generated/rtl/butterfold_top.v` (via `gen_top.py`) |
-| Whole-chain golden (numpy) | `butterfold_sim/`, `golden/reference.py` |
-| TX / RX fixed-point golden | `golden/top_exec.py`, `golden/rx_exec.py` |
-| Reference micro-op schedule | `golden/schedule.py` |
-| EVM scorer | `golden/evm_check.py` |
-| Top functional testbenches | `tests/tb_top_golden.v` (TX), `tests/tb_top_rx.v` (RX) |
-| Per-module gates | `tests/modules/tb_*.v` |
-| Golden vectors (regenerated) | `tests/vectors/` (via `golden/vectors.py`) |
-| Agents | `agents/` (planner, code, verify, functional, orchestrator, …) |
-| Synthesis / PnR | `librelane/config.yaml`, `librelane/runs/<latest>/` |
-| GDS output | `librelane/runs/<latest>/final/gds/butterfold_top.gds` |
+| 6 modules + structural top | `rtl/` |
+| SRAM-macro core + macro blackbox | `rtl_sram/` |
+| PPA + schematic scripts | `scripts/ppa_regfile.sh`, `scripts/ppa_sram.sh`, `scripts/gen_schematics.sh` |
+| Schematics | `schematics/` |
+| PPA guide | `PPA.md` |
 
-### Reproduce
-```bash
-# in the IIC-OSIC-TOOLS container, repo root
-python gen_top.py                       # generate the transceiver RTL
-python golden/vectors.py                # emit golden vectors
-iverilog -g2012 -o /tmp/t.vvp tests/tb_top_golden.v generated/rtl/butterfold_top.v && vvp /tmp/t.vvp
-python golden/evm_check.py generated/rtl/top_out.hex tests/vectors/top_gold.hex   # TX
-iverilog -g2012 -o /tmp/r.vvp tests/tb_top_rx.v generated/rtl/butterfold_top.v && vvp /tmp/r.vvp
-python golden/evm_check.py generated/rtl/rx_out.hex tests/vectors/rx_gold.hex     # RX
-BUTTERFOLD_GDS=1 python agents/orchestrator.py    # (or: cd librelane && librelane config.yaml) for GDS
-```
-
-## 5. Status & next steps
-
-**The chip is functionally complete for the DFT-s-OFDM transform, both directions:**
-TX and RX each match the golden bit-for-bit (EVM 0.0%), and the TX→RX loopback
-recovers the transmitted symbols at 1.20% EVM — all within the ≤ 2% gate. It
-synthesizes clean to GF180 and is going through LibreLane to GDS.
-
-**Honest scope notes:**
-- The working `butterfold_top` is the *integrated* Q9.15 datapath, not the 6
-  streaming modules wired verbatim — the spec's int8 inter-module interfaces
-  cannot hold the precision needed for EVM ≤ 2% (documented finding). The 8
-  modules stand as the verified decomposition + methodology.
-- The scratch memory is implemented as standard-cell flip-flops (large area); a
-  natural optimization is a GF180 SRAM macro.
-- Verified paths are TX and RX of one symbol; multi-symbol streaming, error/status
-  reporting, and scan are wired but lightly exercised.
-
-**Next optimizations:** SRAM macro for the scratch memory (large area win), tighter
-fixed-point widths, and a multi-symbol streaming wrapper.
+**Next step:** the SRAM version closes timing, so it is the sensible candidate to
+push through LibreLane PnR→GDS for signoff-grade (post-layout) numbers.

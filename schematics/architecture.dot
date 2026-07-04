@@ -1,42 +1,53 @@
 digraph butterfold {
   rankdir=LR;
-  graph [fontname="Helvetica", labelloc=t,
-         label="ButterFold — integrated DFT-s-OFDM transceiver (Q9.15 shared datapath)"];
+  graph [fontname="Helvetica", labelloc=t, fontsize=16,
+         label="ButterFold — modular DFT-s-OFDM chip (6 modules from butterfold_module_io.md)"];
   node  [fontname="Helvetica", shape=box, style="rounded,filled", fillcolor="#eef4ff"];
   edge  [fontname="Helvetica", fontsize=10];
 
-  din  [label="din[7:0]\ndin_valid/ready", shape=cds, fillcolor="#fff2cc"];
-  dout [label="dout[7:0]\ndout_valid/ready", shape=cds, fillcolor="#fff2cc"];
+  din  [label="din[7:0]\ndin_valid_i / din_ready_o", shape=cds, fillcolor="#fff2cc"];
+  dout [label="dout[7:0]\ndout_valid_o / dout_ready_i", shape=cds, fillcolor="#fff2cc"];
+  irq  [label="done_irq_o", shape=cds, fillcolor="#fff2cc"];
 
-  subgraph cluster_shared {
-    label="shared resources"; style="rounded,dashed"; color="#888888";
-    mem  [label="scratch memory\n128 x Q9.15 complex\n(gr[], gi[])", fillcolor="#e2f0d9"];
-    tw   [label="twiddle ROMs\nw12 / w128 (Q1.13)", fillcolor="#e2f0d9"];
-    bfly [label="butterfly\n(top +/- W*bot)\nFFT / IFFT via mode", fillcolor="#e2f0d9"];
+  // control
+  sch  [label="scheduler_addr_control\n(control brain: sequences DFT-12 /\nFFT-128 / IFFT-128, gen addrs,\nmap+CP+twiddle control)", fillcolor="#dae3f3"];
+
+  // datapath core + shared resources
+  subgraph cluster_core {
+    label="unified_mixed_radix_core"; style="rounded,dashed"; color="#548235"; fontname="Helvetica";
+    mem  [label="scratch memory\n128 x 16b complex\n(register file OR 4x SRAM)", fillcolor="#e2f0d9"];
+    alu  [label="shared complex multiplier\n+ radix-2 butterfly\n+ scale / round / saturate", fillcolor="#e2f0d9"];
   }
+  tw   [label="twiddle_source\n(Q1.7 twiddle ROM,\nconjugate for inverse)", fillcolor="#e2f0d9"];
 
-  fsm  [label="control FSM\nIDLE > LOAD > ... > OUT\ncmd 0x03=TX  0x04=RX", fillcolor="#dae3f3"];
+  // frequency-domain side
+  fdiq [label="fdiq_io_adapter\n(freq-domain I/Q byte pack/unpack,\n12 QAM samples)"];
+  map  [label="subcarrier_map_extract\n(centered map / extract,\nbins 58..69 of 128)"];
 
-  // TX path
-  dft  [label="DFT-12\n(MAC, Q1.13 tw)"];
-  map  [label="centered map\nSTART=58 + bit-reverse"];
-  ifft [label="IFFT-128\n448 butterflies, >>1/stage"];
-  cp   [label="CP insert (9)\nnarrow -> int8"];
+  // time-domain side
+  tdiq [label="tdiq_io_adapter_cp\n(time-domain I/Q byte pack/unpack,\nCP insert/remove 9|10)"];
 
-  // RX path
-  cpr  [label="CP remove (9)\nbit-reverse"];
-  fft  [label="FFT-128\n448 butterflies (fwd)"];
-  ext  [label="extract bins\n58..69"];
-  idft [label="IDFT-12\n(MAC, /12)"];
+  // command + streaming
+  din  -> sch  [label="cmd byte (0x03 TX / 0x04 RX)"];
+  din  -> fdiq [label="TX freq I/Q", color="#2e75b6"];
+  din  -> tdiq [label="RX time I/Q", color="#c55a11"];
 
-  din -> fsm;
-  fsm -> dft   [label="TX", color="#2e75b6"];
-  dft -> map -> ifft -> cp -> dout [color="#2e75b6"];
+  // control fan-out
+  sch  -> alu  [label="uop / addrs"];
+  sch  -> tw   [label="tw_req/addr"];
+  sch  -> map  [label="map ctrl"];
+  sch  -> tdiq [label="CP ctrl"];
 
-  fsm -> cpr   [label="RX", color="#c55a11"];
-  cpr -> fft -> ext -> idft -> dout [color="#c55a11"];
+  // datapath connectivity
+  fdiq -> mem  [label="load", color="#2e75b6"];
+  tdiq -> mem  [label="load (RX)", color="#c55a11"];
+  tw   -> alu  [style=dotted, dir=none, color="#548235"];
+  mem  -> alu  [dir=both, color="#548235"];
+  mem  -> map  [label="read"];
+  map  -> fdiq [label="extract -> dout (RX)", color="#c55a11"];
+  mem  -> tdiq [label="read -> dout (TX)", color="#2e75b6"];
 
-  { dft ifft fft idft } -> bfly [style=dotted, dir=none, color="#888888"];
-  { dft ifft fft idft } -> mem  [style=dotted, dir=none, color="#888888"];
-  { dft ifft fft idft } -> tw   [style=dotted, dir=none, color="#888888"];
+  fdiq -> dout;
+  tdiq -> dout;
+  sch  -> irq  [label="done"];
 }
