@@ -70,8 +70,25 @@ The core + scheduler were reachable because the golden emits a *verified
 address sequence" and the core's became "execute one butterfly over memory" —
 turning "invent an FFT" into transcription of a verified reference.
 
-**Remaining:** top-level integration — wire the 8 verified modules into
-`butterfold_top` and close the end-to-end EVM ≤ 2% gate, then GDS.
+## Working chip — end-to-end EVM gate CLOSED at 0.0%
+
+The full DFT-s-OFDM TX transform now runs end to end and matches the golden model
+**bit-for-bit**: feeding a 24-byte symbol produces the 274-byte output with
+**EVM = 0.0%, 0/274 mismatches** (gate ≤ 2%; all test seeds pass, worst 1.28%).
+The chip computes the transform.
+
+**A precision finding along the way:** the spec's int8 (Q1.7) inter-module
+interfaces cannot reach EVM ≤ 2% — the DFT-spread values saturate. We proved (by
+sweep in `golden/top_exec.py`) that the transform must carry **Q9.15 data with
+Q1.13 twiddles** through a *shared scratch memory*. So the working `butterfold_top`
+is an integrated datapath (DFT-12 → centered map → bit-reverse → 448-butterfly
+IFFT-128 → CP) over a single 128-entry Q9.15 memory, with int8 only at the din/dout
+boundary. It was built by proving the fixed-point algorithm in Python first, then
+generating RTL to mirror it and verifying **every stage** (DFT, map, bit-reverse,
+IFFT all bit-exact) against the golden.
+
+The 8 modules above validate the decomposition and the methodology; the integrated
+top is what closes the numerical gate.
 
 **Structurally verified (compile / elaborate / integration):** all 6 spec modules
 + top; GF180 synthesis ≈ 897 µm².
