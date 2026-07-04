@@ -60,6 +60,22 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "fdiq_io_adapter":
+        return (
+            "\n\nIMPLEMENTATION HINT (TX packing path is what the gate checks):\n"
+            "Synchronous FSM on posedge clk, active-low rst_n. On `start` with\n"
+            "direction=1 (TX), pack the external interleaved byte stream into 12\n"
+            "internal complex samples:\n"
+            "  - hold fdiq_in_ready high while active; accept a byte when\n"
+            "    fdiq_in_valid && fdiq_in_ready.\n"
+            "  - the FIRST byte of each pair is I, the SECOND is Q; when both are in,\n"
+            "    drive fd_in_data <= {I[7:0], Q[7:0]} and pulse fd_in_valid for one\n"
+            "    cycle. Assert fd_in_last on the 12th sample.\n"
+            "  - count 12 samples, then drop busy and pulse done; go idle.\n"
+            "  - busy high while active; done when the block completes.\n"
+            "Drive EVERY output (fd_in_valid low when not emitting). Unused RX-path\n"
+            "outputs (fdiq_out_*, fd_out_ready) may be tied to 0. Register outputs;\n"
+            "assign each output reg only ONCE per always block.")
     if name == "butterfly":
         return (
             "\n\nIMPLEMENTATION HINT (match the golden exactly, all signed):\n"
