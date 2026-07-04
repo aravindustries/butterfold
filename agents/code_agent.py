@@ -60,6 +60,20 @@ def _golden_hint(name: str) -> str:
             "where sat8(x) clamps to [-128,127]. Declare intermediates `signed` and wide\n"
             "enough (e.g. signed [17:0]); use $signed()/arithmetic shift >>> so negatives\n"
             "round correctly. Do NOT register — no clk/rst here.")
+    if name == "subcarrier_map_extract":
+        return (
+            "\n\nIMPLEMENTATION HINT (TX map path is what the gate checks):\n"
+            "Simple synchronous FSM, SAME shape as the adapters (no enums/next_state).\n"
+            "On `start` with map_not_extract=1 (map):\n"
+            "  - LOAD phase: in_ready = high; capture 12 samples from in_data into an\n"
+            "    internal reg array buf[0..11] (accept on in_valid && in_ready).\n"
+            "  - EMIT phase: stream out the 128-bin grid on out_data, one bin/cycle,\n"
+            "    out_valid pulsed each cycle. For bin index k: out_data = buf[k -\n"
+            "    first_subcarrier] when first_subcarrier <= k < first_subcarrier+12,\n"
+            "    else 16'b0. Assert out_last on bin 127.\n"
+            "  - busy while active; done when the 128 bins are emitted.\n"
+            "Use an internal reg array (NOT the external mem_* interface); tie mem_addr,\n"
+            "mem_write, mem_wdata to 0. Assign each output reg only ONCE per always block.")
     if name == "tdiq_io_adapter_cp":
         return (
             "\n\nIMPLEMENTATION HINT (RX CP-removal path is what the gate checks):\n"
