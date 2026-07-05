@@ -1,0 +1,107 @@
+{
+  "design": "butterfold",
+  "spec": "butterfold_module_io.md",
+  "spec_hash": "6077aaf78f8a",
+  "build_order": [
+    "twiddle_source",
+    "unified_mixed_radix_core",
+    "subcarrier_map_extract",
+    "fdiq_io_adapter",
+    "tdiq_io_adapter_cp",
+    "scheduler_addr_control",
+    "butterfold_top"
+  ],
+  "subtasks": [
+    {
+      "id": "twiddle_source",
+      "module_name": "twiddle_source",
+      "description": "Stores or generates quantized twiddle factors.",
+      "ports": {
+        "total": 8,
+        "in": 5,
+        "out": 3
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "unified_mixed_radix_core",
+      "module_name": "unified_mixed_radix_core",
+      "description": "Performs the arithmetic used by:",
+      "ports": {
+        "total": 28,
+        "in": 21,
+        "out": 7
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "subcarrier_map_extract",
+      "module_name": "subcarrier_map_extract",
+      "description": "TX mapping:",
+      "ports": {
+        "total": 21,
+        "in": 11,
+        "out": 10
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "fdiq_io_adapter",
+      "module_name": "fdiq_io_adapter",
+      "description": "Interfaces ButterFold to external frequency-domain I/Q data.",
+      "ports": {
+        "total": 21,
+        "in": 11,
+        "out": 10
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "tdiq_io_adapter_cp",
+      "module_name": "tdiq_io_adapter_cp",
+      "description": "Interfaces ButterFold to external time-domain I/Q data.",
+      "ports": {
+        "total": 24,
+        "in": 11,
+        "out": 13
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "scheduler_addr_control",
+      "module_name": "scheduler_addr_control",
+      "description": "Controls the complete ButterFold datapath.",
+      "ports": {
+        "total": 36,
+        "in": 9,
+        "out": 27
+      },
+      "depends_on": [],
+      "rationale": ""
+    },
+    {
+      "id": "butterfold_top",
+      "module_name": "butterfold_top",
+      "description": "Top-level integration of all ButterFold modules.",
+      "ports": {
+        "total": 12,
+        "in": 7,
+        "out": 5
+      },
+      "depends_on": [
+        "fdiq_io_adapter",
+        "tdiq_io_adapter_cp",
+        "subcarrier_map_extract",
+        "unified_mixed_radix_core",
+        "twiddle_source",
+        "scheduler_addr_control"
+      ],
+      "rationale": ""
+    }
+  ]
+}
