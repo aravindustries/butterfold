@@ -15,7 +15,9 @@
 // External load and read requests borrow the same single port.
 //
 // This eliminates the async 128:1 read muxes and 3-write-port decoders that made
-// the register-file version huge and un-timeable. PPA target only; not bit-exact.
+// the register-file version huge and un-timeable. The butterfly arithmetic is
+// bit-exact to the register-file core (same widen/round/scale/saturate), so this
+// variant passes the same golden IFFT-128 check (tests/modules/tb_..._sram.v).
 `default_nettype none
 module unified_mixed_radix_core (
     input  wire        rst_n,
@@ -53,12 +55,16 @@ module unified_mixed_radix_core (
 
     // captured operands
     reg signed [15:0] topr, topi, botr, boti;
-    reg               uop_done_r, read_valid_r, sat_r;
+    reg               uop_done_r, sat_r;
 
     assign uop_ready  = (state == IDLE);
     assign load_ready = (state == IDLE);
     assign uop_done   = uop_done_r;
-    assign read_valid = read_valid_r;
+    // read_data (combinational from the macro Q) is valid in the RDX state, where
+    // Q still holds mem[read_addr] latched on the IDLE->RDX edge. Assert read_valid
+    // in that same cycle so it coincides with valid data (a registered pulse would
+    // land one cycle late, after Q has advanced).
+    assign read_valid = (state == RDX);
     assign overflow   = 1'b0;
     assign saturation_occurred = sat_r;
 
@@ -85,10 +91,13 @@ module unified_mixed_radix_core (
                            - $signed(boti)*$signed(twiddle_im) + 64) >>> 7;
     wire signed [31:0] ti = ($signed(botr)*$signed(twiddle_im)
                            + $signed(boti)*$signed(twiddle_re) + 64) >>> 7;
-    wire signed [15:0] res0_re = sat16($signed(topr) + tr);
-    wire signed [15:0] res0_im = sat16($signed(topi) + ti);
-    wire signed [15:0] res1_re = sat16($signed(topr) - tr);
-    wire signed [15:0] res1_im = sat16($signed(topi) - ti);
+    // Radix-2 DIT outputs WITH the per-stage 1/2 scaling (uop_scale_shift=1):
+    // round-to-nearest then arithmetic >>1, exactly like the register-file core,
+    // so this variant is bit-exact to the golden IFFT (not just PPA-representative).
+    wire signed [15:0] res0_re = sat16(($signed(topr) + tr + 1) >>> 1);
+    wire signed [15:0] res0_im = sat16(($signed(topi) + ti + 1) >>> 1);
+    wire signed [15:0] res1_re = sat16(($signed(topr) - tr + 1) >>> 1);
+    wire signed [15:0] res1_im = sat16(($signed(topi) - ti + 1) >>> 1);
 
     // ---------------- single memory port (shared by 4 macros) ----------------
     reg  [6:0]  mem_a;
@@ -131,10 +140,9 @@ module unified_mixed_radix_core (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE; topr <= 0; topi <= 0; botr <= 0; boti <= 0;
-            uop_done_r <= 1'b0; read_valid_r <= 1'b0; sat_r <= 1'b0;
+            uop_done_r <= 1'b0; sat_r <= 1'b0;
         end else begin
             uop_done_r   <= 1'b0;
-            read_valid_r <= 1'b0;
             case (state)
                 IDLE: begin
                     if      (uop_valid)  state <= S1;
@@ -148,7 +156,7 @@ module unified_mixed_radix_core (
                     state <= S4;
                 end
                 S4: begin uop_done_r <= 1'b1; state <= IDLE; end
-                RDX: begin read_valid_r <= 1'b1; state <= IDLE; end
+                RDX: begin state <= IDLE; end
                 default: state <= IDLE;
             endcase
         end
