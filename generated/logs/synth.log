@@ -1,0 +1,576 @@
+/----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)
+
+-- Running command `read_verilog -sv /foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v /foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v
+hierarchy -top butterfold_top -check
+proc
+opt -fast
+check
+stat
+' --
+
+1. Executing Verilog-2005 frontend: /foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v
+Parsing SystemVerilog input from `/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v' to AST representation.
+Generating RTLIL representation for module `\butterfold_kernel'.
+Successfully finished Verilog frontend.
+
+2. Executing Verilog-2005 frontend: /foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v
+Parsing SystemVerilog input from `/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v' to AST representation.
+Generating RTLIL representation for module `\butterfold_top'.
+Successfully finished Verilog frontend.
+
+3. Executing HIERARCHY pass (managing design hierarchy).
+
+3.1. Analyzing design hierarchy..
+Top module:  \butterfold_top
+Used module:     \butterfold_kernel
+
+3.2. Analyzing design hierarchy..
+Top module:  \butterfold_top
+Used module:     \butterfold_kernel
+Removed 0 unused modules.
+
+4. Executing PROC pass (convert processes to netlists).
+
+4.1. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Cleaned up 0 empty switches.
+
+4.2. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
+Marked 8 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98 in module butterfold_top.
+Marked 5 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64 in module butterfold_top.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52 in module butterfold_kernel.
+Removed 1 dead cases from process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47 in module butterfold_kernel.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47 in module butterfold_kernel.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42 in module butterfold_kernel.
+Removed 1 dead cases from process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37 in module butterfold_kernel.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37 in module butterfold_kernel.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31 in module butterfold_kernel.
+Removed a total of 2 dead cases.
+
+4.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
+Removed 2 redundant assignments.
+Promoted 35 assignments to connections.
+
+4.4. Executing PROC_INIT pass (extract init attributes).
+
+4.5. Executing PROC_ARST pass (detect async resets in processes).
+Found async reset \rst_n in `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+
+4.6. Executing PROC_ROM pass (convert switches to ROMs).
+Converted 5 switches.
+<suppressed ~16 debug messages>
+
+4.7. Executing PROC_MUX pass (convert decision trees to multiplexers).
+Creating decoders for process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+     1/79: $3$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_ADDR[3:0]$123
+     2/79: $3$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_DATA[23:0]$124
+     3/79: $3$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_ADDR[3:0]$121
+     4/79: $3$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_DATA[23:0]$122
+     5/79: $2$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_DATA[23:0]$117
+     6/79: $2$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_ADDR[3:0]$116
+     7/79: $2$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_DATA[23:0]$115
+     8/79: $2$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_ADDR[3:0]$114
+     9/79: $2$mem2reg_wr$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:122$61_DATA[7:0]$113
+    10/79: $2$mem2reg_wr$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:122$61_ADDR[4:0]$112
+    11/79: $1$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_DATA[23:0]$111
+    12/79: $1$mem2reg_wr$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:140$63_ADDR[3:0]$110
+    13/79: $1$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_DATA[23:0]$109
+    14/79: $1$mem2reg_wr$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:139$62_ADDR[3:0]$108
+    15/79: $1$mem2reg_wr$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:122$61_DATA[7:0]$107
+    16/79: $1$mem2reg_wr$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:122$61_ADDR[4:0]$106
+    17/79: $0\dout_valid[0:0]
+    18/79: $0\done[0:0]
+    19/79: $0\spread_im[11][23:0]
+    20/79: $0\spread_im[10][23:0]
+    21/79: $0\spread_im[9][23:0]
+    22/79: $0\spread_im[8][23:0]
+    23/79: $0\spread_im[7][23:0]
+    24/79: $0\spread_im[6][23:0]
+    25/79: $0\spread_im[5][23:0]
+    26/79: $0\spread_im[4][23:0]
+    27/79: $0\spread_im[3][23:0]
+    28/79: $0\spread_im[2][23:0]
+    29/79: $0\spread_im[1][23:0]
+    30/79: $0\spread_im[0][23:0]
+    31/79: $0\spread_re[11][23:0]
+    32/79: $0\spread_re[10][23:0]
+    33/79: $0\spread_re[9][23:0]
+    34/79: $0\spread_re[8][23:0]
+    35/79: $0\spread_re[7][23:0]
+    36/79: $0\spread_re[6][23:0]
+    37/79: $0\spread_re[5][23:0]
+    38/79: $0\spread_re[4][23:0]
+    39/79: $0\spread_re[3][23:0]
+    40/79: $0\spread_re[2][23:0]
+    41/79: $0\spread_re[1][23:0]
+    42/79: $0\spread_re[0][23:0]
+    43/79: $0\inbuf[23][7:0]
+    44/79: $0\inbuf[22][7:0]
+    45/79: $0\inbuf[21][7:0]
+    46/79: $0\inbuf[20][7:0]
+    47/79: $0\inbuf[19][7:0]
+    48/79: $0\inbuf[18][7:0]
+    49/79: $0\inbuf[17][7:0]
+    50/79: $0\inbuf[16][7:0]
+    51/79: $0\inbuf[15][7:0]
+    52/79: $0\inbuf[14][7:0]
+    53/79: $0\inbuf[13][7:0]
+    54/79: $0\inbuf[12][7:0]
+    55/79: $0\inbuf[11][7:0]
+    56/79: $0\inbuf[10][7:0]
+    57/79: $0\inbuf[9][7:0]
+    58/79: $0\inbuf[8][7:0]
+    59/79: $0\inbuf[7][7:0]
+    60/79: $0\inbuf[6][7:0]
+    61/79: $0\inbuf[5][7:0]
+    62/79: $0\inbuf[4][7:0]
+    63/79: $0\inbuf[3][7:0]
+    64/79: $0\inbuf[2][7:0]
+    65/79: $0\inbuf[1][7:0]
+    66/79: $0\inbuf[0][7:0]
+    67/79: $0\out_q_byte[7:0]
+    68/79: $0\out_i_byte[7:0]
+    69/79: $0\acc_im[39:0]
+    70/79: $0\acc_re[39:0]
+    71/79: $0\emit_half[0:0]
+    72/79: $0\ifft_j[3:0]
+    73/79: $0\samp[7:0]
+    74/79: $0\load_cnt[4:0]
+    75/79: $0\state[2:0]
+    76/79: $0\busy[0:0]
+    77/79: $0\dout[7:0]
+    78/79: $0\dft_j[3:0]
+    79/79: $0\dft_n[3:0]
+Creating decoders for process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+     1/15: $2$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:68$60_DATA[7:0]$95
+     2/15: $2$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:67$59_DATA[7:0]$92
+     3/15: $2$mem2reg_rd$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:64$58_DATA[23:0]$90
+     4/15: $2$mem2reg_rd$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:63$57_DATA[23:0]$89
+     5/15: $1\use_ifft[0:0]
+     6/15: $1\a_im[23:0]
+     7/15: $1$mem2reg_rd$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:64$58_DATA[23:0]$84
+     8/15: $1$mem2reg_rd$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:64$58_ADDR[3:0]$83
+     9/15: $1\a_re[23:0]
+    10/15: $1$mem2reg_rd$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:63$57_DATA[23:0]$82
+    11/15: $1$mem2reg_rd$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:63$57_ADDR[3:0]$81
+    12/15: $1$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:68$60_DATA[7:0]$88
+    13/15: $1$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:68$60_ADDR[4:0]$87
+    14/15: $1$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:67$59_DATA[7:0]$86
+    15/15: $1$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:67$59_ADDR[4:0]$85
+Creating decoders for process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+     1/1: $1\w12_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$10.$result[11:0]$56
+Creating decoders for process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+     1/1: $1\w128_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$9.$result[11:0]$51
+Creating decoders for process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+     1/1: $1\w12_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$8.$result[11:0]$46
+Creating decoders for process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+     1/1: $1\w128_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$7.$result[11:0]$41
+Creating decoders for process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+     1/1: $1\idx12$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$6.$result[3:0]$36
+
+4.8. Executing PROC_DLATCH pass (convert process syncs to latches).
+No latch inferred for signal `\butterfold_top.\a_re' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.\a_im' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.\use_ifft' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.\w_idx' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.\tau' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:63$57_ADDR' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\spread_re$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:63$57_DATA' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:64$58_ADDR' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\spread_im$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:64$58_DATA' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:67$59_ADDR' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:67$59_DATA' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:68$60_ADDR' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_top.$mem2reg_rd$\inbuf$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:68$60_DATA' from process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+No latch inferred for signal `\butterfold_kernel.\w12_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$5.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+No latch inferred for signal `\butterfold_kernel.\w12_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$10.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+No latch inferred for signal `\butterfold_kernel.\w12_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$10.idx' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+No latch inferred for signal `\butterfold_kernel.\w128_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$4.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+No latch inferred for signal `\butterfold_kernel.\w128_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$9.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+No latch inferred for signal `\butterfold_kernel.\w128_im$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$9.idx' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+No latch inferred for signal `\butterfold_kernel.\w12_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$3.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+No latch inferred for signal `\butterfold_kernel.\w12_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$8.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+No latch inferred for signal `\butterfold_kernel.\w12_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$8.idx' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+No latch inferred for signal `\butterfold_kernel.\w128_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$2.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+No latch inferred for signal `\butterfold_kernel.\w128_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$7.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+No latch inferred for signal `\butterfold_kernel.\w128_re$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$7.idx' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+No latch inferred for signal `\butterfold_kernel.\idx12$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$1.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+No latch inferred for signal `\butterfold_kernel.\idx12$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$6.$result' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+No latch inferred for signal `\butterfold_kernel.\idx12$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$6.nn' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+No latch inferred for signal `\butterfold_kernel.\idx12$func$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$6.jj' from process `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+
+4.9. Executing PROC_DFF pass (convert process syncs to FFs).
+Creating register for signal `\butterfold_top.\dft_n' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1381' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\dft_j' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1386' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\dout' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1391' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\dout_valid' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1396' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\busy' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1401' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\done' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1406' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\state' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1411' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\load_cnt' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1416' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\samp' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1421' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\ifft_j' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1426' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\emit_half' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1431' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\acc_re' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1436' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\acc_im' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1441' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\out_i_byte' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1446' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\out_q_byte' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $adff cell `$procdff$1451' with positive edge clock and positive level reset.
+Creating register for signal `\butterfold_top.\inbuf[0]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1458' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[1]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1465' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[2]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1472' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[3]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1479' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[4]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1486' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[5]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1493' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[6]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1500' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[7]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1507' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[8]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1514' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[9]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1521' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[10]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1528' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[11]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1535' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[12]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1542' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[13]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1549' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[14]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1556' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[15]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1563' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[16]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1570' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[17]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1577' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[18]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1584' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[19]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1591' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[20]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1598' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[21]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1605' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[22]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1612' with positive edge clock.
+Creating register for signal `\butterfold_top.\inbuf[23]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1619' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[0]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1626' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[1]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1633' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[2]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1640' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[3]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1647' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[4]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1654' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[5]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1661' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[6]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1668' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[7]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1675' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[8]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1682' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[9]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1689' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[10]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1696' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_re[11]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1703' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[0]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1710' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[1]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1717' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[2]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1724' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[3]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1731' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[4]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1738' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[5]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1745' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[6]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1752' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[7]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1759' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[8]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1766' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[9]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1773' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[10]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1780' with positive edge clock.
+Creating register for signal `\butterfold_top.\spread_im[11]' using process `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+  created $dff cell `$procdff$1787' with positive edge clock.
+
+4.10. Executing PROC_MEMWR pass (convert process memory writes to cells).
+
+4.11. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Found and cleaned up 11 empty switches in `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+Removing empty process `butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:88$98'.
+Found and cleaned up 5 empty switches in `\butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+Removing empty process `butterfold_top.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:59$64'.
+Found and cleaned up 1 empty switch in `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+Removing empty process `butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$52'.
+Found and cleaned up 1 empty switch in `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+Removing empty process `butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:491$47'.
+Found and cleaned up 1 empty switch in `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+Removing empty process `butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$42'.
+Found and cleaned up 1 empty switch in `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+Removing empty process `butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:490$37'.
+Found and cleaned up 1 empty switch in `\butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+Removing empty process `butterfold_kernel.$proc$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_kernel.v:489$31'.
+Cleaned up 21 empty switches.
+
+4.12. Executing OPT_EXPR pass (perform const folding).
+Optimizing module butterfold_top.
+<suppressed ~145 debug messages>
+Optimizing module butterfold_kernel.
+<suppressed ~2 debug messages>
+
+5. Executing OPT pass (performing simple optimizations).
+
+5.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module butterfold_top.
+<suppressed ~4 debug messages>
+Optimizing module butterfold_kernel.
+
+5.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\butterfold_top'.
+Computing hashes of 620 cells of `\butterfold_top'.
+Finding duplicate cells in `\butterfold_top'.
+Computing hashes of 437 cells of `\butterfold_top'.
+Finding duplicate cells in `\butterfold_top'.
+<suppressed ~549 debug messages>
+Finding identical cells in module `\butterfold_kernel'.
+Computing hashes of 28 cells of `\butterfold_kernel'.
+Finding duplicate cells in `\butterfold_kernel'.
+Removed a total of 183 cells.
+
+5.3. Executing OPT_DFF pass (perform DFF optimizations).
+Adding EN signal on $procdff$1675 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[7]).
+Adding EN signal on $procdff$1640 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[2]).
+Adding EN signal on $procdff$1381 ($adff) from module butterfold_top (D = $procmux$1241_Y, Q = \dft_n).
+Adding EN signal on $procdff$1570 ($dff) from module butterfold_top (D = \din, Q = \inbuf[16]).
+Adding EN signal on $procdff$1386 ($adff) from module butterfold_top (D = $procmux$1229_Y, Q = \dft_j).
+Adding EN signal on $procdff$1682 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[8]).
+Adding EN signal on $procdff$1391 ($adff) from module butterfold_top (D = $procmux$1216_Y, Q = \dout).
+Adding EN signal on $procdff$1752 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[6]).
+Adding EN signal on $procdff$1577 ($dff) from module butterfold_top (D = \din, Q = \inbuf[17]).
+Adding EN signal on $procdff$1401 ($adff) from module butterfold_top (D = $procmux$1206_Y, Q = \busy).
+Adding EN signal on $procdff$1689 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[9]).
+Adding EN signal on $procdff$1411 ($adff) from module butterfold_top (D = $procmux$1185_Y, Q = \state).
+Adding EN signal on $procdff$1584 ($dff) from module butterfold_top (D = \din, Q = \inbuf[18]).
+Adding EN signal on $procdff$1647 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[3]).
+Adding EN signal on $procdff$1416 ($adff) from module butterfold_top (D = $procmux$1173_Y, Q = \load_cnt).
+Adding EN signal on $procdff$1738 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[4]).
+Adding EN signal on $procdff$1421 ($adff) from module butterfold_top (D = $procmux$1157_Y, Q = \samp).
+Adding EN signal on $procdff$1426 ($adff) from module butterfold_top (D = $procmux$1137_Y, Q = \ifft_j).
+Adding EN signal on $procdff$1591 ($dff) from module butterfold_top (D = \din, Q = \inbuf[19]).
+Adding EN signal on $procdff$1696 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[10]).
+Adding EN signal on $procdff$1431 ($adff) from module butterfold_top (D = $procmux$1124_Y, Q = \emit_half).
+Adding EN signal on $procdff$1668 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[6]).
+Adding EN signal on $procdff$1436 ($adff) from module butterfold_top (D = $procmux$1110_Y, Q = \acc_re).
+Adding EN signal on $procdff$1766 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[8]).
+Adding EN signal on $procdff$1441 ($adff) from module butterfold_top (D = $procmux$1095_Y, Q = \acc_im).
+Adding EN signal on $procdff$1598 ($dff) from module butterfold_top (D = \din, Q = \inbuf[20]).
+Adding EN signal on $procdff$1446 ($adff) from module butterfold_top (D = \byte_re, Q = \out_i_byte).
+Adding EN signal on $procdff$1703 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[11]).
+Adding EN signal on $procdff$1451 ($adff) from module butterfold_top (D = \byte_im, Q = \out_q_byte).
+Adding EN signal on $procdff$1458 ($dff) from module butterfold_top (D = $procmux$1071_Y, Q = \inbuf[0]).
+Adding EN signal on $procdff$1605 ($dff) from module butterfold_top (D = \din, Q = \inbuf[21]).
+Adding EN signal on $procdff$1654 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[4]).
+Adding EN signal on $procdff$1465 ($dff) from module butterfold_top (D = \din, Q = \inbuf[1]).
+Adding EN signal on $procdff$1472 ($dff) from module butterfold_top (D = \din, Q = \inbuf[2]).
+Adding EN signal on $procdff$1710 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[0]).
+Adding EN signal on $procdff$1479 ($dff) from module butterfold_top (D = \din, Q = \inbuf[3]).
+Adding EN signal on $procdff$1612 ($dff) from module butterfold_top (D = \din, Q = \inbuf[22]).
+Adding EN signal on $procdff$1486 ($dff) from module butterfold_top (D = \din, Q = \inbuf[4]).
+Adding EN signal on $procdff$1745 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[5]).
+Adding EN signal on $procdff$1787 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[11]).
+Adding EN signal on $procdff$1493 ($dff) from module butterfold_top (D = \din, Q = \inbuf[5]).
+Adding EN signal on $procdff$1500 ($dff) from module butterfold_top (D = \din, Q = \inbuf[6]).
+Adding EN signal on $procdff$1619 ($dff) from module butterfold_top (D = \din, Q = \inbuf[23]).
+Adding EN signal on $procdff$1717 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[1]).
+Adding EN signal on $procdff$1507 ($dff) from module butterfold_top (D = \din, Q = \inbuf[7]).
+Adding EN signal on $procdff$1780 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[10]).
+Adding EN signal on $procdff$1514 ($dff) from module butterfold_top (D = \din, Q = \inbuf[8]).
+Adding EN signal on $procdff$1521 ($dff) from module butterfold_top (D = \din, Q = \inbuf[9]).
+Adding EN signal on $procdff$1626 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[0]).
+Adding EN signal on $procdff$1528 ($dff) from module butterfold_top (D = \din, Q = \inbuf[10]).
+Adding EN signal on $procdff$1661 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[5]).
+Adding EN signal on $procdff$1724 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[2]).
+Adding EN signal on $procdff$1535 ($dff) from module butterfold_top (D = \din, Q = \inbuf[11]).
+Adding EN signal on $procdff$1542 ($dff) from module butterfold_top (D = \din, Q = \inbuf[12]).
+Adding EN signal on $procdff$1633 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:76$96_Y [23:0], Q = \spread_re[1]).
+Adding EN signal on $procdff$1773 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[9]).
+Adding EN signal on $procdff$1549 ($dff) from module butterfold_top (D = \din, Q = \inbuf[13]).
+Adding EN signal on $procdff$1759 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[7]).
+Adding EN signal on $procdff$1556 ($dff) from module butterfold_top (D = \din, Q = \inbuf[14]).
+Adding EN signal on $procdff$1731 ($dff) from module butterfold_top (D = $add$/foss/designs/chipathon/butterfold/generated/rtl/butterfold_top.v:77$97_Y [23:0], Q = \spread_im[3]).
+Adding EN signal on $procdff$1563 ($dff) from module butterfold_top (D = \din, Q = \inbuf[15]).
+
+5.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \butterfold_top..
+Finding unused cells or wires in module \butterfold_kernel..
+Removed 195 unused cells and 697 unused wires.
+<suppressed ~197 debug messages>
+
+5.5. Rerunning OPT passes. (Removed registers in this run.)
+
+5.6. Executing OPT_EXPR pass (perform const folding).
+Optimizing module butterfold_top.
+<suppressed ~22 debug messages>
+Optimizing module butterfold_kernel.
+
+5.7. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\butterfold_top'.
+Computing hashes of 322 cells of `\butterfold_top'.
+Finding duplicate cells in `\butterfold_top'.
+Computing hashes of 288 cells of `\butterfold_top'.
+Finding duplicate cells in `\butterfold_top'.
+Computing hashes of 287 cells of `\butterfold_top'.
+Finding duplicate cells in `\butterfold_top'.
+<suppressed ~105 debug messages>
+Finding identical cells in module `\butterfold_kernel'.
+Computing hashes of 28 cells of `\butterfold_kernel'.
+Finding duplicate cells in `\butterfold_kernel'.
+Removed a total of 35 cells.
+
+5.8. Executing OPT_DFF pass (perform DFF optimizations).
+
+5.9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \butterfold_top..
+Finding unused cells or wires in module \butterfold_kernel..
+Removed 0 unused cells and 47 unused wires.
+<suppressed ~1 debug messages>
+
+5.10. Finished fast OPT passes.
+
+6. Executing CHECK pass (checking for obvious problems).
+Checking module butterfold_top...
+Checking module butterfold_kernel...
+Found and reported 0 problems.
+
+7. Printing statistics.
+
+=== butterfold_top ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      297 wires
+     2099 wire bits
+       79 public wires
+     1155 public wire bits
+        9 ports
+       23 port bits
+      286 cells
+       10   $add
+        2   $adff
+       13   $adffe
+       48   $dffe
+       84   $eq
+        6   $logic_not
+        1   $lt
+        1   $mul
+       45   $mux
+        8   $ne
+       15   $pmux
+       45   $reduce_and
+        7   $reduce_bool
+        1   $sub
+        1 submodules
+        1   butterfold_kernel
+
+=== butterfold_kernel ===
+
+        +----------Local Count, excluding submodules.
+        | 
+       39 wires
+      686 wire bits
+       27 public wires
+      426 public wire bits
+       12 ports
+      240 port bits
+        5 memories
+     4480 memory bits
+       28 cells
+        3   $add
+        2   $gt
+        2   $lt
+        5   $meminit
+        5   $memrd_v2
+        4   $mul
+        6   $mux
+        1   $sub
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        | 
+      314 butterfold_top
+       28 butterfold_kernel
+
+        +----------Count including submodules.
+        | 
+      336 wires
+     2785 wire bits
+      106 public wires
+     1581 public wire bits
+       21 ports
+      263 port bits
+        5 memories
+     4480 memory bits
+        - processes
+      314 cells
+       13   $add
+        2   $adff
+       13   $adffe
+       48   $dffe
+       84   $eq
+        2   $gt
+        6   $logic_not
+        3   $lt
+        5   $meminit
+        5   $memrd_v2
+        5   $mul
+       51   $mux
+        8   $ne
+       15   $pmux
+       45   $reduce_and
+        7   $reduce_bool
+        2   $sub
+        1 submodules
+        1   butterfold_kernel
+
+End of script. Logfile hash: 69fb1273b7, time: 0.22s, user: 0.08s, system: 0.08s, MEM: 116.59 MB peak
+Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)
+Time spent: 29% 3x read_verilog (0 sec), 14% 2x opt_dff (0 sec), ...
