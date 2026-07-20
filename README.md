@@ -1054,6 +1054,29 @@ Synthesis (yosys) → area   |   Static timing (OpenSTA) → timing
         ↓
 Power estimation (OpenSTA) + schematics + memory-architecture PPA comparison
 ```
+
+### Implementation: LangGraph orchestrator + ReAct code agent
+
+The diagram above is implemented, not just described, in [`agents/`](agents/):
+
+| Stage | Code | What it is |
+|---|---|---|
+| Orchestration | [`agents/orchestrator.py`](agents/orchestrator.py) | A [LangGraph](https://github.com/langchain-ai/langgraph) `StateGraph` wiring `plan → author → verify → golden → functional → synth → gds` as real graph nodes/edges. Writes `generated/logs/run_manifest.json` (provider, model, per-stage pass/fail, timings) on every run. |
+| Task planning | [`agents/planner.py`](agents/planner.py), [`agents/module_spec.py`](agents/module_spec.py) | Parses `butterfold_module_io.md` into 6 module contracts + a dependency-respecting build order. Deterministic (works with no LLM); adds a one-line LLM rationale per module if a model is configured. |
+| Verilog code agent + debug loop | [`agents/rtl_react_agent.py`](agents/rtl_react_agent.py) | A `langgraph.prebuilt.create_react_agent` **ReAct** agent: it reads a module's contract, writes RTL, runs `check_module` (compile → elaborate → testbench), reads the failure, and repairs the RTL — a real author → check → repair loop, bounded and logged, not a single scripted call. Falls back to a compile-clean port skeleton with no LLM configured. |
+| Model backend | [`agents/llm_provider.py`](agents/llm_provider.py) | Model-agnostic factory: OpenAI **or any open-weight model behind an OpenAI-compatible endpoint** (Ollama, vLLM, llama.cpp server, LM Studio) via `BUTTERFOLD_LLM_PROVIDER`/`_BASE_URL`/`_MODEL` (see [`.env.example`](.env.example)). No model configured → every agent still runs on its deterministic fallback. Every LLM call (prompt, response, model, settings) is appended to `generated/logs/llm_calls.jsonl`. |
+| Verification / debug | [`agents/verify_agent.py`](agents/verify_agent.py), [`agents/golden_agent.py`](agents/golden_agent.py), [`agents/functional_agent.py`](agents/functional_agent.py) | Deterministic gates (iverilog + yosys + a Python golden model), no LLM in the loop — correctness is established structurally and numerically, not by model self-report. |
+| Physical / PPA | [`agents/synth_agent.py`](agents/synth_agent.py), [`agents/librelane_agent.py`](agents/librelane_agent.py) | Scripted yosys/OpenSTA/LibreLane runs (long deterministic EDA flows, not a reasoning loop). |
+
+**Run it:**
+```bash
+pip install -r requirements.txt
+cp .env.example .env            # optional — edit to point at OpenAI or a local open-weight model
+python agents/orchestrator.py                          # deterministic, no LLM, no GDS
+BUTTERFOLD_AUTHOR_RTL=1 python agents/orchestrator.py   # + ReAct code agent authors RTL
+BUTTERFOLD_GDS=1        python agents/orchestrator.py   # + full LibreLane RTL->GDS (needs the EDA container)
+```
+
 ## Why this is a strong Chipathon project
 
 ButterFold is a strong project for the PICO Track D because it combines:
