@@ -17,7 +17,7 @@ def q17(x):
 
 def hex8(x):
     """Convert signed integer to 8-bit two's-complement hex."""
-    return f"{int(x) & 0xff:02x}"
+    return f"{int(x) & 0xffff:04x}"
 
 
 with (
@@ -42,9 +42,6 @@ with (
             q[0] - q[1],
         ])
 
-        # Saturate outputs back to signed 8-bit
-        out_i = np.clip(out_i, -128, 127)
-        out_q = np.clip(out_q, -128, 127)
 
         input_file.write(
             f"{hex8(i[0])}{hex8(q[0])}"
