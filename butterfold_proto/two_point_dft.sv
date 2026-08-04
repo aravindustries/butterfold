@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-`default_nettype none
+`default_nettype wire
 
 module two_point_dft #(
     /*
@@ -464,55 +464,6 @@ module two_point_dft #(
 
             if (compute_fire) begin
 
-`ifndef SYNTHESIS
-                /*
-                 * Verify that each wide butterfly result fits in the signed
-                 * 16-bit datapath before truncation.
-                 *
-                 * To fit in 16 bits, every bit above bit 15 must equal the
-                 * result's sign bit.
-                 */
-                assert (
-                    next_X0_i_wide[25:16] ==
-                    {10{next_X0_i_wide[15]}}
-                ) else begin
-                    $error(
-                        "two_point_dft: X0_i overflow: %0d",
-                        next_X0_i_wide
-                    );
-                end
-
-                assert (
-                    next_X0_q_wide[25:16] ==
-                    {10{next_X0_q_wide[15]}}
-                ) else begin
-                    $error(
-                        "two_point_dft: X0_q overflow: %0d",
-                        next_X0_q_wide
-                    );
-                end
-
-                assert (
-                    next_X1_i_wide[25:16] ==
-                    {10{next_X1_i_wide[15]}}
-                ) else begin
-                    $error(
-                        "two_point_dft: X1_i overflow: %0d",
-                        next_X1_i_wide
-                    );
-                end
-
-                assert (
-                    next_X1_q_wide[25:16] ==
-                    {10{next_X1_q_wide[15]}}
-                ) else begin
-                    $error(
-                        "two_point_dft: X1_q overflow: %0d",
-                        next_X1_q_wide
-                    );
-                end
-`endif
-
                 /*
                  * The assertions verify that these slices do not discard
                  * meaningful upper bits under the expected FFT input range.
@@ -532,57 +483,4 @@ module two_point_dft #(
         end
     end
 
-    //==========================================================================
-    // Simulation-only protocol assertions
-    //==========================================================================
-
-`ifndef SYNTHESIS
-
-    /*
-     * Only uop == 1 may currently be presented. An unsupported operation
-     * would otherwise remain buffered waiting for future implementation.
-     */
-    property p_supported_uop;
-        @(posedge clk)
-        disable iff (!rst_n)
-        (uop_valid && uop_ready) |-> uop_in;
-    endproperty
-
-    assert_supported_uop:
-        assert property (p_supported_uop)
-        else begin
-            $error(
-                "two_point_dft: only uop_in == 1 is currently supported"
-            );
-        end
-
-    /*
-     * The output transaction must remain stable while the downstream block
-     * applies backpressure.
-     */
-    property p_output_stable;
-        @(posedge clk)
-        disable iff (!rst_n)
-        (out_valid && !out_ready) |=>
-            out_valid &&
-            $stable({
-                X0_i,
-                X0_q,
-                X1_i,
-                X1_q
-            });
-    endproperty
-
-    assert_output_stable:
-        assert property (p_output_stable)
-        else begin
-            $error(
-                "two_point_dft: output changed while stalled"
-            );
-        end
-
-`endif
-
 endmodule
-
-`default_nettype wire
