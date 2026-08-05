@@ -861,4 +861,3 @@ module scheduler #(
 endmodule
 
 `default_nettype wire
-
