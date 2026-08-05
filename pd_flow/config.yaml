@@ -1,0 +1,153 @@
+# GF180MCU LibreLane config for ButterFold -- SRAM-MACRO variant.
+# Same proven-routing settings as config.yaml (the register-file run), plus the
+# four gf180mcu_fd_ip_sram__sram128x8m8wm1 hard macros wired in and placed.
+#
+# The core uses rtl_sram/unified_mixed_radix_core.v (single-port synchronous SRAM,
+# 5-cycle butterfly FSM) with 4 macros = real/imag x hi/lo byte slices:
+#   u_mre_hi u_mre_lo u_mim_hi u_mim_lo
+# All OTHER modules + the top are the same rtl/*.v files as the register-file run.
+
+meta:
+  version: 3
+  flow: Classic
+
+DESIGN_NAME: butterfold_top
+
+# sram128x8_bb.v (blackbox stub) MUST come first so yosys keeps the macro
+# instances instead of trying to elaborate them. The behavioral model
+# rtl_sram/sram128x8_behav.v is for simulation ONLY -- do NOT list it here.
+VERILOG_FILES:
+  - dir::../gf180_SRAM/gf180mcu_fd_ip_sram/gf180mcu_fd_ip_sram__sram128x8m8wm1.v
+  - dir::../rtl_sram/unified_mixed_radix_core.v
+  - dir::../rtl/scheduler_addr_control.v
+  - dir::../rtl/twiddle_source.v
+  - dir::../rtl/subcarrier_map_extract.v
+  - dir::../rtl/fdiq_io_adapter.v
+  - dir::../rtl/tdiq_io_adapter_cp.v
+  - dir::../rtl/butterfold_top.v
+
+CLOCK_PORT: clk_i
+# SRAM core critical path = the 16x8 complex multiplier. At 30 ns setup CLOSES at
+# the nominal + fast corners (WNS 0) and hold is clean at ALL corners -> reported
+# as nominal-closing, 33 MHz. It misses only the slow corner (ss/125C/4v50).
+# NOTE: relaxing to 40 ns did NOT close ss -- that path is ~53 ns post-layout at
+# ss, so a true all-corner close needs ~55 ns (~18 MHz) AND net repair for the
+# multiplier's high-fanout slew/cap warnings. We deliberately keep 30 ns for the
+# best honest Fmax number rather than chase the ss corner.
+CLOCK_PERIOD: 30
+
+# ---------------------------------------------------------------------------
+# Hard macros: 4x gf180mcu_fd_ip_sram__sram128x8m8wm1 (each 431.86 x 268.88 um).
+# Placed in a 2x2 grid with ~100 um routing channels, 150 um edge margins.
+#   die 1300 x 1000 um; core logic (~0.09 mm^2) fills the channels/edges.
+# ---------------------------------------------------------------------------
+MACROS:
+  gf180mcu_fd_ip_sram__sram128x8m8wm1:
+    gds:
+      - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram128x8m8wm1.gds
+    lef:
+      - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram128x8m8wm1.lef
+    lib:
+      "*":
+        - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram128x8m8wm1__tt_025C_5v00.lib
+    instances:
+      # Macros live inside the core (instance u_core); after synthesis the
+      # flattened instance names are u_core.<name> -- must match the netlist.
+      "u_core.u_mre_hi":
+        location: [150.0, 150.0]
+        orientation: N
+      "u_core.u_mre_lo":
+        location: [681.86, 150.0]
+        orientation: N
+      "u_core.u_mim_hi":
+        location: [150.0, 518.88]
+        orientation: N
+      "u_core.u_mim_lo":
+        location: [681.86, 518.88]
+        orientation: N
+
+FP_SIZING: absolute
+DIE_AREA: [0.0, 0.0, 1300.0, 1000.0]
+
+ERROR_ON_SYNTH_CHECKS: false
+ERROR_ON_LINTER_WARNINGS: false
+
+# Power / ground nets.
+VDD_NETS:
+  - VDD
+GND_NETS:
+  - VSS
+
+# Signoff / streamout.
+PRIMARY_GDSII_STREAMOUT_TOOL: klayout
+
+# Magic DRC on the LEF/DEF ABSTRACT, not the flattened GDS. With USE_GDS=true
+# Magic flattens the gf180mcu_fd_ip_sram hard macro and re-checks its INTERNAL
+# diffusion/well/device geometry (DF.8/DV.9/DV.6/CO.4 ...), producing ~2300
+# errors per macro (8803 total) -- all strictly INSIDE the four macro footprints,
+# zero in the std-cell/routing area. That macro is a signed-off vendor IP; you do
+# not re-DRC hardened IP internals (the foundry guarantees them). USE_GDS=false
+# checks the macro as a black-box outline, so top-level/placement/routing DRC is
+# still verified (and is clean) while the vendor IP internals are trusted.
+MAGIC_DRC_USE_GDS: false
+
+# Routing / ESD -- Metal2..Metal5 to sidestep GF180's broken Via1 rule (RT_MIN at
+# Metal2, see config.yaml notes) while giving the router a 4th layer. With 4 big
+# SRAM macros in a tight die, Metal2..Metal4 alone (only 3 layers, and Metal3/Metal4
+# also carry the PDN) over-subscribed and global routing finished with congestion
+# (GRT-0116). Metal5 is a clean signal-only layer that relieves the channels.
+DIODE_ON_PORTS: in
+RT_MIN_LAYER: Metal2
+RT_MAX_LAYER: Metal5
+PDN_MULTILAYER: false
+
+# The router asked to reduce the layer derating (GRT-0704: "reduce the layer
+# adjustment from 30% to 26%"). Lower the global adjustment so more track capacity
+# is exposed to global routing, which resolves the congestion hot-spots.
+GRT_ADJUSTMENT: 0.2
+
+# Power distribution network.
+# NOTE on the 6 residual Magic M3.1 (Metal3 width) errors: they are NOT ours and
+# NOT a PDN-tuning problem. They are the gf180mcu_fd_ip_sram macro's OWN abstract
+# pin -- its VSS Metal3 pin is drawn 88.55 um x 0.110 um (< the 0.56 um minimum),
+# identical in all 4 instances. Widening these straps to 12 um changed nothing
+# (coords stayed byte-identical), confirming it is vendor-IP geometry. It is
+# waived as a hard-IP pin (see DRC_WAIVER.md). Kept at 5 um to match the reported
+# signoff run RUN_2026-08-04_07-00-00.
+PDN_VWIDTH: 5
+PDN_HWIDTH: 5
+PDN_VSPACING: 1
+PDN_HSPACING: 1
+PDN_VPITCH: 75
+PDN_HPITCH: 75
+PDN_EXTEND_TO: boundary
+# The SRAM macro power pins are on Metal2/Metal3, but the default PDN connects the
+# macro grid on Metal4<->Metal5 -- which never reaches the pins (PDN-0232/0233
+# "grid does not contain any shapes or vias"). Vertical Metal4 straps stay; point
+# the macro connect DOWN to Metal3 so Metal4 straps crossing the macro drop Via3
+# onto the SRAM's Metal3 VDD/VSS pins.
+PDN_VERTICAL_LAYER: Metal4
+PDN_HORIZONTAL_LAYER: Metal3
+# Explicit global connection of the 4 SRAM macro pins to the core power nets.
+# Format: <instance_regex> <vdd_net> <gnd_net> <vdd_pin> <gnd_pin>
+PDN_MACRO_CONNECTIONS:
+  - "u_core.u_m.* VDD VSS VDD VSS"
+
+# Placement.
+FP_CORE_UTIL: 40
+PL_TARGET_DENSITY_PCT: 55
+MAX_FANOUT_CONSTRAINT: 10
+
+# CTS -- obstruction-aware, no wide NDR (keeps clock-buffer pins reachable).
+CTS_CLK_MAX_WIRE_LENGTH: 0
+CTS_DISTANCE_BETWEEN_BUFFERS: 0
+CTS_SINK_CLUSTERING_SIZE: 40
+CTS_SINK_CLUSTERING_MAX_DIAMETER: 60
+CTS_OBSTRUCTION_AWARE: true
+CTS_APPLY_NDR: none
+
+# Margins.
+TOP_MARGIN_MULT: 1
+BOTTOM_MARGIN_MULT: 1
+LEFT_MARGIN_MULT: 2
+RIGHT_MARGIN_MULT: 2
