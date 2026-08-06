@@ -163,6 +163,7 @@ module unified_mixed_radix_core (
     end
 
     // ---------------- 4x GF180 single-port SRAM macros ----------------
+    
     gf180mcu_fd_ip_sram__sram128x8m8wm1 u_mre_hi (
         .CLK(clk), .CEN(1'b0), .GWEN(gwen), .WEN(wen), .A(mem_a), .D(re_d[15:8]), .Q(re_q_hi));
     gf180mcu_fd_ip_sram__sram128x8m8wm1 u_mre_lo (

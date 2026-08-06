@@ -11,13 +11,14 @@ meta:
   version: 3
   flow: Classic
 
+
 DESIGN_NAME: butterfold_top
 
 # sram128x8_bb.v (blackbox stub) MUST come first so yosys keeps the macro
 # instances instead of trying to elaborate them. The behavioral model
 # rtl_sram/sram128x8_behav.v is for simulation ONLY -- do NOT list it here.
 VERILOG_FILES:
-  - dir::../gf180_SRAM/gf180mcu_fd_ip_sram/gf180mcu_fd_ip_sram__sram128x8m8wm1.v
+  - dir::../rtl_sram/sram128x8_bb.v
   - dir::../rtl_sram/unified_mixed_radix_core.v
   - dir::../rtl/scheduler_addr_control.v
   - dir::../rtl/twiddle_source.v
@@ -41,12 +42,14 @@ CLOCK_PERIOD: 30
 # Placed in a 2x2 grid with ~100 um routing channels, 150 um edge margins.
 #   die 1300 x 1000 um; core logic (~0.09 mm^2) fills the channels/edges.
 # ---------------------------------------------------------------------------
+#lef:
+#      - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram128x8m8wm1.lef
 MACROS:
   gf180mcu_fd_ip_sram__sram128x8m8wm1:
     gds:
       - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram128x8m8wm1.gds
     lef:
-      - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram128x8m8wm1.lef
+      - /foss/designs/butterfold/pd_flow/lef/sram128x8m8wm1_drcfix.lef
     lib:
       "*":
         - /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram128x8m8wm1__tt_025C_5v00.lib
@@ -71,6 +74,8 @@ DIE_AREA: [0.0, 0.0, 1300.0, 1000.0]
 
 ERROR_ON_SYNTH_CHECKS: false
 ERROR_ON_LINTER_WARNINGS: false
+
+
 
 # Power / ground nets.
 VDD_NETS:
