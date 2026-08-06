@@ -1,0 +1,191 @@
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl/tdiq_io_adapter_cp.v:80:32: Operator GTE expects 8 bits on the RHS, but RHS's VARREF 'cp_len' generates 4 bits.
+                                                                             : ... note: In instance 'butterfold_top.u_tdiq'
+   80 |                     if (scount >= cp_len) begin
+      |                                ^~
+                      ... For warning description see https://verilator.org/warn/WIDTHEXPAND?v=5.046
+                      ... Use "/* verilator lint_off WIDTHEXPAND */" and lint_on around source to disable this message.
+%Warning-WIDTHTRUNC: /foss/designs/butterfold/rtl/subcarrier_map_extract.v:96:43: Bit extraction of array[11:0] requires 4 bit index, not 7 bits.
+                                                                                : ... note: In instance 'butterfold_top.u_map'
+   96 |                         out_data <= buffer[emit_counter - first_subcarrier];
+      |                                           ^
+                     ... For warning description see https://verilator.org/warn/WIDTHTRUNC?v=5.046
+                     ... Use "/* verilator lint_off WIDTHTRUNC */" and lint_on around source to disable this message.
+%Warning-WIDTHTRUNC: /foss/designs/butterfold/rtl/scheduler_addr_control.v:88:29: Operator ASSIGNDLY expects 7 bits on the Assign RHS, but Assign RHS's ADD generates 8 bits.
+                                                                                : ... note: In instance 'butterfold_top.u_sch'
+   88 |                         grp <= grp + m;
+      |                             ^~
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:82:20: Operator ADD expects 32 bits on the LHS, but LHS's VARREF 'v' generates 16 bits.
+                                                                                        : ... note: In instance 'butterfold_top.u_core'
+   82 |             r = (v + 8) >>> 4;
+      |                    ^
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:97:55: Operator ADD expects 32 bits on the LHS, but LHS's SIGNED generates 16 bits.
+                                                                                        : ... note: In instance 'butterfold_top.u_core'
+   97 |     wire signed [15:0] res0_re = sat16(($signed(topr) + tr + 1) >>> 1);
+      |                                                       ^
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:98:55: Operator ADD expects 32 bits on the LHS, but LHS's SIGNED generates 16 bits.
+                                                                                        : ... note: In instance 'butterfold_top.u_core'
+   98 |     wire signed [15:0] res0_im = sat16(($signed(topi) + ti + 1) >>> 1);
+      |                                                       ^
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:99:55: Operator SUB expects 32 bits on the LHS, but LHS's SIGNED generates 16 bits.
+                                                                                        : ... note: In instance 'butterfold_top.u_core'
+   99 |     wire signed [15:0] res1_re = sat16(($signed(topr) - tr + 1) >>> 1);
+      |                                                       ^
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:100:55: Operator SUB expects 32 bits on the LHS, but LHS's SIGNED generates 16 bits.
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+  100 |     wire signed [15:0] res1_im = sat16(($signed(topi) - ti + 1) >>> 1);
+      |                                                       ^
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:127:55: Operator SHIFTL expects 16 bits on the LHS, but LHS's SIGNED generates 8 bits.
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+  127 |                     re_d   = $signed(load_data[15:8]) <<< 4;
+      |                                                       ^~~
+%Warning-WIDTHEXPAND: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:128:55: Operator SHIFTL expects 16 bits on the LHS, but LHS's SIGNED generates 8 bits.
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+  128 |                     im_d   = $signed(load_data[7:0])  <<< 4;
+      |                                                       ^~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/butterfold_top.v:61:17: Signal is not used: 'sch_cycle_count'
+                                                                          : ... note: In instance 'butterfold_top'
+   61 |     wire [15:0] sch_cycle_count;
+      |                 ^~~~~~~~~~~~~~~
+                       ... For warning description see https://verilator.org/warn/UNUSEDSIGNAL?v=5.046
+                       ... Use "/* verilator lint_off UNUSEDSIGNAL */" and lint_on around source to disable this message.
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:27:24: Signal is not used: 'uop_radix'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   27 |     input  wire [1:0]  uop_radix,
+      |                        ^~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:28:24: Signal is not used: 'uop_inverse'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   28 |     input  wire        uop_inverse,
+      |                        ^~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:29:24: Signal is not used: 'uop_scale_shift'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   29 |     input  wire [2:0]  uop_scale_shift,
+      |                        ^~~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:30:24: Signal is not used: 'uop_last'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   30 |     input  wire        uop_last,
+      |                        ^~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:33:24: Signal is not used: 'src_addr_2'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   33 |     input  wire [6:0]  src_addr_2,
+      |                        ^~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:36:24: Signal is not used: 'dst_addr_2'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   36 |     input  wire [6:0]  dst_addr_2,
+      |                        ^~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/unified_mixed_radix_core.v:39:24: Signal is not used: 'twiddle_valid'
+                                                                                         : ... note: In instance 'butterfold_top.u_core'
+   39 |     input  wire        twiddle_valid,
+      |                        ^~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/scheduler_addr_control.v:8:17: Signal is not used: 'long_cp'
+                                                                                 : ... note: In instance 'butterfold_top.u_sch'
+    8 |     input  wire long_cp,
+      |                 ^~~~~~~
+%Warning-UNDRIVEN: /foss/designs/butterfold/rtl/scheduler_addr_control.v:17:22: Signal is not driven: 'src_addr_2'
+                                                                              : ... note: In instance 'butterfold_top.u_sch'
+   17 |     output reg [6:0] src_addr_2,
+      |                      ^~~~~~~~~~
+                   ... For warning description see https://verilator.org/warn/UNDRIVEN?v=5.046
+                   ... Use "/* verilator lint_off UNDRIVEN */" and lint_on around source to disable this message.
+%Warning-UNDRIVEN: /foss/designs/butterfold/rtl/scheduler_addr_control.v:20:22: Signal is not driven: 'dst_addr_2'
+                                                                              : ... note: In instance 'butterfold_top.u_sch'
+   20 |     output reg [6:0] dst_addr_2,
+      |                      ^~~~~~~~~~
+%Warning-UNDRIVEN: /foss/designs/butterfold/rtl/scheduler_addr_control.v:21:17: Signal is not driven: 'tw_req'
+                                                                              : ... note: In instance 'butterfold_top.u_sch'
+   21 |     output wire tw_req,
+      |                 ^~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/scheduler_addr_control.v:24:17: Signal is not used: 'tw_valid'
+                                                                                  : ... note: In instance 'butterfold_top.u_sch'
+   24 |     input  wire tw_valid,
+      |                 ^~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/scheduler_addr_control.v:28:17: Signal is not used: 'map_done'
+                                                                                  : ... note: In instance 'butterfold_top.u_sch'
+   28 |     input  wire map_done,
+      |                 ^~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/scheduler_addr_control.v:32:17: Signal is not used: 'cp_done'
+                                                                                  : ... note: In instance 'butterfold_top.u_sch'
+   32 |     input  wire cp_done,
+      |                 ^~~~~~~
+%Warning-UNDRIVEN: /foss/designs/butterfold/rtl/scheduler_addr_control.v:38:23: Signal is not driven: 'cycle_count'
+                                                                              : ... note: In instance 'butterfold_top.u_sch'
+   38 |     output reg [15:0] cycle_count
+      |                       ^~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/subcarrier_map_extract.v:16:16: Signal is not used: 'out_ready'
+                                                                                  : ... note: In instance 'butterfold_top.u_map'
+   16 |     input wire out_ready,
+      |                ^~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/subcarrier_map_extract.v:21:23: Signal is not used: 'mem_rdata'
+                                                                                  : ... note: In instance 'butterfold_top.u_map'
+   21 |     input wire [15:0] mem_rdata,
+      |                       ^~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/subcarrier_map_extract.v:22:16: Signal is not used: 'mem_rvalid'
+                                                                                  : ... note: In instance 'butterfold_top.u_map'
+   22 |     input wire mem_rvalid
+      |                ^~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/fdiq_io_adapter.v:10:17: Signal is not used: 'fdiq_out_ready'
+                                                                           : ... note: In instance 'butterfold_top.u_fdiq'
+   10 |     input  wire fdiq_out_ready,
+      |                 ^~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/fdiq_io_adapter.v:13:17: Signal is not used: 'fd_in_ready'
+                                                                           : ... note: In instance 'butterfold_top.u_fdiq'
+   13 |     input  wire fd_in_ready,
+      |                 ^~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/fdiq_io_adapter.v:15:24: Signal is not used: 'fd_out_data'
+                                                                           : ... note: In instance 'butterfold_top.u_fdiq'
+   15 |     input  wire [15:0] fd_out_data,
+      |                        ^~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/fdiq_io_adapter.v:16:17: Signal is not used: 'fd_out_valid'
+                                                                           : ... note: In instance 'butterfold_top.u_fdiq'
+   16 |     input  wire fd_out_valid,
+      |                 ^~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/fdiq_io_adapter.v:18:17: Signal is not used: 'fd_out_last'
+                                                                           : ... note: In instance 'butterfold_top.u_fdiq'
+   18 |     input  wire fd_out_last,
+      |                 ^~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/tdiq_io_adapter_cp.v:12:17: Signal is not used: 'tdiq_out_ready'
+                                                                              : ... note: In instance 'butterfold_top.u_tdiq'
+   12 |     input  wire tdiq_out_ready,
+      |                 ^~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/tdiq_io_adapter_cp.v:18:17: Signal is not used: 'rx_symbol_ready'
+                                                                              : ... note: In instance 'butterfold_top.u_tdiq'
+   18 |     input  wire rx_symbol_ready,
+      |                 ^~~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/tdiq_io_adapter_cp.v:22:24: Signal is not used: 'tx_symbol_rd_data'
+                                                                              : ... note: In instance 'butterfold_top.u_tdiq'
+   22 |     input  wire [15:0] tx_symbol_rd_data,
+      |                        ^~~~~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl/tdiq_io_adapter_cp.v:23:17: Signal is not used: 'tx_symbol_rd_valid'
+                                                                              : ... note: In instance 'butterfold_top.u_tdiq'
+   23 |     input  wire tx_symbol_rd_valid,
+      |                 ^~~~~~~~~~~~~~~~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:12:23: Signal is not used: 'CLK'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   12 |     input  wire       CLK,
+      |                       ^~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:13:23: Signal is not used: 'CEN'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   13 |     input  wire       CEN,
+      |                       ^~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:14:23: Signal is not used: 'GWEN'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   14 |     input  wire       GWEN,
+      |                       ^~~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:15:23: Signal is not used: 'WEN'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   15 |     input  wire [7:0] WEN,
+      |                       ^~~
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:16:23: Signal is not used: 'A'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   16 |     input  wire [6:0] A,
+      |                       ^
+%Warning-UNUSEDSIGNAL: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:17:23: Signal is not used: 'D'
+                                                                             : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   17 |     input  wire [7:0] D,
+      |                       ^
+%Warning-UNDRIVEN: /foss/designs/butterfold/rtl_sram/sram128x8_bb.v:18:23: Signal is not driven: 'Q'
+                                                                         : ... note: In instance 'butterfold_top.u_core.u_mim_lo'
+   18 |     output wire [7:0] Q
+      |                       ^
+- V e r i l a t i o n   R e p o r t: Verilator 5.046 2026-02-28 rev v5.046
+- Verilator: Built from 1.269 MB sources in 307 modules, into 0.064 MB in 3 C++ files needing 0.000 MB
+- Verilator: Walltime 0.166 s (elab=0.017, cvt=0.027, bld=0.000); cpu 0.062 s on 1 threads; allocated 36.570 MB
