@@ -4,7 +4,7 @@
 module scheduler_fft128_tb;
 
     parameter integer N               = 128;
-    parameter integer NUM_TESTS       = 5;
+    parameter integer NUM_TESTS       = 50;
     parameter integer CLK_PERIOD_NS   = 10;
     parameter integer MAX_WAIT_CYCLES = 100000;
 

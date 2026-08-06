@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 N = 128
-NUM_TESTS = 5
+NUM_TESTS = 50
 SEED = 1234
 FRAC_BITS = 7
 SCALE = 1 << FRAC_BITS
