@@ -183,6 +183,29 @@ module butterfold_top #(
     assign rx_output_free_bank  = !rx_output_used[0] ? 1'b0 : 1'b1;
 
     //==========================================================================
+    // External parser
+    //==========================================================================
+    // Parser state/control is declared before the job-queue equations below.
+    // Icarus does not reliably resolve these identifiers when they are first
+    // referenced by a continuous assignment and declared later in the module.
+    localparam logic [2:0] EXT_IDLE = 3'd0;
+    localparam logic [2:0] EXT_CAPTURE_RX = 3'd1;
+    localparam logic [2:0] EXT_CAPTURE_TX = 3'd2;
+    localparam logic [2:0] EXT_BYPASS = 3'd3;
+    logic [2:0] ext_state;
+    logic capture_bank;
+    logic [8:0] capture_length, capture_index;
+    logic [7:0] capture_command;
+    logic [8:0] bypass_remaining;
+    logic external_fire;
+    logic standalone_active;
+    logic [7:0] standalone_command;
+    logic ext_wave_write;
+
+    assign external_fire = din_valid_i && din_ready_o;
+    assign ext_wave_write = (ext_state == EXT_CAPTURE_RX) && external_fire;
+
+    //==========================================================================
     // Input job queue (depth 2, preserves external command order)
     //==========================================================================
     logic job_is_rx [0:1];
@@ -204,28 +227,6 @@ module butterfold_top #(
     assign job_head_bank   = job_bank[job_rd_ptr];
     assign job_head_command= job_command[job_rd_ptr];
     assign job_head_length = job_length[job_rd_ptr];
-
-    //==========================================================================
-    // External parser
-    //==========================================================================
-    localparam logic [2:0] EXT_IDLE = 3'd0;
-    localparam logic [2:0] EXT_CAPTURE_RX = 3'd1;
-    localparam logic [2:0] EXT_CAPTURE_TX = 3'd2;
-    localparam logic [2:0] EXT_BYPASS = 3'd3;
-    logic [2:0] ext_state;
-    logic capture_bank;
-    logic [8:0] capture_length, capture_index;
-    logic [7:0] capture_command;
-    logic [8:0] bypass_remaining;
-    logic external_fire;
-    assign external_fire = din_valid_i && din_ready_o;
-
-    logic standalone_active;
-    logic [7:0] standalone_command;
-
-    // Capture writes to physical waveform SRAM for RX only.
-    logic ext_wave_write;
-    assign ext_wave_write = (ext_state == EXT_CAPTURE_RX) && external_fire;
 
     //==========================================================================
     // OFDM feeder

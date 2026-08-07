@@ -341,6 +341,9 @@ module transform_scheduler_core #(
     logic       tx_mapper_done;
     logic       tx_ifft_block_ready;
 
+    // Declared before continuous assignments for Icarus compatibility.
+    logic       dft12_done;
+
     logic       tx_output_start;
     logic [7:0] tx_dout;
     logic       tx_dout_valid;
@@ -461,6 +464,13 @@ module transform_scheduler_core #(
     logic [31:0] fft_mem_wdata;
     logic [31:0] fft_mem_rdata;
     logic        fft_mem_rvalid;
+
+    // Output-adapter read requests share the physical FFT SRAM port.  Keep
+    // these declarations ahead of the arbitration logic for Icarus.
+    logic        ofdm_mem_req;
+    logic [6:0]  ofdm_mem_addr;
+    logic        tx_mem_req;
+    logic [6:0]  tx_mem_addr;
 
     // Registered FFT operands/results bridge synchronous SRAM latency to the
     // existing latency-insensitive mixed-radix butterfly.
@@ -592,7 +602,6 @@ module transform_scheduler_core #(
     dft12_state_t dft12_state;
     logic         dft12_active;
     logic         dft12_start;
-    logic         dft12_done;
     logic [2:0]   dft12_phase;
     logic [1:0]   dft12_group;
 
@@ -1910,9 +1919,6 @@ module transform_scheduler_core #(
         .done_o         (ofdm_capture_done)
     );
 
-    logic        ofdm_mem_req;
-    logic [6:0]  ofdm_mem_addr;
-
     fdiq_output_adapter_sram u_fdiq_output_adapter (
         .clk          (clk),
         .rst_n        (rst_n),
@@ -1961,9 +1967,6 @@ module transform_scheduler_core #(
         .busy_o         (tx_capture_busy),
         .done_o         (tx_capture_done)
     );
-
-    logic        tx_mem_req;
-    logic [6:0]  tx_mem_addr;
 
     tdiq_output_cp_insert_sram u_tdiq_output_cp_insert (
         .clk          (clk),
