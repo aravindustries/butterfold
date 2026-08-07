@@ -1,0 +1,49 @@
+PYTHON ?= python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+SRAM128_MODEL ?=
+SRAM512_MODEL ?=
+
+COMMON_RTL = \
+	gf180_sram_128x8_wrapper.sv \
+	gf180_sram_512x8_wrapper.sv \
+	gf180_sram_128x32_complex.sv \
+	fft128_twiddle_rom.sv \
+	mixed_radix_butterfly.sv \
+	tdiq_input_cp_remove.sv \
+	fdiq_input_adapter.sv \
+	fdiq_output_adapter_sram.sv \
+	tdiq_output_cp_insert_sram.sv \
+	subcarrier_mapper.sv \
+	subcarrier_extractor.sv \
+	standalone_result_serializer.sv \
+	transform_scheduler_core.sv \
+	butterfold_top.sv
+
+.PHONY: vectors wrapper behavioral foundry clean
+
+vectors:
+	$(PYTHON) gen_realtime_vectors.py
+
+wrapper:
+	$(IVERILOG) -g2012 -Wall -s gf180_sram_wrapper_tb -o sim_sram_wrapper.out \
+		gf180_sram_wrapper_tb.sv gf180_sram_128x8_wrapper.sv \
+		gf180_sram_512x8_wrapper.sv gf180_sram_128x32_complex.sv
+	$(VVP) sim_sram_wrapper.out
+
+behavioral: vectors
+	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_butterfold_sram.out \
+		butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_sram.out
+
+foundry: vectors
+	@test -n "$(SRAM128_MODEL)" || (echo "Set SRAM128_MODEL=/path/to/gf180mcu_fd_ip_sram__sram128x8m8wm1.v"; exit 1)
+	@test -n "$(SRAM512_MODEL)" || (echo "Set SRAM512_MODEL=/path/to/gf180mcu_fd_ip_sram__sram512x8m8wm1.v"; exit 1)
+	$(IVERILOG) -g2012 -gspecify -Wall -DGF180_USE_FOUNDRY_SRAM \
+		-s butterfold_top_tb -o sim_butterfold_foundry_sram.out \
+		butterfold_top_tb.sv $(COMMON_RTL) $(SRAM128_MODEL) $(SRAM512_MODEL)
+	$(VVP) sim_butterfold_foundry_sram.out
+
+clean:
+	rm -f sim_sram_wrapper.out sim_butterfold_sram.out sim_butterfold_foundry_sram.out *.vcd
