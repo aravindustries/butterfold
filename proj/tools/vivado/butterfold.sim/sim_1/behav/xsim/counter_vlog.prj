@@ -1,0 +1,12 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../../../../../../../Tools/xilinx/2025.1/data/rsb/busdef" \
+"../../../../../../../rtl/macros/globalfoundries-pdk-ip-gf180mcu_fd_ip_sram/cells/gf180mcu_fd_ip_sram__sram64x8m8wm1/gf180mcu_fd_ip_sram__sram64x8m8wm1.v" \
+
+sv xil_defaultlib  --include "../../../../../../../../../../Tools/xilinx/2025.1/data/rsb/busdef" \
+"../../../../../../../rtl/src/counter.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

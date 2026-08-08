@@ -1,0 +1,61 @@
+** sch_path: /foss/designs/work/xschem/tutorial/TB_inv1.sch
+**.subckt TB_inv1
+x1 dvdd vin vout 0 inv1
+V1 vin 0 0 PULSE('PAR_VDD' 0 PAR_DEL PAR_SLEW PAR_SLEW '0.5*PAR_PER' '1.0*PAR_PER')
+Vsup dvdd 0 PAR_VDD
+C1 vout 0 'PAR_CLOAD'
+**** begin user architecture code
+
+.include /foss/pdks/gf180mcuD/libs.tech/ngspice/design.ngspice
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice typical
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/smbb000149.ngspice typical
+
+
+
+** PARAMETERS
+.PARAM PAR_VDD=3.3
+.PARAM PAR_CLOAD=100f
+.PARAM PAR_SLEW=100p
+.PARAM PAR_PER=10n
+.PARAM PAR_DEL='0.1*PAR_PER'
+
+** Rise/Fall 10-90%
+.MEASURE TRAN tr1090 TRIG v(vout) VAL='0.1*PAR_VDD' RISE=1 TARG v(vout) VAL='0.9*PAR_VDD' RISE=1
+.MEASURE TRAN tf9010 TRIG v(vout) VAL='0.9*PAR_VDD' FALL=1 TARG v(vout) VAL='0.1*PAR_VDD' FALL=1
+
+** Delay Rise Fall
+.MEASURE TRAN tdrise TRIG v(vin)  VAL='0.5*PAR_VDD' FALL=1 TARG v(vout) VAL='0.5*PAR_VDD' RISE=1
+.MEASURE TRAN tdfall TRIG v(vin)  VAL='0.5*PAR_VDD' RISE=1 TARG v(vout) VAL='0.5*PAR_VDD' FALL=1
+
+**Leakage current and average current
+.MEASURE TRAN iavg AVG vsup#branch FROM=PAR_DEL TO='PAR_DEL+PAR_PER'
+.MEASURE TRAN ileak AVG vsup#branch FROM='PAR_DEL+0.4*PAR_PER' TO='PAR_DEL+0.45*PAR_PER'
+
+.control
+save all
+OP
+TRAN 1p 21n
+write TB_inv1.raw
+plot v(vin) v(vout)
+.endc
+
+
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  inv1.sym # of pins=4
+** sym_path: /foss/designs/work/xschem/tutorial/inv1.sym
+** sch_path: /foss/designs/work/xschem/tutorial/inv1.sch
+.subckt inv1 DVDD vin vout DVSS
+*.ipin vin
+*.opin vout
+*.iopin DVDD
+*.iopin DVSS
+XM1 vout vin DVDD DVDD pfet_03v3 L=0.3u W=1.7u nf=1 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2) * (W/nf + 0.18u)'
++ ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0
+XM2 vout vin DVSS DVSS nfet_03v3 L=0.3u W=0.85u nf=1 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2) * (W/nf + 0.18u)'
++ ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0
+.ends
+
+.end

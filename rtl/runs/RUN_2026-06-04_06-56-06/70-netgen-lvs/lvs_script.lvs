@@ -1,0 +1,7 @@
+set circuit1 [readnet spice /foss/designs/runs/RUN_2026-06-04_06-56-06/68-magic-spiceextraction/counter.spice]
+set circuit2 [readnet verilog /dev/null]
+puts "Reading SPICE netlist file '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/spice/gf180mcu_fd_sc_mcu7t5v0.spice'..."
+readnet spice /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/spice/gf180mcu_fd_sc_mcu7t5v0.spice $circuit2
+puts "Reading Verilog netlist file '/foss/designs/runs/RUN_2026-06-04_06-56-06/52-openroad-fillinsertion/counter.pnl.v'..."
+readnet verilog /foss/designs/runs/RUN_2026-06-04_06-56-06/52-openroad-fillinsertion/counter.pnl.v $circuit2
+lvs "$circuit1 counter" "$circuit2 counter" /usr/local/lib/python3.12/dist-packages/librelane/scripts/netgen/setup.tcl /foss/designs/runs/RUN_2026-06-04_06-56-06/70-netgen-lvs/reports/lvs.netgen.rpt -blackbox -json

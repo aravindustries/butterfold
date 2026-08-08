@@ -1,0 +1,87 @@
+
+===========================================================================
+report_checks -unconstrained
+===========================================================================
+======================= min_tt_025C_5v00 Corner ===================================
+
+Startpoint: u_sram (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q[2] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout         Cap        Slew       Delay        Time   Description
+---------------------------------------------------------------------------------------------
+                                  0.000000    0.000000   clock clk (rise edge)
+                                  0.000000    0.000000   clock source latency
+     4    0.064873    0.292969    0.156764    0.156764 ^ clk (in)
+                                                         clk (net)
+                      0.293039    0.000000    0.156764 ^ clkbuf_0_clk/I (gf180mcu_fd_sc_mcu7t5v0__clkbuf_16)
+     1    0.023128    0.093095    0.267870    0.424634 ^ clkbuf_0_clk/Z (gf180mcu_fd_sc_mcu7t5v0__clkbuf_16)
+                                                         clknet_0_clk (net)
+                      0.093095    0.000252    0.424886 ^ clkbuf_1_0__f_clk/I (gf180mcu_fd_sc_mcu7t5v0__clkbuf_16)
+     1    0.300131    0.341362    0.391415    0.816300 ^ clkbuf_1_0__f_clk/Z (gf180mcu_fd_sc_mcu7t5v0__clkbuf_16)
+                                                         clknet_1_0__leaf_clk (net)
+                      0.341817    0.007279    0.823579 ^ u_sram/CLK (gf180mcu_fd_ip_sram__sram64x8m8wm1)
+     1    0.011829    0.176030    4.493745    5.317325 v u_sram/Q[2] (gf180mcu_fd_ip_sram__sram64x8m8wm1)
+                                                         net4 (net)
+                      0.176030    0.000290    5.317615 v output4/I (gf180mcu_fd_sc_mcu7t5v0__dlyb_1)
+     1    0.073925    0.810064    1.502348    6.819963 v output4/Z (gf180mcu_fd_sc_mcu7t5v0__dlyb_1)
+                                                         q[2] (net)
+                      0.810064    0.000545    6.820508 v q[2] (out)
+                                              6.820508   data arrival time
+
+                                 50.000000   50.000000   clock clk (rise edge)
+                                  0.000000   50.000000   clock network delay (propagated)
+                                 -0.250000   49.749996   clock uncertainty
+                                  0.000000   49.749996   clock reconvergence pessimism
+                                -10.000000   39.749996   output external delay
+                                             39.749996   data required time
+---------------------------------------------------------------------------------------------
+                                             39.749996   data required time
+                                             -6.820508   data arrival time
+---------------------------------------------------------------------------------------------
+                                             32.929489   slack (MET)
+
+
+
+
+===========================================================================
+report_checks --slack_max -0.01
+============================================================================
+======================= min_tt_025C_5v00 Corner ===================================
+
+No paths found.
+
+
+===========================================================================
+ report_check_types -max_slew -max_cap -max_fanout -violators
+============================================================================
+======================= min_tt_025C_5v00 Corner ===================================
+
+max capacitance
+
+Pin                                        Limit         Cap       Slack
+------------------------------------------------------------------------
+clkbuf_1_0__f_clk/Z                     0.200000    0.300131   -0.100131 (VIOLATED)
+
+
+
+===========================================================================
+report_parasitic_annotation -report_unannotated
+============================================================================
+Found 4 unannotated drivers.
+ u_sram/Q[4]
+ u_sram/Q[5]
+ u_sram/Q[6]
+ u_sram/Q[7]
+Found 0 partially unannotated drivers.
+
+===========================================================================
+max slew violation count 0
+max fanout violation count 0
+max cap violation count 1
+============================================================================
+
+===========================================================================
+check_setup -verbose -unconstrained_endpoints -multiple_clock -no_clock -no_input_delay -loops -generated_clocks
+===========================================================================

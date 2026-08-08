@@ -1,0 +1,31 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)
+
+-- Running command `
+                    verilog_defines -D__pnr__;
+verilog_defines -DPDK_gf180mcuD;
+verilog_defines -DUSE_POWER_PINS;
+verilog_defines -DSCL_gf180mcu_fd_sc_mcu7t5v0;
+verilog_defines -D__librelane__;
+read_verilog -sv -lib /foss/designs/runs/RUN_2026-06-19_03-22-18/tmp/91d1f8678ecc488495ea23565d62ceb9.bb.v;
+
+                    blackbox;
+                    write_verilog -noattr -noexpr -nohex -nodec -defparam -blackboxes /foss/designs/runs/RUN_2026-06-19_03-22-18/tmp/91d1f8678ecc488495ea23565d62ceb9.bb.v;
+                    ' --
+
+1. Executing Verilog-2005 frontend: /foss/designs/runs/RUN_2026-06-19_03-22-18/tmp/91d1f8678ecc488495ea23565d62ceb9.bb.v
+Parsing SystemVerilog input from `/foss/designs/runs/RUN_2026-06-19_03-22-18/tmp/91d1f8678ecc488495ea23565d62ceb9.bb.v' to AST representation.
+Generating RTLIL representation for module `\gf180mcu_fd_ip_sram__sram64x8m8wm1'.
+Successfully finished Verilog frontend.
+
+2. Executing Verilog backend.
+Dumping module `\gf180mcu_fd_ip_sram__sram64x8m8wm1'.
+
+End of script. Logfile hash: 8a110319bf, time: 0.01s, user: 0.01s, system: 0.01s, MEM: 47.62 MB peak
+Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)
+Time spent: 42% 2x read_verilog (0 sec), 35% 2x write_verilog (0 sec), ...

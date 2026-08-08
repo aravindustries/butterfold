@@ -1,0 +1,49 @@
+%Warning-PINMISSING: /foss/designs/src/counter.sv:27:40: Instance has missing pin: 'VDD'
+   27 |     gf180mcu_fd_ip_sram__sram64x8m8wm1 u_sram (
+      |                                        ^~~~~~
+                     /foss/designs/runs/RUN_2026-08-05_05-39-36/tmp/08b26f078bf24fe190ed47dbc56b2576.bb.v:3:73: ... Location of port declaration
+    3 | module gf180mcu_fd_ip_sram__sram64x8m8wm1(CLK, CEN, GWEN, WEN, A, D, Q, VDD, VSS);
+      |                                                                         ^~~
+                     ... For warning description see https://verilator.org/warn/PINMISSING?v=5.046
+                     ... Use "/* verilator lint_off PINMISSING */" and lint_on around source to disable this message.
+%Warning-PINMISSING: /foss/designs/src/counter.sv:27:40: Instance has missing pin: 'VSS'
+   27 |     gf180mcu_fd_ip_sram__sram64x8m8wm1 u_sram (
+      |                                        ^~~~~~
+                     /foss/designs/runs/RUN_2026-08-05_05-39-36/tmp/08b26f078bf24fe190ed47dbc56b2576.bb.v:3:78: ... Location of port declaration
+    3 | module gf180mcu_fd_ip_sram__sram64x8m8wm1(CLK, CEN, GWEN, WEN, A, D, Q, VDD, VSS);
+      |                                                                              ^~~
+%Warning-WIDTHTRUNC: /foss/designs/src/counter.sv:25:14: Operator ASSIGNW expects 4 bits on the Assign RHS, but Assign RHS's VARREF 'dout' generates 8 bits.
+                                                       : ... note: In instance 'counter'
+   25 |     assign q = dout;
+      |              ^
+                     ... For warning description see https://verilator.org/warn/WIDTHTRUNC?v=5.046
+                     ... Use "/* verilator lint_off WIDTHTRUNC */" and lint_on around source to disable this message.
+%Warning-SELRANGE: /foss/designs/src/counter.sv:32:21: Extracting 6 bits from only 4 bit number
+                                                     : ... note: In instance 'counter'
+   32 |         , .A    (cnt[5:0])
+      |                     ^
+                   ... For warning description see https://verilator.org/warn/SELRANGE?v=5.046
+                   ... Use "/* verilator lint_off SELRANGE */" and lint_on around source to disable this message.
+%Warning-SELRANGE: /foss/designs/src/counter.sv:32:21: Selection index out of range: 5:0 outside 3:0
+                                                     : ... note: In instance 'counter'
+   32 |         , .A    (cnt[5:0])
+      |                     ^
+%Warning-WIDTHEXPAND: /foss/designs/src/counter.sv:33:12: Input port connection 'D' expects 8 bits on the pin connection, but pin connection's CONST '1'h1' generates 1 bits.
+                                                        : ... note: In instance 'counter'
+   33 |         , .D    (1'b1)
+      |            ^
+                      ... For warning description see https://verilator.org/warn/WIDTHEXPAND?v=5.046
+                      ... Use "/* verilator lint_off WIDTHEXPAND */" and lint_on around source to disable this message.
+%Warning-UNUSEDSIGNAL: /foss/designs/src/counter.sv:15:16: Signal is not driven, nor used: 'din'
+                                                         : ... note: In instance 'counter'
+   15 |     wire [7:0] din;
+      |                ^~~
+                       ... For warning description see https://verilator.org/warn/UNUSEDSIGNAL?v=5.046
+                       ... Use "/* verilator lint_off UNUSEDSIGNAL */" and lint_on around source to disable this message.
+%Warning-UNUSEDSIGNAL: /foss/designs/src/counter.sv:16:16: Bits of signal are not used: 'dout'[7:4]
+                                                         : ... note: In instance 'counter'
+   16 |     wire [7:0] dout;
+      |                ^~~~
+- V e r i l a t i o n   R e p o r t: Verilator 5.046 2026-02-28 rev v5.046
+- Verilator: Built from 0.384 MB sources in 302 modules, into 0.006 MB in 3 C++ files needing 0.000 MB
+- Verilator: Walltime 0.071 s (elab=0.017, cvt=0.024, bld=0.000); cpu 0.026 s on 1 threads; allocated 35.504 MB

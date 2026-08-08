@@ -1,0 +1,75 @@
+%Warning-PINMISSING: /foss/designs/src/counter.sv:27:40: Instance has missing pin: 'VDD'
+   27 |     gf180mcu_fd_ip_sram__sram64x8m8wm1 u_sram (
+      |                                        ^~~~~~
+                     /foss/designs/runs/RUN_2026-06-19_03-20-08/tmp/fb3ca86100ff49a19b038494859c5299.bb.v:3:73: ... Location of port declaration
+    3 | module gf180mcu_fd_ip_sram__sram64x8m8wm1(CLK, CEN, GWEN, WEN, A, D, Q, VDD, VSS);
+      |                                                                         ^~~
+                     ... For warning description see https://verilator.org/warn/PINMISSING?v=5.046
+                     ... Use "/* verilator lint_off PINMISSING */" and lint_on around source to disable this message.
+%Warning-PINMISSING: /foss/designs/src/counter.sv:27:40: Instance has missing pin: 'VSS'
+   27 |     gf180mcu_fd_ip_sram__sram64x8m8wm1 u_sram (
+      |                                        ^~~~~~
+                     /foss/designs/runs/RUN_2026-06-19_03-20-08/tmp/fb3ca86100ff49a19b038494859c5299.bb.v:3:78: ... Location of port declaration
+    3 | module gf180mcu_fd_ip_sram__sram64x8m8wm1(CLK, CEN, GWEN, WEN, A, D, Q, VDD, VSS);
+      |                                                                              ^~~
+%Warning-IMPLICIT: /foss/designs/src/counter.sv:20:13: Signal definition not found, creating implicitly: 'cnt'
+   20 |             cnt <= 4'b0;
+      |             ^~~
+                   ... For warning description see https://verilator.org/warn/IMPLICIT?v=5.046
+                   ... Use "/* verilator lint_off IMPLICIT */" and lint_on around source to disable this message.
+%Warning-IMPLICIT: /foss/designs/src/counter.sv:33:18: Signal definition not found, creating implicitly: 'din'
+   33 |         , .D    (din)
+      |                  ^~~
+%Warning-IMPLICIT: /foss/designs/src/counter.sv:34:18: Signal definition not found, creating implicitly: 'dout'
+   34 |         , .Q    (dout)
+      |                  ^~~~
+%Warning-WIDTHTRUNC: /foss/designs/src/counter.sv:20:17: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS's CONST '4'h0' generates 4 bits.
+                                                       : ... note: In instance 'counter'
+   20 |             cnt <= 4'b0;
+      |                 ^~
+                     ... For warning description see https://verilator.org/warn/WIDTHTRUNC?v=5.046
+                     ... Use "/* verilator lint_off WIDTHTRUNC */" and lint_on around source to disable this message.
+%Warning-WIDTHTRUNC: /foss/designs/src/counter.sv:22:17: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS's ADD generates 4 bits.
+                                                       : ... note: In instance 'counter'
+   22 |             cnt <= cnt + 4'b1;
+      |                 ^~
+%Warning-WIDTHEXPAND: /foss/designs/src/counter.sv:25:14: Operator ASSIGNW expects 4 bits on the Assign RHS, but Assign RHS's VARREF 'cnt' generates 1 bits.
+                                                        : ... note: In instance 'counter'
+   25 |     assign q = cnt;
+      |              ^
+                      ... For warning description see https://verilator.org/warn/WIDTHEXPAND?v=5.046
+                      ... Use "/* verilator lint_off WIDTHEXPAND */" and lint_on around source to disable this message.
+%Warning-WIDTHEXPAND: /foss/designs/src/counter.sv:32:12: Input port connection 'A' expects 6 bits on the pin connection, but pin connection's VARREF 'cnt' generates 1 bits.
+                                                        : ... note: In instance 'counter'
+   32 |         , .A    (cnt)
+      |            ^
+%Warning-WIDTHEXPAND: /foss/designs/src/counter.sv:33:12: Input port connection 'D' expects 8 bits on the pin connection, but pin connection's VARREF 'din' generates 1 bits.
+                                                        : ... note: In instance 'counter'
+   33 |         , .D    (din)
+      |            ^
+%Warning-WIDTHEXPAND: /foss/designs/src/counter.sv:34:12: Output port connection 'Q' expects 8 bits on the pin connection, but pin connection's VARREF 'dout' generates 1 bits.
+                                                        : ... note: In instance 'counter'
+   34 |         , .Q    (dout)
+      |            ^
+%Error-PROCASSWIRE: /foss/designs/src/counter.sv:20:13: Procedural assignment to wire, perhaps intended var (IEEE 1800-2023 6.5): 'cnt'
+                                                      : ... note: In instance 'counter'
+   20 |             cnt <= 4'b0;
+      |             ^~~
+                    ... For error description see https://verilator.org/warn/PROCASSWIRE?v=5.046
+%Error-PROCASSWIRE: /foss/designs/src/counter.sv:22:13: Procedural assignment to wire, perhaps intended var (IEEE 1800-2023 6.5): 'cnt'
+                                                      : ... note: In instance 'counter'
+   22 |             cnt <= cnt + 4'b1;
+      |             ^~~
+%Warning-UNDRIVEN: /foss/designs/src/counter.sv:33:18: Signal is not driven: 'din'
+                                                     : ... note: In instance 'counter'
+   33 |         , .D    (din)
+      |                  ^~~
+                   ... For warning description see https://verilator.org/warn/UNDRIVEN?v=5.046
+                   ... Use "/* verilator lint_off UNDRIVEN */" and lint_on around source to disable this message.
+%Warning-UNUSEDSIGNAL: /foss/designs/src/counter.sv:34:18: Signal is not used: 'dout'
+                                                         : ... note: In instance 'counter'
+   34 |         , .Q    (dout)
+      |                  ^~~~
+                       ... For warning description see https://verilator.org/warn/UNUSEDSIGNAL?v=5.046
+                       ... Use "/* verilator lint_off UNUSEDSIGNAL */" and lint_on around source to disable this message.
+%Error: Exiting due to 2 error(s)

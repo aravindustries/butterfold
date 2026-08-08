@@ -1,0 +1,212 @@
+#-----------------------------------------------------------
+# Vivado v2025.1 (64-bit)
+# SW Build 6140274 on Wed May 21 22:58:25 MDT 2025
+# IP Build 6138677 on Thu May 22 03:10:11 MDT 2025
+# SharedData Build 6139179 on Tue May 20 17:58:58 MDT 2025
+# Start of session at: Sat Jun  6 22:11:59 2026
+# Process ID         : 3264880
+# Current directory  : /home/eloquencer/Projects/butterfold/frontend/proj/tools/vivado
+# Command line       : vivado -mode gui -notrace -source /home/eloquencer/Projects/butterfold/frontend/proj/scripts/init.tcl
+# Log file           : /home/eloquencer/Projects/butterfold/frontend/proj/tools/vivado/vivado.log
+# Journal file       : /home/eloquencer/Projects/butterfold/frontend/proj/tools/vivado/vivado.jou
+# Running On         : dev-machine
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.4 LTS
+# Processor Detail   : AMD Ryzen 9 8945HS w/ Radeon 780M Graphics
+# CPU Frequency      : 5081.485 MHz
+# CPU Physical cores : 8
+# CPU Logical cores  : 16
+# Host memory        : 32864 MB
+# Swap memory        : 8589 MB
+# Total Virtual      : 41454 MB
+# Available Virtual  : 22729 MB
+#-----------------------------------------------------------
+start_gui
+source /home/eloquencer/Projects/butterfold/frontend/proj/scripts/init.tcl -notrace
+source ../../scripts/orchestrate_proj.tcl
+source ../../scripts/orchestrate_proj.tcl
+update_compile_order -fileset sources_1
+launch_simulation
+launch_simulation
+launch_simulation
+launch_simulation
+launch_simulation
+launch_simulation
+source async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/read_enable} -radix hex {1 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+run 1 us
+report_drivers {/async_fifo/arst_n}
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+close_sim
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+reset_run synth_1
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+reset_run synth_1
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+open_run synth_1 -name synth_1
+report_timing_summary -delay_type min_max -report_unconstrained -check_timing_verbose -max_paths 10 -input_pins -routable_nets -name timing_1
+close_design
+source ../../scripts/orchestrate_proj.tcl
+reset_run synth_1
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+open_run synth_1 -name synth_1
+report_timing_summary -delay_type min_max -report_unconstrained -check_timing_verbose -max_paths 10 -input_pins -routable_nets -name timing_1
+refresh_design
+reset_run synth_1
+close_design
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+open_run synth_1 -name synth_1
+report_timing_summary -delay_type min_max -report_unconstrained -check_timing_verbose -max_paths 10 -input_pins -routable_nets -name timing_1
+close_design
+reset_run synth_1
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+open_run synth_1 -name synth_1
+report_timing_summary -delay_type min_max -report_unconstrained -check_timing_verbose -max_paths 10 -input_pins -routable_nets -name timing_1
+close_design
+launch_simulation
+source async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+close_sim
+launch_simulation
+source async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+run 1 us
+close_sim
+source ../../scripts/orchestrate_proj.tcl
+launch_simulation
+source async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+close_sim
+source ../../scripts/orchestrate_proj.tcl
+launch_simulation
+source circ_async_fifo.tcl
+add_force {/circ_async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/circ_async_fifo/rst_n} -radix hex {0 0ns}
+add_force {/circ_async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/circ_async_fifo/write_data} -radix hex {A 0ns}
+add_force {/circ_async_fifo/read_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/circ_async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/circ_async_fifo/read_enable} -radix hex {1 0ns}
+run 1 us
+add_force {/circ_async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/circ_async_fifo/rst_n} -radix hex {1 0ns}
+add_force {/circ_async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+close_sim
+launch_simulation
+source circ_async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+close_sim
+source ../../scripts/orchestrate_proj.tcl
+launch_simulation
+source async_fifo.tcl
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+relaunch_sim
+add_force {/async_fifo/arst_n} -radix hex {0 0ns}
+add_force {/async_fifo/write_clk} -radix hex {0 0ns} {1 50000ps} -repeat_every 100000ps
+add_force {/async_fifo/write_enable} -radix hex {0 0ns}
+add_force {/async_fifo/write_data} -radix hex {A 0ns}
+add_force {/async_fifo/read_clk} -radix hex {0 0ns} {1 3000ps} -repeat_every 6000ps
+add_force {/async_fifo/read_enable} -radix hex {0 0ns}
+run 1 us
+add_force {/async_fifo/arst_n} -radix hex {1 0ns}
+run 1 us
+add_force {/async_fifo/write_enable} -radix hex {1 0ns}
+run 1 us
+close_sim

@@ -1,0 +1,108 @@
+
+===========================================================================
+report_checks -unconstrained
+===========================================================================
+======================= nom_tt_025C_5v00 Corner ===================================
+
+Startpoint: u_sram (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q[0] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout         Cap        Slew       Delay        Time   Description
+---------------------------------------------------------------------------------------------
+                      0.150000    0.000000    0.000000   clock clk (rise edge)
+                                  0.000000    0.000000   clock network delay (ideal)
+                      0.150000    0.000000    0.000000 ^ u_sram/CLK (gf180mcu_fd_ip_sram__sram64x8m8wm1)
+     1    0.072910    0.695385   16.415804   16.415804 v u_sram/Q[0] (gf180mcu_fd_ip_sram__sram64x8m8wm1)
+                                                         q[0] (net)
+                      0.695385    0.000000   16.415804 v q[0] (out)
+                                             16.415804   data arrival time
+
+                      0.150000   50.000000   50.000000   clock clk (rise edge)
+                                  0.000000   50.000000   clock network delay (ideal)
+                                 -0.250000   49.749996   clock uncertainty
+                                  0.000000   49.749996   clock reconvergence pessimism
+                                -10.000000   39.749996   output external delay
+                                             39.749996   data required time
+---------------------------------------------------------------------------------------------
+                                             39.749996   data required time
+                                            -16.415804   data arrival time
+---------------------------------------------------------------------------------------------
+                                             23.334192   slack (MET)
+
+
+
+
+===========================================================================
+report_checks --slack_max -0.01
+============================================================================
+======================= nom_tt_025C_5v00 Corner ===================================
+
+No paths found.
+
+
+===========================================================================
+ report_check_types -max_slew -max_cap -max_fanout -violators
+============================================================================
+======================= nom_tt_025C_5v00 Corner ===================================
+
+
+
+===========================================================================
+report_parasitic_annotation -report_unannotated
+============================================================================
+Found 42 unannotated drivers.
+ clk
+ rst
+ _28_/ZN
+ _29_/Z
+ _30_/ZN
+ _31_/ZN
+ _32_/ZN
+ _33_/ZN
+ _34_/ZN
+ _35_/ZN
+ _36_/Q
+ _37_/Q
+ _38_/Q
+ _39_/Q
+ _40_/Z
+ _41_/Z
+ _42_/ZN
+ _43_/ZN
+ _44_/ZN
+ _45_/ZN
+ _46_/ZN
+ _47_/ZN
+ _48_/ZN
+ _49_/ZN
+ _50_/ZN
+ _51_/ZN
+ _52_/ZN
+ _53_/ZN
+ _54_/ZN
+ _55_/ZN
+ _56_/ZN
+ _57_/ZN
+ _58_/ZN
+ _59_/ZN
+ u_sram/Q[0]
+ u_sram/Q[1]
+ u_sram/Q[2]
+ u_sram/Q[3]
+ u_sram/Q[4]
+ u_sram/Q[5]
+ u_sram/Q[6]
+ u_sram/Q[7]
+Found 0 partially unannotated drivers.
+
+===========================================================================
+max slew violation count 0
+max fanout violation count 0
+max cap violation count 0
+============================================================================
+
+===========================================================================
+check_setup -verbose -unconstrained_endpoints -multiple_clock -no_clock -no_input_delay -loops -generated_clocks
+===========================================================================
