@@ -24,7 +24,8 @@ COMMON_RTL = \
 	transform_scheduler_core.sv \
 	butterfold_top.sv
 
-.PHONY: vectors wrapper behavioral foundry foundry-functional foundry-info clean
+.PHONY: vectors wrapper behavioral foundry foundry-functional foundry-info \
+	characterize stress-fast stress-paced clean
 
 vectors:
 	$(PYTHON) gen_realtime_vectors.py
@@ -39,6 +40,24 @@ behavioral: vectors
 	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_butterfold_sram.out \
 		butterfold_top_tb.sv $(COMMON_RTL)
 	$(VVP) sim_butterfold_sram.out
+
+characterize: vectors
+	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_PERF -s butterfold_top_tb \
+		-o sim_butterfold_characterize.out butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_characterize.out
+
+stress-fast: vectors
+	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_STRESS -s butterfold_top_tb \
+		-o sim_butterfold_stress_fast.out butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_stress_fast.out
+
+# At 61.44 MHz, 16 core clocks per output byte gives 3.84 Mbyte/s,
+# corresponding to 1.92 Msamples/s for interleaved complex waveform bytes.
+stress-paced: vectors
+	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_STRESS \
+		-DBUTTERFOLD_WAVE_PACED -s butterfold_top_tb \
+		-o sim_butterfold_stress_paced.out butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_stress_paced.out
 
 # Official GlobalFoundries SRAM Verilog models, FUNCTIONAL mode.
 # IMPORTANT: intentionally DO NOT pass -gspecify to Icarus.
@@ -68,4 +87,6 @@ foundry-info:
 	@echo "for final timing/STA."
 
 clean:
-	rm -f sim_sram_wrapper.out sim_butterfold_sram.out sim_butterfold_foundry_sram.out *.vcd
+	rm -f sim_sram_wrapper.out sim_butterfold_sram.out \
+		sim_butterfold_foundry_sram.out sim_butterfold_characterize.out \
+		sim_butterfold_stress_fast.out sim_butterfold_stress_paced.out *.vcd

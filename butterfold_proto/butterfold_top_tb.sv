@@ -5,6 +5,11 @@ module butterfold_top_tb;
     localparam integer N = 128;
     localparam integer DFT12_N = 12;
     localparam integer MAX_WAIT = 200000;
+`ifdef BUTTERFOLD_WAVE_PACED
+    localparam integer TEST_TX_BYTE_INTERVAL = 16;
+`else
+    localparam integer TEST_TX_BYTE_INTERVAL = 1;
+`endif
 
     localparam logic [7:0] CMD_FFT2    = 8'h40;
     localparam logic [7:0] CMD_FFT128  = 8'h41;
@@ -58,9 +63,103 @@ module butterfold_top_tb;
     integer errors;
     integer cycle_count;
 
+`ifdef BUTTERFOLD_PERF
+    integer perf_fft_state_cycles [0:10];
+    integer perf_fft_index;
+    integer perf_butterflies;
+    integer perf_reads;
+    integer perf_writes;
+    integer perf_results;
+
+    initial begin
+        perf_butterflies = 0;
+        perf_reads = 0;
+        perf_writes = 0;
+        perf_results = 0;
+        for (perf_fft_index = 0; perf_fft_index <= 10;
+             perf_fft_index = perf_fft_index + 1)
+            perf_fft_state_cycles[perf_fft_index] = 0;
+    end
+
+    always @(posedge clk) begin
+        if (dut.u_transform_scheduler_core.fft128_start) begin
+            perf_butterflies = 0;
+            perf_reads = 0;
+            perf_writes = 0;
+            perf_results = 0;
+            for (perf_fft_index = 0; perf_fft_index <= 10;
+                 perf_fft_index = perf_fft_index + 1)
+                perf_fft_state_cycles[perf_fft_index] = 0;
+            $display("PERF FFT_START t=%0t inverse=%0d ofdm=%0d tx=%0d",
+                $time,
+                dut.u_transform_scheduler_core.fft128_block_inverse,
+                dut.u_transform_scheduler_core.ofdm_fft_block_ready ||
+                    dut.u_transform_scheduler_core.tx_ifft_block_ready,
+                dut.u_transform_scheduler_core.tx_ifft_block_ready);
+        end
+        if (dut.u_transform_scheduler_core.fft128_active) begin
+            perf_fft_state_cycles[dut.u_transform_scheduler_core.fft128_state] =
+                perf_fft_state_cycles[dut.u_transform_scheduler_core.fft128_state] + 1;
+            if (dut.u_transform_scheduler_core.fft_mem_req &&
+                !dut.u_transform_scheduler_core.fft_mem_write)
+                perf_reads = perf_reads + 1;
+            if (dut.u_transform_scheduler_core.fft_mem_req &&
+                dut.u_transform_scheduler_core.fft_mem_write)
+                perf_writes = perf_writes + 1;
+            if (dut.u_transform_scheduler_core.bf_result_fire) begin
+                perf_results = perf_results + 1;
+                if (!dut.u_transform_scheduler_core.dft12_active)
+                    perf_butterflies = perf_butterflies + 1;
+            end
+        end
+        if (dut.u_transform_scheduler_core.fft128_done) begin
+            $display("PERF FFT_DONE t=%0t butterflies=%0d reads=%0d results=%0d writes=%0d states=%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+                $time, perf_butterflies, perf_reads, perf_results, perf_writes,
+                perf_fft_state_cycles[0], perf_fft_state_cycles[1],
+                perf_fft_state_cycles[2], perf_fft_state_cycles[3],
+                perf_fft_state_cycles[4], perf_fft_state_cycles[5],
+                perf_fft_state_cycles[6], perf_fft_state_cycles[7],
+                perf_fft_state_cycles[8], perf_fft_state_cycles[9] + 1,
+                perf_fft_state_cycles[10]);
+        end
+        if (dut.u_transform_scheduler_core.dft12_done)
+            $display("PERF DFT12_DONE t=%0t tx=%0d", $time,
+                dut.u_transform_scheduler_core.dft12_tx_active);
+        if (dut.u_transform_scheduler_core.dft12_start)
+            $display("PERF DFT12_START t=%0t tx_ready=%0d", $time,
+                dut.u_transform_scheduler_core.tx_dft12_block_ready);
+        if (dut.u_transform_scheduler_core.tx_mapper_done)
+            $display("PERF MAPPER_DONE t=%0t", $time);
+        if (dut.u_transform_scheduler_core.ofdm_output_start)
+            $display("PERF RX_SERIAL_START t=%0t", $time);
+        if (dut.u_transform_scheduler_core.ofdm_output_done)
+            $display("PERF RX_SERIAL_DONE t=%0t", $time);
+        if (dut.u_transform_scheduler_core.tx_output_start)
+            $display("PERF TX_SERIAL_START t=%0t", $time);
+        if (dut.u_transform_scheduler_core.tx_output_done)
+            $display("PERF TX_SERIAL_DONE t=%0t", $time);
+        if (dut.core_rx_selected_complete)
+            $display("PERF RX_EXTRACT_DONE t=%0t", $time);
+        if (dut.core_rx_complete)
+            $display("PERF RX_CORE_DONE t=%0t", $time);
+        if (dut.core_tx_complete)
+            $display("PERF TX_BANK_READY t=%0t", $time);
+        if (dut.feeder_start)
+            $display("PERF FEEDER_START t=%0t cmd=%02h", $time,
+                dut.job_head_command);
+        if (dut.external_fire && dut.ext_state == 0)
+            $display("PERF COMMAND t=%0t cmd=%02h", $time, din);
+        if (dut.external_fire)
+            $display("PERF DIN t=%0t state=%0d data=%02h", $time,
+                dut.ext_state, din);
+        if (dout_valid_o)
+            $display("PERF DOUT t=%0t data=%02h", $time, dout);
+    end
+`endif
+
     butterfold_top #(
         .TRANSACTION_FIFO_DEPTH(4),
-        .TX_BYTE_INTERVAL(1)
+        .TX_BYTE_INTERVAL(TEST_TX_BYTE_INTERVAL)
     ) dut (
         .rst_n        (rst_n),
         .clk          (clk),
@@ -319,6 +418,105 @@ module butterfold_top_tb;
         end
     endtask
 
+`ifdef BUTTERFOLD_STRESS
+    integer stress_feeder_cycle [0:3];
+    integer stress_feeder_count;
+    always @(posedge clk) begin
+        if (dut.feeder_start && stress_feeder_count < 4) begin
+            stress_feeder_cycle[stress_feeder_count] = cycle_count;
+            stress_feeder_count = stress_feeder_count + 1;
+        end
+    end
+
+    task automatic stress_send_rx(input logic long_cp, input integer test_index);
+        integer k, base;
+        begin
+            send_byte(long_cp ? CMD_RX_LONG : CMD_RX_SHORT);
+            base = test_index * (long_cp ? 138 : 137);
+            for (k=0; k<(long_cp ? 138 : 137); k=k+1) begin
+                if (long_cp) begin
+                    send_byte(rx_long_inputs[base+k][15:8]);
+                    send_byte(rx_long_inputs[base+k][7:0]);
+                end else begin
+                    send_byte(rx_short_inputs[base+k][15:8]);
+                    send_byte(rx_short_inputs[base+k][7:0]);
+                end
+            end
+        end
+    endtask
+
+    task automatic stress_check_rx_pair;
+        integer k;
+        logic [7:0] b, expected_byte;
+        logic [15:0] expected_word;
+        begin
+            for (k=0; k<48; k=k+1) begin
+                recv_byte(b);
+                if (k < 24)
+                    expected_word = rx_short_expected[k>>1];
+                else
+                    expected_word = rx_long_expected[12+((k-24)>>1)];
+                expected_byte = k[0] ? expected_word[7:0] : expected_word[15:8];
+                if (b !== expected_byte) begin
+                    $display("STRESS RX mismatch byte %0d", k);
+                    errors = errors + 1;
+                end
+            end
+        end
+    endtask
+
+    task automatic stress_send_tx(input logic long_cp, input integer test_index);
+        integer k, base;
+        begin
+            send_byte(long_cp ? CMD_TX_LONG : CMD_TX_SHORT);
+            base = test_index * 12;
+            for (k=0; k<12; k=k+1) begin
+                if (long_cp) begin
+                    send_byte(tx_long_inputs[base+k][15:8]);
+                    send_byte(tx_long_inputs[base+k][7:0]);
+                end else begin
+                    send_byte(tx_short_inputs[base+k][15:8]);
+                    send_byte(tx_short_inputs[base+k][7:0]);
+                end
+            end
+        end
+    endtask
+
+    task automatic stress_check_tx_pair;
+        integer k, frame_byte, expected_index;
+        integer last_cycle, boundary_gap;
+        logic [7:0] b, expected_byte;
+        logic [15:0] expected_word;
+        begin
+            last_cycle = -1;
+            boundary_gap = -1;
+            for (k=0; k<550; k=k+1) begin
+                recv_byte(b);
+                if (k < 274) begin
+                    frame_byte = k;
+                    expected_index = frame_byte >> 1;
+                    expected_word = tx_short_expected[expected_index];
+                end else begin
+                    frame_byte = k - 274;
+                    expected_index = 138 + (frame_byte >> 1);
+                    expected_word = tx_long_expected[expected_index];
+                end
+                expected_byte = frame_byte[0]
+                    ? expected_word[7:0] : expected_word[15:8];
+                if (b !== expected_byte) begin
+                    $display("STRESS TX mismatch byte %0d", k);
+                    errors = errors + 1;
+                end
+                if (k == 274)
+                    boundary_gap = cycle_count - last_cycle;
+                last_cycle = cycle_count;
+            end
+            $display("STRESS TX boundary_gap=%0d expected_pacing=%0d",
+                boundary_gap, TEST_TX_BYTE_INTERVAL);
+        end
+    endtask
+`endif
+
     initial begin
         clk=1'b0; rst_n=1'b0; din=8'h00; din_valid_i=1'b0;
         errors=0; cycle_count=0;
@@ -352,6 +550,27 @@ module butterfold_top_tb;
         $display("Only din/din_valid/din_ready and dout/dout_valid are used.");
         $display("============================================================");
 
+`ifdef BUTTERFOLD_STRESS
+        stress_feeder_count = 0;
+        fork
+            begin
+                stress_send_rx(1'b0, 0);
+                stress_send_rx(1'b1, 1);
+            end
+            stress_check_rx_pair();
+        join
+        $display("STRESS RX feeder_II=%0d cycles", stress_feeder_cycle[1]-stress_feeder_cycle[0]);
+        wait (!dut.core_ofdm_active && !dut.drain_active);
+        repeat (4) @(posedge clk);
+        fork
+            begin
+                stress_send_tx(1'b0, 0);
+                stress_send_tx(1'b1, 1);
+            end
+            stress_check_tx_pair();
+        join
+        $display("STRESS TX feeder_II=%0d cycles", stress_feeder_cycle[3]-stress_feeder_cycle[2]);
+`else
         run_two_point(0); // FFT2
         run_two_point(1); // IFFT2
         run_fft3();
@@ -362,6 +581,7 @@ module butterfold_top_tb;
         run_rx(CMD_RX_LONG,1'b1);
         run_tx(CMD_TX_SHORT,1'b0);
         run_tx(CMD_TX_LONG,1'b1);
+`endif
 
         $display("============================================================");
         if (errors==0)
