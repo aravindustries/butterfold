@@ -275,7 +275,11 @@ module butterfold_top #(
     logic rx_selected_valid, rx_extract_busy, rx_extract_done;
     assign rx_extract_start = feeder_start && job_head_is_rx;
 
-    subcarrier_extractor #(.SC_START_BIN(1), .SC_COUNT(12)) u_subcarrier_extractor (
+    // The production core now emits only bins 1..12, beginning at stream
+    // position zero.  Keep the extractor as the byte-counting/output buffer.
+    subcarrier_extractor #(
+        .SC_START_BIN(0), .SC_COUNT(12), .INPUT_BIN_COUNT(12)
+    ) u_subcarrier_extractor (
         .clk(clk), .rst_n(rst_n), .start_i(rx_extract_start),
         .din_i(core_dout),
         .din_valid_i(core_dout_valid && core_ofdm_active && is_rx_command(core_job_command)),
@@ -318,11 +322,11 @@ module butterfold_top #(
     // Core completion / queue commit.
     logic core_rx_complete, core_tx_complete, core_rx_selected_complete;
     assign core_rx_selected_complete =
-        core_ofdm_active && is_rx_command(core_job_command) &&
+        is_rx_command(core_job_command) &&
         rx_selected_valid && (rx_selected_byte_count == 6'd23);
     assign core_rx_complete =
         core_ofdm_active && is_rx_command(core_job_command) &&
-        core_dout_valid && (core_output_byte_index == 9'd255);
+        core_dout_valid && (core_output_byte_index == 9'd23);
     assign core_tx_complete =
         core_ofdm_active && is_tx_command(core_job_command) &&
         core_dout_valid &&
@@ -434,7 +438,13 @@ module butterfold_top #(
     // Shared waveform-SRAM arbitration, one independent port per bank.
     //==========================================================================
     logic feed_wave_req;
-    assign feed_wave_req = (feed_state == FEED_RX_READ_REQ);
+    logic [8:0] feed_wave_addr;
+    assign feed_wave_req =
+        (feed_state == FEED_RX_READ_REQ) ||
+        ((feed_state == FEED_RX_SEND) && feed_core_fire &&
+         (feed_index != feed_length-1'b1));
+    assign feed_wave_addr = (feed_state == FEED_RX_SEND)
+        ? feed_index + 1'b1 : feed_index;
 
     logic core_tx_wave_write;
     assign core_tx_wave_write =
@@ -448,7 +458,7 @@ module butterfold_top #(
         if (ext_wave_write && !capture_bank) begin
             wave0_req=1'b1; wave0_write=1'b1; wave0_addr=capture_index; wave0_wdata=din;
         end else if (feed_wave_req && !feed_bank) begin
-            wave0_req=1'b1; wave0_addr=feed_index;
+            wave0_req=1'b1; wave0_addr=feed_wave_addr;
         end else if (core_tx_wave_write && !core_output_bank) begin
             wave0_req=1'b1; wave0_write=1'b1;
             wave0_addr=core_output_byte_index; wave0_wdata=core_dout;
@@ -460,7 +470,7 @@ module butterfold_top #(
         if (ext_wave_write && capture_bank) begin
             wave1_req=1'b1; wave1_write=1'b1; wave1_addr=capture_index; wave1_wdata=din;
         end else if (feed_wave_req && feed_bank) begin
-            wave1_req=1'b1; wave1_addr=feed_index;
+            wave1_req=1'b1; wave1_addr=feed_wave_addr;
         end else if (core_tx_wave_write && core_output_bank) begin
             wave1_req=1'b1; wave1_write=1'b1;
             wave1_addr=core_output_byte_index; wave1_wdata=core_dout;
@@ -653,7 +663,9 @@ module butterfold_top #(
                         feed_state <= FEED_IDLE;
                     end else begin
                         feed_index <= feed_index + 1'b1;
-                        feed_state <= FEED_RX_READ_REQ;
+                        // The next SRAM read was issued concurrently with
+                        // this byte transfer; wait only for its response.
+                        feed_state <= FEED_RX_READ_WAIT;
                     end
                 end
                 FEED_TX_SEND: if (feed_core_fire) begin
@@ -674,7 +686,7 @@ module butterfold_top #(
                 end else core_output_byte_index <= core_output_byte_index + 1'b1;
             end
 
-            if (rx_selected_valid && core_ofdm_active && is_rx_command(core_job_command)) begin
+            if (rx_selected_valid && is_rx_command(core_job_command)) begin
                 if (core_output_bank) rx_output_bank1[rx_selected_byte_count] <= rx_selected_data;
                 else rx_output_bank0[rx_selected_byte_count] <= rx_selected_data;
                 if (rx_selected_byte_count != 6'd23)

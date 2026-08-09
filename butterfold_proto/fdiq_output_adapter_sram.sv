@@ -3,7 +3,10 @@
 
 // SRAM-aware 128-bin FDIQ output adapter. Requests one 32-bit complex word,
 // waits for the synchronous read response, then emits I and Q bytes.
-module fdiq_output_adapter_sram (
+module fdiq_output_adapter_sram #(
+    parameter logic [6:0] START_SAMPLE = 7'd0,
+    parameter logic [7:0] SAMPLE_COUNT = 8'd128
+) (
     input  logic clk,
     input  logic rst_n,
     input  logic start_i,
@@ -51,7 +54,7 @@ module fdiq_output_adapter_sram (
         end else begin
             done_o <= 1'b0;
             case (state)
-                IDLE: if (start_i) begin sample_index <= 7'd0; state <= READ_REQ; end
+                IDLE: if (start_i) begin sample_index <= START_SAMPLE; state <= READ_REQ; end
                 READ_REQ: state <= READ_WAIT;
                 READ_WAIT: if (mem_rvalid_i) begin
                     sample_i_reg <= $signed(mem_rdata_i[15:0]);
@@ -60,7 +63,7 @@ module fdiq_output_adapter_sram (
                 end
                 OUT_I: state <= OUT_Q;
                 OUT_Q: begin
-                    if (sample_index == 7'd127) begin
+                    if (sample_index == START_SAMPLE + SAMPLE_COUNT - 1'b1) begin
                         state <= IDLE;
                         done_o <= 1'b1;
                     end else begin

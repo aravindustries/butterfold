@@ -10,7 +10,8 @@
 // captures every selected byte when selected_valid_o is asserted.
 module subcarrier_extractor #(
     parameter integer SC_START_BIN = 1,
-    parameter integer SC_COUNT     = 12
+    parameter integer SC_COUNT     = 12,
+    parameter integer INPUT_BIN_COUNT = 128
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -49,7 +50,7 @@ module subcarrier_extractor #(
                 byte_index <= 8'd0;
                 busy_o     <= 1'b1;
             end else if (busy_o && din_valid_i) begin
-                if (byte_index == 8'd255) begin
+                if (byte_index == (2 * INPUT_BIN_COUNT) - 1) begin
                     byte_index <= 8'd0;
                     busy_o     <= 1'b0;
                     done_o     <= 1'b1;

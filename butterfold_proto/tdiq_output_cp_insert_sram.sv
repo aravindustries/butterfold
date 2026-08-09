@@ -22,6 +22,8 @@ module tdiq_output_cp_insert_sram (
     state_t state;
     logic in_cp;
     logic [6:0] sample_index;
+    logic [6:0] next_sample_index;
+    logic       final_sample;
     logic signed [15:0] sample_i_reg, sample_q_reg;
 
     function automatic logic [7:0] saturate_q17_to_byte(input logic signed [15:0] value);
@@ -33,8 +35,16 @@ module tdiq_output_cp_insert_sram (
     endfunction
 
     always @* begin
-        mem_req_o = (state == READ_REQ);
-        mem_addr_o = sample_index;
+        final_sample = !in_cp && (sample_index == 7'd127);
+        if (in_cp && (sample_index == 7'd127))
+            next_sample_index = 7'd0;
+        else
+            next_sample_index = sample_index + 1'b1;
+        // Prefetch the following complex word while the current I byte is
+        // emitted.  Its registered response arrives on the Q-byte edge.
+        mem_req_o = (state == READ_REQ) ||
+            ((state == OUT_I) && !final_sample);
+        mem_addr_o = (state == OUT_I) ? next_sample_index : sample_index;
         dout_valid_o = (state == OUT_I) || (state == OUT_Q);
         dout = (state == OUT_Q)
             ? saturate_q17_to_byte(sample_q_reg)
@@ -66,18 +76,16 @@ module tdiq_output_cp_insert_sram (
                 end
                 OUT_I: state <= OUT_Q;
                 OUT_Q: begin
-                    if (in_cp) begin
-                        if (sample_index == 7'd127) begin
-                            in_cp <= 1'b0;
-                            sample_index <= 7'd0;
-                        end else sample_index <= sample_index + 1'b1;
-                        state <= READ_REQ;
-                    end else if (sample_index == 7'd127) begin
+                    if (final_sample) begin
                         state <= IDLE;
                         done_o <= 1'b1;
-                    end else begin
-                        sample_index <= sample_index + 1'b1;
-                        state <= READ_REQ;
+                    end else if (mem_rvalid_i) begin
+                        sample_i_reg <= $signed(mem_rdata_i[15:0]);
+                        sample_q_reg <= $signed(mem_rdata_i[31:16]);
+                        if (in_cp && (sample_index == 7'd127))
+                            in_cp <= 1'b0;
+                        sample_index <= next_sample_index;
+                        state <= OUT_I;
                     end
                 end
                 default: state <= IDLE;

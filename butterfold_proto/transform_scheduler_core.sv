@@ -342,6 +342,7 @@ module transform_scheduler_core #(
     logic       tx_ifft_block_ready;
 
     // Declared before continuous assignments for Icarus compatibility.
+    logic       dft12_start;
     logic       dft12_done;
 
     logic       tx_output_start;
@@ -384,7 +385,11 @@ module transform_scheduler_core #(
     assign tx_sample_ready = 1'b1;
     assign tx_input_write = tx_sample_valid && tx_sample_ready;
 
-    assign tx_mapper_start = dft12_done && dft12_tx_active;
+    // Clearing the FFT scratch does not consume the shared butterfly and can
+    // overlap the register-based DFT12.  The 128-cycle clear is longer than
+    // DFT12, so the mapper cannot reach its data-dependent mapping phase
+    // before all twelve DFT results have been produced.
+    assign tx_mapper_start = dft12_start && tx_dft12_block_ready;
 
     //==========================================================================
     // Small-transform transaction FIFO
@@ -601,7 +606,6 @@ module transform_scheduler_core #(
 
     dft12_state_t dft12_state;
     logic         dft12_active;
-    logic         dft12_start;
     logic [2:0]   dft12_phase;
     logic [1:0]   dft12_group;
 
@@ -1124,6 +1128,17 @@ module transform_scheduler_core #(
                     fft_mem_write = 1'b1;
                     fft_mem_addr  = fft128_addr0;
                     fft_mem_wdata = {fft_result0_q, fft_result0_i};
+                end
+                F128_WAIT_RESULT: begin
+                    // The butterfly result is already held in its registered
+                    // output interface.  Commit X0 on the same edge that the
+                    // controller consumes that transaction.
+                    if (bf_out_valid) begin
+                        fft_mem_req   = 1'b1;
+                        fft_mem_write = 1'b1;
+                        fft_mem_addr  = fft128_addr0;
+                        fft_mem_wdata = {routed_X0_q, routed_X0_i};
+                    end
                 end
                 F128_WRITE1: begin
                     fft_mem_req   = 1'b1;
@@ -1750,39 +1765,33 @@ module transform_scheduler_core #(
             end else if (fft128_active) begin
                 case (fft128_state)
                     F128_READ0_REQ: begin
-                        // Read request is presented to SRAM throughout this cycle.
-                        fft128_state <= F128_READ0_WAIT;
-                    end
-
-                    F128_READ0_WAIT: begin
-                        if (fft_mem_rvalid) begin
-                            fft_operand0_i <= $signed(fft_mem_rdata[15:0]);
-                            fft_operand0_q <= $signed(fft_mem_rdata[31:16]);
-                            fft128_state <= F128_READ1_REQ;
-                        end
+                        // The SRAM accepts one request per cycle.  Request x1
+                        // next cycle rather than leaving its port idle while
+                        // the registered x0 response is returned.
+                        fft128_state <= F128_READ1_REQ;
                     end
 
                     F128_READ1_REQ: begin
-                        fft128_state <= F128_READ1_WAIT;
+                        if (fft_mem_rvalid) begin
+                            fft_operand0_i <= $signed(fft_mem_rdata[15:0]);
+                            fft_operand0_q <= $signed(fft_mem_rdata[31:16]);
+                            fft128_state <= F128_READ1_WAIT;
+                        end
                     end
 
                     F128_READ1_WAIT: begin
                         if (fft_mem_rvalid) begin
                             fft_operand1_i <= $signed(fft_mem_rdata[15:0]);
                             fft_operand1_q <= $signed(fft_mem_rdata[31:16]);
-                            fft128_state <= F128_PREPARE;
+                            fft128_sent_uop        <= 1'b0;
+                            fft128_sent_x0_i       <= 1'b0;
+                            fft128_sent_x0_q       <= 1'b0;
+                            fft128_sent_x1_i       <= 1'b0;
+                            fft128_sent_x1_q       <= 1'b0;
+                            fft128_sent_twiddle_re <= 1'b0;
+                            fft128_sent_twiddle_im <= 1'b0;
+                            fft128_state <= F128_ISSUE;
                         end
-                    end
-
-                    F128_PREPARE: begin
-                        fft128_sent_uop        <= 1'b0;
-                        fft128_sent_x0_i       <= 1'b0;
-                        fft128_sent_x0_q       <= 1'b0;
-                        fft128_sent_x1_i       <= 1'b0;
-                        fft128_sent_x1_q       <= 1'b0;
-                        fft128_sent_twiddle_re <= 1'b0;
-                        fft128_sent_twiddle_im <= 1'b0;
-                        fft128_state <= F128_ISSUE;
                     end
 
                     F128_ISSUE: begin
@@ -1813,13 +1822,9 @@ module transform_scheduler_core #(
                             fft_result0_q <= routed_X0_q;
                             fft_result1_i <= routed_X1_i;
                             fft_result1_q <= routed_X1_q;
-                            fft128_state <= F128_WRITE0;
+                            // X0 writes on this result-transfer edge.
+                            fft128_state <= F128_WRITE1;
                         end
-                    end
-
-                    F128_WRITE0: begin
-                        // First result word writes on this edge.
-                        fft128_state <= F128_WRITE1;
                     end
 
                     F128_WRITE1: begin
@@ -1919,7 +1924,13 @@ module transform_scheduler_core #(
         .done_o         (ofdm_capture_done)
     );
 
-    fdiq_output_adapter_sram u_fdiq_output_adapter (
+    // Production RX needs natural bins 1..12 only.  Standalone FFT128 uses
+    // the independent result serializer and retains its complete 128-bin
+    // diagnostic stream.
+    fdiq_output_adapter_sram #(
+        .START_SAMPLE(7'd1),
+        .SAMPLE_COUNT(8'd12)
+    ) u_fdiq_output_adapter (
         .clk          (clk),
         .rst_n        (rst_n),
         .start_i      (ofdm_output_start),
