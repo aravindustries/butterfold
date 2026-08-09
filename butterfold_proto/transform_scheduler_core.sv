@@ -521,6 +521,11 @@ module transform_scheduler_core #(
     logic [7:0] fft128_group_size;
     logic [6:0] fft128_addr0;
     logic [6:0] fft128_addr1;
+    logic [2:0] fft128_next_stage;
+    logic [6:0] fft128_next_group_base;
+    logic [5:0] fft128_next_j;
+    logic [6:0] fft128_next_addr0;
+    logic [6:0] fft128_next_addr1;
     logic [5:0] fft128_twiddle_index;
 
     logic fft128_last_butterfly;
@@ -549,6 +554,33 @@ module transform_scheduler_core #(
         fft128_final_stage &&
         (fft128_group_base == 7'd0) &&
         (fft128_j == 6'd63);
+
+    always @* begin
+        fft128_next_stage = fft128_stage;
+        fft128_next_group_base = fft128_group_base;
+        fft128_next_j = fft128_j + 1'b1;
+        if (fft128_j == fft128_half_size - 1'b1) begin
+            fft128_next_j = 6'd0;
+            if (fft128_group_base + fft128_group_size >= 8'd128) begin
+                fft128_next_group_base = 7'd0;
+                fft128_next_stage = fft128_stage + 1'b1;
+            end else begin
+                fft128_next_group_base =
+                    fft128_group_base + fft128_group_size[6:0];
+            end
+        end
+        fft128_next_addr0 = fft128_next_group_base + fft128_next_j;
+        fft128_next_addr1 = fft128_next_addr0 + (7'd1 << fft128_next_stage);
+    end
+
+    logic [1:0] fft128_prefetch_requests;
+    logic [1:0] fft128_prefetch_responses;
+    logic signed [15:0] fft128_prefetch0_i, fft128_prefetch0_q;
+    logic signed [15:0] fft128_prefetch1_i, fft128_prefetch1_q;
+    logic fft128_prefetch_complete;
+
+    assign fft128_prefetch_complete =
+        (fft128_prefetch_responses == 2'd2);
 
     fft128_twiddle_rom u_fft128_twiddle_rom (
         .addr_i (fft128_twiddle_index),
@@ -1138,6 +1170,11 @@ module transform_scheduler_core #(
                         fft_mem_write = 1'b1;
                         fft_mem_addr  = fft128_addr0;
                         fft_mem_wdata = {routed_X0_q, routed_X0_i};
+                    end else if (!fft128_last_butterfly &&
+                                 (fft128_prefetch_requests < 2'd2)) begin
+                        fft_mem_req = 1'b1;
+                        fft_mem_addr = (fft128_prefetch_requests == 2'd0)
+                            ? fft128_next_addr0 : fft128_next_addr1;
                     end
                 end
                 F128_WRITE1: begin
@@ -1747,6 +1784,12 @@ module transform_scheduler_core #(
             fft128_sent_x1_q       <= 1'b0;
             fft128_sent_twiddle_re <= 1'b0;
             fft128_sent_twiddle_im <= 1'b0;
+            fft128_prefetch_requests <= 2'd0;
+            fft128_prefetch_responses <= 2'd0;
+            fft128_prefetch0_i <= '0;
+            fft128_prefetch0_q <= '0;
+            fft128_prefetch1_i <= '0;
+            fft128_prefetch1_q <= '0;
         end else begin
             if (fft128_start) begin
                 fft128_active         <= 1'b1;
@@ -1811,10 +1854,35 @@ module transform_scheduler_core #(
                             fft128_sent_twiddle_im <= 1'b1;
 
                         if (fft128_issue_done_now)
+                        begin
+                            fft128_prefetch_requests <= 2'd0;
+                            fft128_prefetch_responses <= 2'd0;
                             fft128_state <= F128_WAIT_RESULT;
+                        end
                     end
 
                     F128_WAIT_RESULT: begin
+                        if (!fft128_last_butterfly &&
+                            (fft128_prefetch_requests < 2'd2))
+                            fft128_prefetch_requests <=
+                                fft128_prefetch_requests + 1'b1;
+
+                        if (!fft128_last_butterfly && fft_mem_rvalid) begin
+                            if (fft128_prefetch_responses == 2'd0) begin
+                                fft128_prefetch0_i <=
+                                    $signed(fft_mem_rdata[15:0]);
+                                fft128_prefetch0_q <=
+                                    $signed(fft_mem_rdata[31:16]);
+                            end else begin
+                                fft128_prefetch1_i <=
+                                    $signed(fft_mem_rdata[15:0]);
+                                fft128_prefetch1_q <=
+                                    $signed(fft_mem_rdata[31:16]);
+                            end
+                            fft128_prefetch_responses <=
+                                fft128_prefetch_responses + 1'b1;
+                        end
+
                         if (bf_result_fire) begin
                             // Apply the already-established IFFT final-stage
                             // normalization before the values enter SRAM.
@@ -1855,7 +1923,22 @@ module transform_scheduler_core #(
                             end else begin
                                 fft128_j <= fft128_j + 1'b1;
                             end
-                            fft128_state <= F128_READ0_REQ;
+                            if (fft128_prefetch_complete) begin
+                                fft_operand0_i <= fft128_prefetch0_i;
+                                fft_operand0_q <= fft128_prefetch0_q;
+                                fft_operand1_i <= fft128_prefetch1_i;
+                                fft_operand1_q <= fft128_prefetch1_q;
+                                fft128_sent_uop        <= 1'b0;
+                                fft128_sent_x0_i       <= 1'b0;
+                                fft128_sent_x0_q       <= 1'b0;
+                                fft128_sent_x1_i       <= 1'b0;
+                                fft128_sent_x1_q       <= 1'b0;
+                                fft128_sent_twiddle_re <= 1'b0;
+                                fft128_sent_twiddle_im <= 1'b0;
+                                fft128_state <= F128_ISSUE;
+                            end else begin
+                                fft128_state <= F128_READ0_REQ;
+                            end
                         end
                     end
 
@@ -1884,7 +1967,22 @@ module transform_scheduler_core #(
                                 end else begin
                                     fft128_j <= fft128_j + 1'b1;
                                 end
-                                fft128_state <= F128_READ0_REQ;
+                                if (fft128_prefetch_complete) begin
+                                    fft_operand0_i <= fft128_prefetch0_i;
+                                    fft_operand0_q <= fft128_prefetch0_q;
+                                    fft_operand1_i <= fft128_prefetch1_i;
+                                    fft_operand1_q <= fft128_prefetch1_q;
+                                    fft128_sent_uop        <= 1'b0;
+                                    fft128_sent_x0_i       <= 1'b0;
+                                    fft128_sent_x0_q       <= 1'b0;
+                                    fft128_sent_x1_i       <= 1'b0;
+                                    fft128_sent_x1_q       <= 1'b0;
+                                    fft128_sent_twiddle_re <= 1'b0;
+                                    fft128_sent_twiddle_im <= 1'b0;
+                                    fft128_state <= F128_ISSUE;
+                                end else begin
+                                    fft128_state <= F128_READ0_REQ;
+                                end
                             end
                         end
                     end

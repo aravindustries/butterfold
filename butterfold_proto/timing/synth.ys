@@ -1,0 +1,31 @@
+read_verilog -sv -D GF180_USE_FOUNDRY_SRAM \
+    timing/sram_blackboxes.sv \
+    gf180_sram_128x8_wrapper.sv \
+    gf180_sram_512x8_wrapper.sv \
+    gf180_sram_128x32_complex.sv \
+    fft128_twiddle_rom.sv \
+    mixed_radix_butterfly.sv \
+    tdiq_input_cp_remove.sv \
+    fdiq_input_adapter.sv \
+    fdiq_output_adapter_sram.sv \
+    tdiq_output_cp_insert_sram.sv \
+    subcarrier_mapper.sv \
+    subcarrier_extractor.sv \
+    standalone_result_serializer.sv \
+    transform_scheduler_core.sv \
+    butterfold_top.sv
+
+hierarchy -check -top butterfold_top
+synth -top butterfold_top -flatten -noabc
+techmap -map timing/latch_map.v
+dfflibmap -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
+abc -D 12000 \
+    -constr timing/abc.constr \
+    -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
+clean -purge
+
+check
+select -assert-none t:$mul t:$add t:$sub t:$macc t:$mux t:$dff t:$dlatch t:$lut
+stat -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
+write_verilog -noattr timing/results/butterfold_mapped.v
+write_json timing/results/butterfold_mapped.json

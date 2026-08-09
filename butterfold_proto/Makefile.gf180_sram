@@ -25,7 +25,7 @@ COMMON_RTL = \
 	butterfold_top.sv
 
 .PHONY: vectors wrapper behavioral foundry foundry-functional foundry-info \
-	characterize stress-fast stress-paced clean
+	characterize stress-fast stress-paced synth-sta clean
 
 vectors:
 	$(PYTHON) gen_realtime_vectors.py
@@ -85,6 +85,11 @@ foundry-info:
 	@echo "Use the SRAM Liberty views under:"
 	@echo "  $(PDKPATH)/libs.ref/gf180mcu_fd_ip_sram/lib"
 	@echo "for final timing/STA."
+
+synth-sta:
+	mkdir -p timing/results
+	yosys -l timing/results/yosys.log -s timing/synth.ys
+	sta -no_init -exit timing/sta.tcl | tee timing/results/sta_summary.log
 
 clean:
 	rm -f sim_sram_wrapper.out sim_butterfold_sram.out \
