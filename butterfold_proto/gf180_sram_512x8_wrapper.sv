@@ -18,17 +18,41 @@ module gf180_sram_512x8_wrapper (
     wire [7:0] macro_q;
     supply1 sim_vdd;
     supply0 sim_vss;
-    wire       macro_cen  = (!rst_n || !req_i) ? 1'b1 : 1'b0;
-    wire       macro_gwen = write_i ? 1'b0 : 1'b1;
-    wire [7:0] macro_wen  = write_i ? ~wmask_i : 8'hff;
+    logic       macro_req;
+    logic       macro_write;
+    logic [8:0] macro_addr;
+    logic [7:0] macro_wdata;
+    logic [7:0] macro_wmask;
+
+    // Follow the request during the low phase, then hold all foundry-macro
+    // pins stable across the active rising edge and delayed functional event.
+    always_latch begin
+        if (!rst_n) begin
+            macro_req   <= 1'b0;
+            macro_write <= 1'b0;
+            macro_addr  <= 9'd0;
+            macro_wdata <= 8'd0;
+            macro_wmask <= 8'd0;
+        end else if (!clk) begin
+            macro_req   <= req_i;
+            macro_write <= write_i;
+            macro_addr  <= addr_i;
+            macro_wdata <= wdata_i;
+            macro_wmask <= wmask_i;
+        end
+    end
+
+    wire       macro_cen  = (!rst_n || !macro_req) ? 1'b1 : 1'b0;
+    wire       macro_gwen = macro_write ? 1'b0 : 1'b1;
+    wire [7:0] macro_wen  = macro_write ? ~macro_wmask : 8'hff;
 
     gf180mcu_fd_ip_sram__sram512x8m8wm1 u_sram (
         .CLK  (clk),
         .CEN  (macro_cen),
         .GWEN (macro_gwen),
         .WEN  (macro_wen),
-        .A    (addr_i),
-        .D    (wdata_i),
+        .A    (macro_addr),
+        .D    (macro_wdata),
         .Q    (macro_q),
         .VDD  (sim_vdd),
         .VSS  (sim_vss)

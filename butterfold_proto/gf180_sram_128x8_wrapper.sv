@@ -25,19 +25,47 @@ module gf180_sram_128x8_wrapper (
     supply1 sim_vdd;
     supply0 sim_vss;
 
+    // Hold the macro interface stable across its active rising clock edge.
+    // The official functional model performs the memory operation on an
+    // internally delayed copy of CLK and consults the live controls/data at
+    // that delayed edge.  A low-phase latch also models the setup/hold
+    // discipline required by the physical synchronous macro while retaining
+    // the wrapper's one-cycle request/response contract.
+    logic       macro_req;
+    logic       macro_write;
+    logic [6:0] macro_addr;
+    logic [7:0] macro_wdata;
+    logic [7:0] macro_wmask;
+
+    always_latch begin
+        if (!rst_n) begin
+            macro_req   <= 1'b0;
+            macro_write <= 1'b0;
+            macro_addr  <= 7'd0;
+            macro_wdata <= 8'd0;
+            macro_wmask <= 8'd0;
+        end else if (!clk) begin
+            macro_req   <= req_i;
+            macro_write <= write_i;
+            macro_addr  <= addr_i;
+            macro_wdata <= wdata_i;
+            macro_wmask <= wmask_i;
+        end
+    end
+
     // The GF macro requires CEN high before the first running cycle. rst_n
     // therefore forces standby regardless of req_i.
-    wire       macro_cen  = (!rst_n || !req_i) ? 1'b1 : 1'b0;
-    wire       macro_gwen = write_i ? 1'b0 : 1'b1;
-    wire [7:0] macro_wen  = write_i ? ~wmask_i : 8'hff;
+    wire       macro_cen  = (!rst_n || !macro_req) ? 1'b1 : 1'b0;
+    wire       macro_gwen = macro_write ? 1'b0 : 1'b1;
+    wire [7:0] macro_wen  = macro_write ? ~macro_wmask : 8'hff;
 
     gf180mcu_fd_ip_sram__sram128x8m8wm1 u_sram (
         .CLK  (clk),
         .CEN  (macro_cen),
         .GWEN (macro_gwen),
         .WEN  (macro_wen),
-        .A    (addr_i),
-        .D    (wdata_i),
+        .A    (macro_addr),
+        .D    (macro_wdata),
         .Q    (macro_q),
         .VDD  (sim_vdd),
         .VSS  (sim_vss)
