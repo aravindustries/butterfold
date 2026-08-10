@@ -1,8 +1,8 @@
 read_verilog -sv -D GF180_USE_FOUNDRY_SRAM \
     timing/sram_blackboxes.sv \
-    gf180_sram_128x8_wrapper.sv \
-    gf180_sram_512x8_wrapper.sv \
-    gf180_sram_128x32_complex.sv \
+    gf180_sram_256x8_wrapper.sv \
+    gf180_sram_256x16_complex.sv \
+    fft128_modulo_controller.sv \
     fft128_twiddle_rom.sv \
     mixed_radix_butterfly.sv \
     tdiq_input_cp_remove.sv \
@@ -18,8 +18,25 @@ read_verilog -sv -D GF180_USE_FOUNDRY_SRAM \
 hierarchy -check -top butterfold_top
 synth -top butterfold_top -flatten -noabc
 techmap -map timing/latch_map.v
-dfflibmap -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
-abc -D 12000 \
+dfflibmap \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnrnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnrnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnsnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnsnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffrnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffrnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffsnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffsnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnrsnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffnrsnq_4 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffrsnq_1 \
+    -dont_use gf180mcu_fd_sc_mcu9t5v0__dffrsnq_4 \
+    -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
+abc -D 10000 \
     -constr timing/abc.constr \
     -liberty /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
 clean -purge

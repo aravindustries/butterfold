@@ -2,7 +2,8 @@
 `default_nettype none
 
 module transform_scheduler_core #(
-    parameter integer TRANSACTION_FIFO_DEPTH = 4
+    parameter integer TRANSACTION_FIFO_DEPTH = 1,
+    parameter integer TX_BYTE_INTERVAL = 1
 ) (
     input logic clk,
     input logic rst_n,
@@ -40,7 +41,19 @@ module transform_scheduler_core #(
     // Byte-stream output used by OFDM_RX (FDIQ) and DFT-s-OFDM TX (TDIQ).
     // The receiver is assumed always ready whenever dout_valid_o is asserted.
     output logic [7:0] dout,
-    output logic       dout_valid_o
+    output logic       dout_valid_o,
+
+    // Idle-only post-silicon access to the physical 256x16 scratch port.
+    // The top-level command engine holds debug_mode_i for the complete
+    // transaction; active transform owners always have priority.
+    input  logic        debug_mode_i,
+    input  logic        debug_req_i,
+    input  logic        debug_write_i,
+    input  logic [7:0]  debug_addr_i,
+    input  logic [15:0] debug_wdata_i,
+    output logic        debug_ready_o,
+    output logic [15:0] debug_rdata_o,
+    output logic        debug_rvalid_o
 );
 
     //==========================================================================
@@ -306,6 +319,7 @@ module transform_scheduler_core #(
     logic               ofdm_capture_done;
     logic               ofdm_input_write;
     logic               ofdm_fft_block_ready;
+    logic               fft_mem_ready;
 
     logic       fft128_ofdm_active;
     logic       fft128_tx_active;
@@ -369,7 +383,7 @@ module transform_scheduler_core #(
             ? OFDM_LONG_NORMAL_CP_LENGTH
             : OFDM_SHORT_NORMAL_CP_LENGTH;
 
-    assign ofdm_sample_ready = 1'b1;
+    assign ofdm_sample_ready = fft_mem_ready;
     assign ofdm_input_write = ofdm_sample_valid && ofdm_sample_ready;
 
     assign tx_capture_start =
@@ -461,21 +475,31 @@ module transform_scheduler_core #(
     //==========================================================================
 
     // The physically significant 128-complex-sample store is implemented as
-    // four GF180 128x8 synchronous single-port SRAM macros. Packing is
-    // {Q[15:0], I[15:0]}. All access arbitration is explicit below.
+    // two GF180 256x8 synchronous single-port SRAM macros. Complex accesses
+    // use {Q[15:0],I[15:0]}; active FFT execution owns the direct 16-bit port.
     logic        fft_mem_req;
     logic        fft_mem_write;
     logic [6:0]  fft_mem_addr;
     logic [31:0] fft_mem_wdata;
     logic [31:0] fft_mem_rdata;
     logic        fft_mem_rvalid;
+    logic mod_half_req, mod_half_write, mod_half_ready, mod_half_rvalid;
+    logic [7:0] mod_half_addr;
+    logic [15:0] mod_half_wdata, mod_half_rdata;
+    logic mod_active, mod_done, mod_inverse, mod_ofdm, mod_tx;
+    logic mod_issue_valid, mod_issue_ready, mod_result_ready;
+    logic signed [15:0] mod_x0_i,mod_x0_q,mod_x1_i,mod_x1_q;
+    logic signed [7:0] mod_tw_re,mod_tw_im;
+    logic mod_diag_valid,mod_diag_ready,mod_diag_last;
+    logic signed [15:0] mod_diag_X0_i,mod_diag_X0_q,mod_diag_X1_i,mod_diag_X1_q;
+    logic [6:0] mod_diag_addr0,mod_diag_addr1;
 
     // Output-adapter read requests share the physical FFT SRAM port.  Keep
     // these declarations ahead of the arbitration logic for Icarus.
     logic        ofdm_mem_req;
     logic [6:0]  ofdm_mem_addr;
     logic        tx_mem_req;
-    logic [6:0]  tx_mem_addr;
+    logic [7:0]  tx_mem_addr;
 
     // Registered FFT operands/results bridge synchronous SRAM latency to the
     // existing latency-insensitive mixed-radix butterfly.
@@ -516,6 +540,10 @@ module transform_scheduler_core #(
     logic [2:0] fft128_stage;
     logic [6:0] fft128_group_base;
     logic [5:0] fft128_j;
+    assign fft128_active = mod_active;
+    assign fft128_inverse_active = mod_inverse;
+    assign fft128_ofdm_active = mod_ofdm;
+    assign fft128_tx_active = mod_tx;
 
     logic [6:0] fft128_half_size;
     logic [7:0] fft128_group_size;
@@ -527,6 +555,8 @@ module transform_scheduler_core #(
     logic [6:0] fft128_next_addr0;
     logic [6:0] fft128_next_addr1;
     logic [5:0] fft128_twiddle_index;
+    logic [5:0] fft128_next_twiddle_index;
+    logic [5:0] fft128_issue_twiddle_index;
 
     logic fft128_last_butterfly;
     logic fft128_final_stage;
@@ -546,6 +576,8 @@ module transform_scheduler_core #(
     // stage 0: shift 6, stage 6: shift 0
     assign fft128_twiddle_index =
         fft128_j << (6 - fft128_stage);
+    assign fft128_next_twiddle_index =
+        fft128_next_j << (6 - fft128_next_stage);
 
     assign fft128_final_stage =
         (fft128_stage == 3'd6);
@@ -578,26 +610,50 @@ module transform_scheduler_core #(
     logic signed [15:0] fft128_prefetch0_i, fft128_prefetch0_q;
     logic signed [15:0] fft128_prefetch1_i, fft128_prefetch1_q;
     logic fft128_prefetch_complete;
+    logic fft128_prefetch_complete_now;
+    logic fft128_next_issued;
 
     assign fft128_prefetch_complete =
         (fft128_prefetch_responses == 2'd2);
+    assign fft128_prefetch_complete_now = fft128_prefetch_complete ||
+        ((fft128_prefetch_responses == 2'd1) && fft_mem_rvalid);
 
     fft128_twiddle_rom u_fft128_twiddle_rom (
-        .addr_i (fft128_twiddle_index),
+        .addr_i (fft128_issue_twiddle_index),
         .re_o   (fft128_twiddle_re),
         .im_o   (fft128_twiddle_im)
     );
 
-    gf180_sram_128x32_complex u_fft_scratch_sram (
+    gf180_sram_256x16_complex u_fft_scratch_sram (
         .clk     (clk),
         .rst_n   (rst_n),
         .req_i   (fft_mem_req),
         .write_i (fft_mem_write),
         .addr_i  (fft_mem_addr),
         .wdata_i (fft_mem_wdata),
+        .ready_o (fft_mem_ready),
         .rdata_o (fft_mem_rdata),
-        .rvalid_o(fft_mem_rvalid)
+        .rvalid_o(fft_mem_rvalid),
+        .half_mode_i(mod_active || tx_output_busy || debug_mode_i),
+        .half_req_i(mod_active ? mod_half_req :
+                    (tx_output_busy ? tx_mem_req : debug_req_i)),
+        // TX readout never writes.  Keep its busy/owner decode out of the
+        // SRAM write-enable cone; debug writes are accepted only while idle.
+        .half_write_i((mod_active && mod_half_write) ||
+                      (debug_mode_i && debug_write_i)),
+        .half_addr_i(mod_active ? mod_half_addr :
+                     (tx_output_busy ? tx_mem_addr : debug_addr_i)),
+        .half_wdata_i(mod_active ? mod_half_wdata :
+                      (tx_output_busy ? 16'd0 : debug_wdata_i)),
+        .half_ready_o(mod_half_ready),
+        .half_rdata_o(mod_half_rdata), .half_rvalid_o(mod_half_rvalid)
     );
+
+    assign debug_ready_o = debug_mode_i && !mod_active && !tx_output_busy &&
+                           mod_half_ready;
+    assign debug_rdata_o = mod_half_rdata;
+    assign debug_rvalid_o = debug_mode_i && !mod_active && !tx_output_busy &&
+                            mod_half_rvalid;
 
     //==========================================================================
     // DFT12 Good-Thomas / prime-factor engine
@@ -612,16 +668,12 @@ module transform_scheduler_core #(
     logic signed [15:0] dft12_ram_i [0:11];
     logic signed [15:0] dft12_ram_q [0:11];
 
-    // Dedicated natural-order DFT12 output buffer for DFT-s-OFDM TX.
-    //
-    // The Good-Thomas DFT12 schedule computes its three four-point groups
-    // sequentially using dft12_ram_i/q as in-place intermediate storage. Final
-    // natural-order DFT addresses overlap intermediate locations belonging to
-    // groups that have not yet executed. Therefore, TX results must not be
-    // written back into dft12_ram_i/q. All 12 final outputs are captured here
-    // and consumed by the subcarrier mapper only after DFT12 completes.
-    logic signed [15:0] tx_dft12_output_i [0:11];
-    logic signed [15:0] tx_dft12_output_q [0:11];
+    // Most natural-order TX results can reuse the in-place DFT12 RAM.  With
+    // groups evaluated in order 0,1,2, only outputs 6, 9, and 10 overlap
+    // intermediates that a later group still needs.  Keep just those three
+    // complex values aside instead of duplicating the complete 12-word RAM.
+    logic signed [15:0] tx_dft12_hold_i [0:2];
+    logic signed [15:0] tx_dft12_hold_q [0:2];
 
     localparam logic [2:0] D12_PHASE_RADIX3      = 3'd0;
     localparam logic [2:0] D12_PHASE_FFT4_EVEN   = 3'd1;
@@ -639,6 +691,7 @@ module transform_scheduler_core #(
     dft12_state_t dft12_state;
     logic         dft12_active;
     logic [2:0]   dft12_phase;
+    logic [4:0]   dft12_phase_onehot;
     logic [1:0]   dft12_group;
 
     logic [3:0] dft12_addr0;
@@ -647,6 +700,8 @@ module transform_scheduler_core #(
     logic [3:0] dft12_base;
     logic       dft12_final_operation;
     logic       dft12_last_operation;
+    logic [3:0] dft12_out_addr0;
+    logic [3:0] dft12_out_addr1;
 
     assign dft12_base = {dft12_group, 2'b00};
 
@@ -687,6 +742,15 @@ module transform_scheduler_core #(
     assign dft12_last_operation =
         (dft12_phase == D12_PHASE_FINAL_ODD) &&
         (dft12_group == 2'd2);
+
+    assign dft12_out_addr0 = dft12_output_address(
+        dft12_group,
+        (dft12_phase == D12_PHASE_FINAL_EVEN) ? 2'd0 : 2'd1
+    );
+    assign dft12_out_addr1 = dft12_output_address(
+        dft12_group,
+        (dft12_phase == D12_PHASE_FINAL_EVEN) ? 2'd2 : 2'd3
+    );
 
     //==========================================================================
     // Shared mixed-radix butterfly interface
@@ -737,14 +801,21 @@ module transform_scheduler_core #(
 
     logic small_issue_active;
     logic fft128_issue_active;
+    logic fft128_overlap_issue;
     logic dft12_issue_active;
 
     assign small_issue_active =
         !fft128_active && !dft12_active &&
         !fifo_empty && !result_meta_full;
 
-    assign fft128_issue_active =
-        fft128_active && (fft128_state == F128_ISSUE);
+    // Load the next operation into the butterfly's elastic input registers
+    // while the current operation is still using the scalar multiplier.  At
+    // the current result-transfer edge the arithmetic stage drains and the
+    // waiting operation advances without an extra issue bubble.
+    assign fft128_overlap_issue = 1'b0;
+    assign fft128_issue_active = fft128_active && mod_issue_valid;
+    assign fft128_issue_twiddle_index = fft128_overlap_issue
+        ? fft128_next_twiddle_index : fft128_twiddle_index;
 
     assign dft12_issue_active =
         dft12_active && (dft12_state == D12_ISSUE);
@@ -764,30 +835,9 @@ module transform_scheduler_core #(
 
         if (fft128_issue_active) begin
             bf_uop_in = UOP_RADIX2;
-            bf_x0_i = fft_operand0_i;
-            bf_x0_q = fft_operand0_q;
-
-            if (fft128_twiddle_index == 0) begin
-                bf_x1_i = negate16(fft_operand1_i);
-                bf_x1_q = negate16(fft_operand1_q);
-                bf_twiddle_re = UNITY_PROXY_RE;
-                bf_twiddle_im = UNITY_PROXY_IM;
-            end else if (
-                fft128_inverse_active &&
-                (fft128_twiddle_im == 8'sh80)
-            ) begin
-                bf_x1_i = negate16(fft_operand1_i);
-                bf_x1_q = negate16(fft_operand1_q);
-                bf_twiddle_re = fft128_twiddle_re;
-                bf_twiddle_im = fft128_twiddle_im;
-            end else begin
-                bf_x1_i = fft_operand1_i;
-                bf_x1_q = fft_operand1_q;
-                bf_twiddle_re = fft128_twiddle_re;
-                bf_twiddle_im = fft128_inverse_active
-                    ? negate8(fft128_twiddle_im)
-                    : fft128_twiddle_im;
-            end
+            bf_x0_i=mod_x0_i; bf_x0_q=mod_x0_q;
+            bf_x1_i=mod_x1_i; bf_x1_q=mod_x1_q;
+            bf_twiddle_re=mod_tw_re; bf_twiddle_im=mod_tw_im;
         end else if (dft12_issue_active) begin
             if (dft12_phase == D12_PHASE_RADIX3) begin
                 bf_uop_in = UOP_RADIX3;
@@ -915,6 +965,7 @@ module transform_scheduler_core #(
     assign fft128_start =
         (fft128_block_ready || ofdm_fft_block_ready ||
          tx_ifft_block_ready) &&
+        !mod_done &&
         !fft128_active && !dft12_active &&
         fifo_empty &&
         (small_inflight_count == 0) &&
@@ -963,31 +1014,31 @@ module transform_scheduler_core #(
 
     assign bf_uop_valid =
         fft128_issue_active
-            ? !fft128_sent_uop
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_uop
                 : (small_issue_active && !small_sent_uop));
     assign bf_x0_i_valid =
         fft128_issue_active
-            ? !fft128_sent_x0_i
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_x0_i
                 : (small_issue_active && !small_sent_x0_i));
     assign bf_x0_q_valid =
         fft128_issue_active
-            ? !fft128_sent_x0_q
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_x0_q
                 : (small_issue_active && !small_sent_x0_q));
     assign bf_x1_i_valid =
         fft128_issue_active
-            ? !fft128_sent_x1_i
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_x1_i
                 : (small_issue_active && !small_sent_x1_i));
     assign bf_x1_q_valid =
         fft128_issue_active
-            ? !fft128_sent_x1_q
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_x1_q
                 : (small_issue_active && !small_sent_x1_q));
@@ -1005,13 +1056,13 @@ module transform_scheduler_core #(
                !small_sent_x2_q);
     assign bf_twiddle_re_valid =
         fft128_issue_active
-            ? !fft128_sent_twiddle_re
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_twiddle_re
                 : (small_issue_active && !small_sent_twiddle_re));
     assign bf_twiddle_im_valid =
         fft128_issue_active
-            ? !fft128_sent_twiddle_im
+            ? mod_issue_valid
             : (dft12_issue_active
                 ? !dft12_sent_twiddle_im
                 : (small_issue_active && !small_sent_twiddle_im));
@@ -1054,21 +1105,16 @@ module transform_scheduler_core #(
     assign routed_X2_i = bf_X2_i;
     assign routed_X2_q = bf_X2_q;
 
-    assign X0_i_o = (fft128_active && (fft128_state == F128_OUTPUT_WAIT))
-        ? fft_result0_i : routed_X0_i;
-    assign X0_q_o = (fft128_active && (fft128_state == F128_OUTPUT_WAIT))
-        ? fft_result0_q : routed_X0_q;
-    assign X1_i_o = (fft128_active && (fft128_state == F128_OUTPUT_WAIT))
-        ? fft_result1_i : routed_X1_i;
-    assign X1_q_o = (fft128_active && (fft128_state == F128_OUTPUT_WAIT))
-        ? fft_result1_q : routed_X1_q;
+    assign X0_i_o = fft128_active ? mod_diag_X0_i : routed_X0_i;
+    assign X0_q_o = fft128_active ? mod_diag_X0_q : routed_X0_q;
+    assign X1_i_o = fft128_active ? mod_diag_X1_i : routed_X1_i;
+    assign X1_q_o = fft128_active ? mod_diag_X1_q : routed_X1_q;
     assign X2_i_o = routed_X2_i;
     assign X2_q_o = routed_X2_q;
 
     assign result_valid_o =
         fft128_active
-            ? ((fft128_state == F128_OUTPUT_WAIT) &&
-               fft128_final_stage && !fft128_ofdm_active)
+            ? mod_diag_valid
             : (bf_out_valid &&
                 (dft12_active
                     ? ((dft12_state == D12_WAIT_RESULT) &&
@@ -1076,14 +1122,14 @@ module transform_scheduler_core #(
                     : !result_meta_empty));
 
     assign result_addr0_o = fft128_active
-        ? fft128_addr0
+        ? mod_diag_addr0
         : (dft12_active
             ? {3'd0, dft12_output_address(
                 dft12_group,
                 (dft12_phase == D12_PHASE_FINAL_EVEN) ? 2'd0 : 2'd1)}
             : 7'd0);
     assign result_addr1_o = fft128_active
-        ? fft128_addr1
+        ? mod_diag_addr1
         : (dft12_active
             ? {3'd0, dft12_output_address(
                 dft12_group,
@@ -1096,12 +1142,12 @@ module transform_scheduler_core #(
         (!fft128_active && !dft12_active && small_result_radix3)
             ? 2'd3 : 2'd2;
     assign result_last_o = fft128_active
-        ? fft128_last_butterfly
+        ? mod_diag_last
         : (dft12_active ? dft12_last_operation : 1'b1);
 
     assign bf_out_ready =
         fft128_active
-            ? ((fft128_state == F128_WAIT_RESULT) ? 1'b1 : 1'b0)
+            ? mod_result_ready
             : (dft12_active
                 ? ((dft12_state == D12_WAIT_RESULT)
                     ? (dft12_final_operation
@@ -1117,10 +1163,7 @@ module transform_scheduler_core #(
     // Completion is defined at the second SRAM write, not at butterfly
     // result capture. This guarantees the final sample is physically stored
     // before an OFDM output adapter begins reading the memory.
-    assign fft128_done =
-        fft128_active &&
-        (fft128_state == F128_WRITE1) &&
-        fft128_last_butterfly;
+    assign fft128_done = mod_done;
 
     assign ofdm_output_start =
         fft128_done && fft128_ofdm_active && !fft128_tx_active;
@@ -1143,66 +1186,25 @@ module transform_scheduler_core #(
         fft_mem_addr  = 7'd0;
         fft_mem_wdata = 32'd0;
 
-        // Folded compute owns the SRAM whenever active. Reads and writes are
-        // deliberately serialized to match the physical single-port macro.
-        if (fft128_active) begin
-            case (fft128_state)
-                F128_READ0_REQ: begin
-                    fft_mem_req  = 1'b1;
-                    fft_mem_addr = fft128_addr0;
-                end
-                F128_READ1_REQ: begin
-                    fft_mem_req  = 1'b1;
-                    fft_mem_addr = fft128_addr1;
-                end
-                F128_WRITE0: begin
-                    fft_mem_req   = 1'b1;
-                    fft_mem_write = 1'b1;
-                    fft_mem_addr  = fft128_addr0;
-                    fft_mem_wdata = {fft_result0_q, fft_result0_i};
-                end
-                F128_WAIT_RESULT: begin
-                    // The butterfly result is already held in its registered
-                    // output interface.  Commit X0 on the same edge that the
-                    // controller consumes that transaction.
-                    if (bf_out_valid) begin
-                        fft_mem_req   = 1'b1;
-                        fft_mem_write = 1'b1;
-                        fft_mem_addr  = fft128_addr0;
-                        fft_mem_wdata = {routed_X0_q, routed_X0_i};
-                    end else if (!fft128_last_butterfly &&
-                                 (fft128_prefetch_requests < 2'd2)) begin
-                        fft_mem_req = 1'b1;
-                        fft_mem_addr = (fft128_prefetch_requests == 2'd0)
-                            ? fft128_next_addr0 : fft128_next_addr1;
-                    end
-                end
-                F128_WRITE1: begin
-                    fft_mem_req   = 1'b1;
-                    fft_mem_write = 1'b1;
-                    fft_mem_addr  = fft128_addr1;
-                    fft_mem_wdata = {fft_result1_q, fft_result1_i};
-                end
-                default: begin end
-            endcase
-        end else if (ofdm_mem_req) begin
-            fft_mem_req  = 1'b1;
+        // FFT/IFFT execution uses the direct physical half-word port above.
+        // This complex-word port serves only capture/map/diagnostic adapters;
+        // retaining the superseded FFT transaction mux here needlessly placed
+        // its result/metadata selection in the physical SRAM timing cone.
+        if (ofdm_mem_req) begin
+            fft_mem_req  = fft_mem_ready;
             fft_mem_addr = ofdm_mem_addr;
-        end else if (tx_mem_req) begin
-            fft_mem_req  = 1'b1;
-            fft_mem_addr = tx_mem_addr;
         end else if (ofdm_input_write) begin
-            fft_mem_req   = 1'b1;
+            fft_mem_req   = fft_mem_ready;
             fft_mem_write = 1'b1;
             fft_mem_addr  = bit_reverse7(ofdm_sample_index);
             fft_mem_wdata = {ofdm_sample_q, ofdm_sample_i};
         end else if (tx_mapper_write_valid) begin
-            fft_mem_req   = 1'b1;
+            fft_mem_req   = fft_mem_ready;
             fft_mem_write = 1'b1;
             fft_mem_addr  = tx_mapper_write_addr;
             fft_mem_wdata = {tx_mapper_write_q, tx_mapper_write_i};
         end else if (fft128_input_write) begin
-            fft_mem_req   = 1'b1;
+            fft_mem_req   = fft_mem_ready;
             fft_mem_write = 1'b1;
             fft_mem_addr  = bit_reverse7(rx_fft128_index);
             fft_mem_wdata = {sign_extend_q17(din), rx_fft128_i};
@@ -1279,7 +1281,7 @@ module transform_scheduler_core #(
                 if (din_fire) rx_next_state = RX_FFT128_Q;
             end
             RX_FFT128_Q: begin
-                din_ready_o = 1'b1;
+                din_ready_o = fft_mem_ready;
                 if (din_fire) begin
                     if (rx_fft128_index == 7'd127)
                         rx_next_state = RX_FFT128_BLOCKED;
@@ -1546,8 +1548,8 @@ module transform_scheduler_core #(
             (dft12_state == D12_WAIT_RESULT) &&
             bf_result_fire
         ) begin
-            case (dft12_phase)
-                D12_PHASE_RADIX3: begin
+            case (1'b1)
+                dft12_phase_onehot[D12_PHASE_RADIX3]: begin
                     // Store B[k1,n2] at address 4*k1+n2.
                     dft12_ram_i[{2'd0, dft12_group}] <= routed_X0_i;
                     dft12_ram_q[{2'd0, dft12_group}] <= routed_X0_q;
@@ -1556,13 +1558,13 @@ module transform_scheduler_core #(
                     dft12_ram_i[4'd8 + dft12_group] <= routed_X2_i;
                     dft12_ram_q[4'd8 + dft12_group] <= routed_X2_q;
                 end
-                D12_PHASE_FFT4_EVEN: begin
+                dft12_phase_onehot[D12_PHASE_FFT4_EVEN]: begin
                     dft12_ram_i[dft12_base] <= routed_X0_i;
                     dft12_ram_q[dft12_base] <= routed_X0_q;
                     dft12_ram_i[dft12_base + 4'd2] <= routed_X1_i;
                     dft12_ram_q[dft12_base + 4'd2] <= routed_X1_q;
                 end
-                D12_PHASE_FFT4_ODD: begin
+                dft12_phase_onehot[D12_PHASE_FFT4_ODD]: begin
                     dft12_ram_i[dft12_base + 4'd1] <= routed_X0_i;
                     dft12_ram_q[dft12_base + 4'd1] <= routed_X0_q;
                     dft12_ram_i[dft12_base + 4'd3] <= routed_X1_i;
@@ -1570,28 +1572,36 @@ module transform_scheduler_core #(
                 end
                 default: begin
                     // Standalone DFT12 sends these downstream. DFT-s-OFDM TX
-                    // instead captures the natural-order outputs internally.
+                    // stores safe outputs in-place and retains only the three
+                    // values whose natural addresses are still live inputs.
                     if (dft12_tx_active) begin
-                        tx_dft12_output_i[dft12_output_address(
-                            dft12_group,
-                            (dft12_phase == D12_PHASE_FINAL_EVEN)
-                                ? 2'd0 : 2'd1
-                        )] <= routed_X0_i;
-                        tx_dft12_output_q[dft12_output_address(
-                            dft12_group,
-                            (dft12_phase == D12_PHASE_FINAL_EVEN)
-                                ? 2'd0 : 2'd1
-                        )] <= routed_X0_q;
-                        tx_dft12_output_i[dft12_output_address(
-                            dft12_group,
-                            (dft12_phase == D12_PHASE_FINAL_EVEN)
-                                ? 2'd2 : 2'd3
-                        )] <= routed_X1_i;
-                        tx_dft12_output_q[dft12_output_address(
-                            dft12_group,
-                            (dft12_phase == D12_PHASE_FINAL_EVEN)
-                                ? 2'd2 : 2'd3
-                        )] <= routed_X1_q;
+                        if (dft12_out_addr0 == 4'd6) begin
+                            tx_dft12_hold_i[0] <= routed_X0_i;
+                            tx_dft12_hold_q[0] <= routed_X0_q;
+                        end else if (dft12_out_addr0 == 4'd9) begin
+                            tx_dft12_hold_i[1] <= routed_X0_i;
+                            tx_dft12_hold_q[1] <= routed_X0_q;
+                        end else if (dft12_out_addr0 == 4'd10) begin
+                            tx_dft12_hold_i[2] <= routed_X0_i;
+                            tx_dft12_hold_q[2] <= routed_X0_q;
+                        end else begin
+                            dft12_ram_i[dft12_out_addr0] <= routed_X0_i;
+                            dft12_ram_q[dft12_out_addr0] <= routed_X0_q;
+                        end
+
+                        if (dft12_out_addr1 == 4'd6) begin
+                            tx_dft12_hold_i[0] <= routed_X1_i;
+                            tx_dft12_hold_q[0] <= routed_X1_q;
+                        end else if (dft12_out_addr1 == 4'd9) begin
+                            tx_dft12_hold_i[1] <= routed_X1_i;
+                            tx_dft12_hold_q[1] <= routed_X1_q;
+                        end else if (dft12_out_addr1 == 4'd10) begin
+                            tx_dft12_hold_i[2] <= routed_X1_i;
+                            tx_dft12_hold_q[2] <= routed_X1_q;
+                        end else begin
+                            dft12_ram_i[dft12_out_addr1] <= routed_X1_i;
+                            dft12_ram_q[dft12_out_addr1] <= routed_X1_q;
+                        end
                     end
                 end
             endcase
@@ -1655,6 +1665,7 @@ module transform_scheduler_core #(
             dft12_tx_active <= 1'b0;
             dft12_state <= D12_IDLE;
             dft12_phase <= D12_PHASE_RADIX3;
+            dft12_phase_onehot <= 5'b00001;
             dft12_group <= 2'd0;
 
             dft12_sent_uop <= 1'b0;
@@ -1667,6 +1678,10 @@ module transform_scheduler_core #(
             dft12_sent_twiddle_re <= 1'b0;
             dft12_sent_twiddle_im <= 1'b0;
         end else begin
+            // The phase is constant for many multiplier cycles.  Register its
+            // one-hot decode ahead of result writeback so the 12-word register
+            // RAM write mux is not fed by a same-cycle equality-decode tree.
+            dft12_phase_onehot <= 5'b00001 << dft12_phase;
             if (dft12_start) begin
                 dft12_active <= 1'b1;
                 dft12_tx_active <= tx_dft12_block_ready;
@@ -1758,6 +1773,7 @@ module transform_scheduler_core #(
     // FFT128 control and sent tracking -- synchronous single-port SRAM version
     //==========================================================================
 
+`ifdef LEGACY_FFT_CONTROLLER
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             fft128_active         <= 1'b0;
@@ -1790,6 +1806,7 @@ module transform_scheduler_core #(
             fft128_prefetch0_q <= '0;
             fft128_prefetch1_i <= '0;
             fft128_prefetch1_q <= '0;
+            fft128_next_issued <= 1'b0;
         end else begin
             if (fft128_start) begin
                 fft128_active         <= 1'b1;
@@ -1805,16 +1822,23 @@ module transform_scheduler_core #(
                 fft128_stage      <= 3'd0;
                 fft128_group_base <= 7'd0;
                 fft128_j          <= 6'd0;
+                fft128_next_issued <= 1'b0;
             end else if (fft128_active) begin
                 case (fft128_state)
                     F128_READ0_REQ: begin
                         // The SRAM accepts one request per cycle.  Request x1
                         // next cycle rather than leaving its port idle while
                         // the registered x0 response is returned.
-                        fft128_state <= F128_READ1_REQ;
+                        if (fft_mem_ready)
+                            fft128_state <= F128_READ1_REQ;
                     end
 
                     F128_READ1_REQ: begin
+                        if (fft_mem_ready)
+                            fft128_state <= F128_READ0_WAIT;
+                    end
+
+                    F128_READ0_WAIT: begin
                         if (fft_mem_rvalid) begin
                             fft_operand0_i <= $signed(fft_mem_rdata[15:0]);
                             fft_operand0_q <= $signed(fft_mem_rdata[31:16]);
@@ -1855,6 +1879,16 @@ module transform_scheduler_core #(
 
                         if (fft128_issue_done_now)
                         begin
+                            // The accepted transaction now lives in the
+                            // butterfly. Reuse these channel trackers for the
+                            // prefetched successor while this result computes.
+                            fft128_sent_uop        <= 1'b0;
+                            fft128_sent_x0_i       <= 1'b0;
+                            fft128_sent_x0_q       <= 1'b0;
+                            fft128_sent_x1_i       <= 1'b0;
+                            fft128_sent_x1_q       <= 1'b0;
+                            fft128_sent_twiddle_re <= 1'b0;
+                            fft128_sent_twiddle_im <= 1'b0;
                             fft128_prefetch_requests <= 2'd0;
                             fft128_prefetch_responses <= 2'd0;
                             fft128_state <= F128_WAIT_RESULT;
@@ -1863,7 +1897,8 @@ module transform_scheduler_core #(
 
                     F128_WAIT_RESULT: begin
                         if (!fft128_last_butterfly &&
-                            (fft128_prefetch_requests < 2'd2))
+                            (fft128_prefetch_requests < 2'd2) &&
+                            fft_mem_ready)
                             fft128_prefetch_requests <=
                                 fft128_prefetch_requests + 1'b1;
 
@@ -1883,6 +1918,25 @@ module transform_scheduler_core #(
                                 fft128_prefetch_responses + 1'b1;
                         end
 
+                        if (fft128_overlap_issue) begin
+                            if (bf_uop_valid && bf_uop_ready)
+                                fft128_sent_uop <= 1'b1;
+                            if (bf_x0_i_valid && bf_x0_i_ready)
+                                fft128_sent_x0_i <= 1'b1;
+                            if (bf_x0_q_valid && bf_x0_q_ready)
+                                fft128_sent_x0_q <= 1'b1;
+                            if (bf_x1_i_valid && bf_x1_i_ready)
+                                fft128_sent_x1_i <= 1'b1;
+                            if (bf_x1_q_valid && bf_x1_q_ready)
+                                fft128_sent_x1_q <= 1'b1;
+                            if (bf_twiddle_re_valid && bf_twiddle_re_ready)
+                                fft128_sent_twiddle_re <= 1'b1;
+                            if (bf_twiddle_im_valid && bf_twiddle_im_ready)
+                                fft128_sent_twiddle_im <= 1'b1;
+                            if (fft128_issue_done_now)
+                                fft128_next_issued <= 1'b1;
+                        end
+
                         if (bf_result_fire) begin
                             // Apply the already-established IFFT final-stage
                             // normalization before the values enter SRAM.
@@ -1890,12 +1944,19 @@ module transform_scheduler_core #(
                             fft_result0_q <= routed_X0_q;
                             fft_result1_i <= routed_X1_i;
                             fft_result1_q <= routed_X1_q;
-                            // X0 writes on this result-transfer edge.
+                            fft128_sent_uop        <= 1'b0;
+                            fft128_sent_x0_i       <= 1'b0;
+                            fft128_sent_x0_q       <= 1'b0;
+                            fft128_sent_x1_i       <= 1'b0;
+                            fft128_sent_x1_q       <= 1'b0;
+                            fft128_sent_twiddle_re <= 1'b0;
+                            fft128_sent_twiddle_im <= 1'b0;
                             fft128_state <= F128_WRITE1;
                         end
                     end
 
                     F128_WRITE1: begin
+                        if (fft_mem_ready) begin
                         // Second result word writes on this edge. Standalone
                         // final-stage results are then held for serialization.
                         if (fft128_final_stage && !fft128_ofdm_active) begin
@@ -1923,7 +1984,7 @@ module transform_scheduler_core #(
                             end else begin
                                 fft128_j <= fft128_j + 1'b1;
                             end
-                            if (fft128_prefetch_complete) begin
+                            if (fft128_next_issued) begin
                                 fft_operand0_i <= fft128_prefetch0_i;
                                 fft_operand0_q <= fft128_prefetch0_q;
                                 fft_operand1_i <= fft128_prefetch1_i;
@@ -1935,10 +1996,14 @@ module transform_scheduler_core #(
                                 fft128_sent_x1_q       <= 1'b0;
                                 fft128_sent_twiddle_re <= 1'b0;
                                 fft128_sent_twiddle_im <= 1'b0;
-                                fft128_state <= F128_ISSUE;
+                                fft128_prefetch_requests <= 2'd0;
+                                fft128_prefetch_responses <= 2'd0;
+                                fft128_next_issued <= 1'b0;
+                                fft128_state <= F128_WAIT_RESULT;
                             end else begin
                                 fft128_state <= F128_READ0_REQ;
                             end
+                        end
                         end
                     end
 
@@ -1998,6 +2063,7 @@ module transform_scheduler_core #(
             end
         end
     end
+`endif
 
     //==========================================================================
     // OFDM_RX stream adapters
@@ -2034,6 +2100,7 @@ module transform_scheduler_core #(
         .start_i      (ofdm_output_start),
         .mem_req_o    (ofdm_mem_req),
         .mem_addr_o   (ofdm_mem_addr),
+        .mem_ready_i  (fft_mem_ready),
         .mem_rdata_i  (fft_mem_rdata),
         .mem_rvalid_i (fft_mem_rvalid),
         .dout          (ofdm_rx_dout),
@@ -2049,12 +2116,23 @@ module transform_scheduler_core #(
         .rst_n          (rst_n),
         .start_i        (tx_mapper_start),
         .source_addr_o  (tx_mapper_source_addr),
-        .source_i_i     (tx_dft12_output_i[tx_mapper_source_addr]),
-        .source_q_i     (tx_dft12_output_q[tx_mapper_source_addr]),
+        .source_i_i     (
+            (tx_mapper_source_addr == 4'd6) ? tx_dft12_hold_i[0] :
+            (tx_mapper_source_addr == 4'd9) ? tx_dft12_hold_i[1] :
+            (tx_mapper_source_addr == 4'd10) ? tx_dft12_hold_i[2] :
+            dft12_ram_i[tx_mapper_source_addr]
+        ),
+        .source_q_i     (
+            (tx_mapper_source_addr == 4'd6) ? tx_dft12_hold_q[0] :
+            (tx_mapper_source_addr == 4'd9) ? tx_dft12_hold_q[1] :
+            (tx_mapper_source_addr == 4'd10) ? tx_dft12_hold_q[2] :
+            dft12_ram_q[tx_mapper_source_addr]
+        ),
         .write_valid_o  (tx_mapper_write_valid),
         .write_addr_o   (tx_mapper_write_addr),
         .write_i_o      (tx_mapper_write_i),
         .write_q_o      (tx_mapper_write_q),
+        .write_ready_i  (fft_mem_ready),
         .busy_o         (tx_mapper_busy),
         .done_o         (tx_mapper_done)
     );
@@ -2077,15 +2155,18 @@ module transform_scheduler_core #(
         .done_o         (tx_capture_done)
     );
 
-    tdiq_output_cp_insert_sram u_tdiq_output_cp_insert (
+    tdiq_output_cp_insert_sram #(
+        .BYTE_INTERVAL(TX_BYTE_INTERVAL)
+    ) u_tdiq_output_cp_insert (
         .clk          (clk),
         .rst_n        (rst_n),
         .start_i      (tx_output_start),
         .cp_length_i  (tx_cp_length_reg),
         .mem_req_o    (tx_mem_req),
         .mem_addr_o   (tx_mem_addr),
-        .mem_rdata_i  (fft_mem_rdata),
-        .mem_rvalid_i (fft_mem_rvalid),
+        .mem_ready_i  (mod_half_ready),
+        .mem_rdata_i  (mod_half_rdata),
+        .mem_rvalid_i (mod_half_rvalid),
         .dout          (tx_dout),
         .dout_valid_o  (tx_dout_valid),
         .busy_o        (tx_output_busy),
@@ -2098,6 +2179,37 @@ module transform_scheduler_core #(
     //==========================================================================
     // Mixed-radix butterfly instance
     //==========================================================================
+
+    assign mod_issue_ready = bf_uop_ready && bf_x0_i_ready && bf_x0_q_ready &&
+        bf_x1_i_ready && bf_x1_q_ready && bf_twiddle_re_ready &&
+        bf_twiddle_im_ready;
+    assign mod_diag_ready = result_ready_i;
+
+    fft128_modulo_controller u_fft128_modulo_controller (
+        .clk(clk),.rst_n(rst_n),.start_i(fft128_start),
+        .inverse_i(tx_ifft_block_ready ? 1'b1 :
+            (ofdm_fft_block_ready ? 1'b0 : fft128_block_inverse)),
+        .ofdm_i(ofdm_fft_block_ready || tx_ifft_block_ready),
+        .tx_i(tx_ifft_block_ready),
+        .active_o(mod_active),.done_o(mod_done),.inverse_o(mod_inverse),
+        .ofdm_o(mod_ofdm),.tx_o(mod_tx),
+        .half_req_o(mod_half_req),.half_write_o(mod_half_write),
+        .half_addr_o(mod_half_addr),.half_wdata_o(mod_half_wdata),
+        .half_ready_i(mod_half_ready),.half_rdata_i(mod_half_rdata),
+        .half_rvalid_i(mod_half_rvalid),
+        .issue_valid_o(mod_issue_valid),.issue_ready_i(mod_issue_ready),
+        .x0_i_o(mod_x0_i),.x0_q_o(mod_x0_q),
+        .x1_i_o(mod_x1_i),.x1_q_o(mod_x1_q),
+        .twiddle_re_o(mod_tw_re),.twiddle_im_o(mod_tw_im),
+        .result_valid_i(bf_out_valid),.result_ready_o(mod_result_ready),
+        .X0_i_i(bf_X0_i),.X0_q_i(bf_X0_q),
+        .X1_i_i(bf_X1_i),.X1_q_i(bf_X1_q),
+        .diag_valid_o(mod_diag_valid),.diag_ready_i(mod_diag_ready),
+        .diag_X0_i_o(mod_diag_X0_i),.diag_X0_q_o(mod_diag_X0_q),
+        .diag_X1_i_o(mod_diag_X1_i),.diag_X1_q_o(mod_diag_X1_q),
+        .diag_addr0_o(mod_diag_addr0),.diag_addr1_o(mod_diag_addr1),
+        .diag_last_o(mod_diag_last)
+    );
 
     mixed_radix_butterfly #(
         .FRAC_BITS(7)

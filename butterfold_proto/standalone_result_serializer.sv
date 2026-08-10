@@ -54,46 +54,38 @@ module standalone_result_serializer (
     output logic       job_done_o
 );
 
-    logic signed [15:0] X0_i_reg;
-    logic signed [15:0] X0_q_reg;
-    logic signed [15:0] X1_i_reg;
-    logic signed [15:0] X1_q_reg;
-    logic signed [15:0] X2_i_reg;
-    logic signed [15:0] X2_q_reg;
-
-    logic [6:0] addr0_reg;
-    logic [6:0] addr1_reg;
-    logic [6:0] addr2_reg;
-    logic [1:0] radix_reg;
-    logic       last_reg;
-
     logic [3:0] byte_index;
-    logic [3:0] final_byte_index;
+    wire [3:0] final_byte_index =
+        (result_radix_i == 2'd3) ? 4'd14 : 4'd9;
 
     wire result_fire = result_valid_i && result_ready_o;
 
-    assign result_ready_o = enable_i && !busy_o;
+    // The producer already owns a stable elastic result slot. Keep it
+    // backpressured throughout serialization and release it with the final
+    // byte instead of copying the complete transaction here.
+    assign result_ready_o = enable_i && busy_o &&
+        (byte_index == final_byte_index);
     assign dout_valid_o   = busy_o;
 
     always @* begin
         case (byte_index)
-            4'd0:  dout_o = {1'b0, addr0_reg};
-            4'd1:  dout_o = X0_i_reg[15:8];
-            4'd2:  dout_o = X0_i_reg[7:0];
-            4'd3:  dout_o = X0_q_reg[15:8];
-            4'd4:  dout_o = X0_q_reg[7:0];
+            4'd0:  dout_o = {1'b0, result_addr0_i};
+            4'd1:  dout_o = X0_i_i[15:8];
+            4'd2:  dout_o = X0_i_i[7:0];
+            4'd3:  dout_o = X0_q_i[15:8];
+            4'd4:  dout_o = X0_q_i[7:0];
 
-            4'd5:  dout_o = {1'b0, addr1_reg};
-            4'd6:  dout_o = X1_i_reg[15:8];
-            4'd7:  dout_o = X1_i_reg[7:0];
-            4'd8:  dout_o = X1_q_reg[15:8];
-            4'd9:  dout_o = X1_q_reg[7:0];
+            4'd5:  dout_o = {1'b0, result_addr1_i};
+            4'd6:  dout_o = X1_i_i[15:8];
+            4'd7:  dout_o = X1_i_i[7:0];
+            4'd8:  dout_o = X1_q_i[15:8];
+            4'd9:  dout_o = X1_q_i[7:0];
 
-            4'd10: dout_o = {1'b0, addr2_reg};
-            4'd11: dout_o = X2_i_reg[15:8];
-            4'd12: dout_o = X2_i_reg[7:0];
-            4'd13: dout_o = X2_q_reg[15:8];
-            4'd14: dout_o = X2_q_reg[7:0];
+            4'd10: dout_o = {1'b0, result_addr2_i};
+            4'd11: dout_o = X2_i_i[15:8];
+            4'd12: dout_o = X2_i_i[7:0];
+            4'd13: dout_o = X2_q_i[15:8];
+            4'd14: dout_o = X2_q_i[7:0];
 
             default: dout_o = 8'h00;
         endcase
@@ -101,19 +93,7 @@ module standalone_result_serializer (
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            X0_i_reg <= '0;
-            X0_q_reg <= '0;
-            X1_i_reg <= '0;
-            X1_q_reg <= '0;
-            X2_i_reg <= '0;
-            X2_q_reg <= '0;
-            addr0_reg <= '0;
-            addr1_reg <= '0;
-            addr2_reg <= '0;
-            radix_reg <= 2'd0;
-            last_reg <= 1'b0;
             byte_index <= 4'd0;
-            final_byte_index <= 4'd0;
             busy_o <= 1'b0;
             transaction_done_o <= 1'b0;
             job_done_o <= 1'b0;
@@ -121,28 +101,15 @@ module standalone_result_serializer (
             transaction_done_o <= 1'b0;
             job_done_o <= 1'b0;
 
-            if (result_fire) begin
-                X0_i_reg <= X0_i_i;
-                X0_q_reg <= X0_q_i;
-                X1_i_reg <= X1_i_i;
-                X1_q_reg <= X1_q_i;
-                X2_i_reg <= X2_i_i;
-                X2_q_reg <= X2_q_i;
-                addr0_reg <= result_addr0_i;
-                addr1_reg <= result_addr1_i;
-                addr2_reg <= result_addr2_i;
-                radix_reg <= result_radix_i;
-                last_reg <= result_last_i;
+            if (!busy_o && enable_i && result_valid_i) begin
                 byte_index <= 4'd0;
-                final_byte_index <=
-                    (result_radix_i == 2'd3) ? 4'd14 : 4'd9;
                 busy_o <= 1'b1;
             end else if (busy_o) begin
                 if (byte_index == final_byte_index) begin
                     busy_o <= 1'b0;
                     byte_index <= 4'd0;
                     transaction_done_o <= 1'b1;
-                    if (last_reg)
+                    if (result_last_i)
                         job_done_o <= 1'b1;
                 end else begin
                     byte_index <= byte_index + 1'b1;

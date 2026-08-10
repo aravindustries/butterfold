@@ -165,7 +165,11 @@ module scheduler #(
         .result_valid_o   (result_valid_o),
         .result_ready_i   (result_ready_i),
         .dout             (core_dout),
-        .dout_valid_o     (core_dout_valid)
+        .dout_valid_o     (core_dout_valid),
+        .debug_mode_i     (1'b0), .debug_req_i(1'b0),
+        .debug_write_i    (1'b0), .debug_addr_i(8'd0),
+        .debug_wdata_i    (16'd0), .debug_ready_o(),
+        .debug_rdata_o    (), .debug_rvalid_o()
     );
 
     //--------------------------------------------------------------------------

@@ -91,27 +91,6 @@ module mixed_radix_butterfly #(
     logic signed [7:0] twiddle_im_reg;
 
     //==========================================================================
-    // Atomic output register
-    //==========================================================================
-
-    logic out_full;
-
-    logic signed [15:0] X0_i_reg;
-    logic signed [15:0] X0_q_reg;
-    logic signed [15:0] X1_i_reg;
-    logic signed [15:0] X1_q_reg;
-    logic signed [15:0] X2_i_reg;
-    logic signed [15:0] X2_q_reg;
-
-    assign out_valid = out_full;
-    assign X0_i = X0_i_reg;
-    assign X0_q = X0_q_reg;
-    assign X1_i = X1_i_reg;
-    assign X1_q = X1_q_reg;
-    assign X2_i = X2_i_reg;
-    assign X2_q = X2_q_reg;
-
-    //==========================================================================
     // Mode-aware latency-insensitive handshakes
     //==========================================================================
 
@@ -130,11 +109,12 @@ module mixed_radix_butterfly #(
     logic arithmetic_stage_valid;
     logic arithmetic_stage_fire;
     logic arithmetic_stage_available;
-    logic multiply_low_valid;
-    logic multiply_high_valid;
-    logic multiply_low_fire;
-    logic multiply_high_fire;
+    logic combine_stage_valid;
+    logic combine_stage_fire;
+    logic combine_stage_available;
+    logic [2:0] multiply_phase;
     logic multiply_product_fire;
+    logic final_scalar_pending;
     logic consume_x2;
 
     logic take_uop;
@@ -158,33 +138,34 @@ module mixed_radix_butterfly #(
     assign selected_radix3 =
         selected_uop_valid && (selected_uop == UOP_RADIX3);
 
+    logic out_full;
+    logic signed [15:0] X0_i_reg, X0_q_reg, X1_i_reg, X1_q_reg, X2_i_reg, X2_q_reg;
+    assign out_valid = out_full;
+    assign X0_i=X0_i_reg; assign X0_q=X0_q_reg;
+    assign X1_i=X1_i_reg; assign X1_q=X1_q_reg;
+    assign X2_i=X2_i_reg; assign X2_q=X2_q_reg;
+
     assign output_available = !out_full || out_ready;
 
     assign radix2_inputs_full =
-        uop_full &&
-        (uop_reg == UOP_RADIX2) &&
-        x0_i_full && x0_q_full &&
-        x1_i_full && x1_q_full &&
+        uop_full && (uop_reg == UOP_RADIX2) &&
+        x0_i_full && x0_q_full && x1_i_full && x1_q_full &&
         twiddle_re_full && twiddle_im_full;
 
     assign radix3_inputs_full =
-        uop_full &&
-        (uop_reg == UOP_RADIX3) &&
-        x0_i_full && x0_q_full &&
-        x1_i_full && x1_q_full &&
-        x2_i_full && x2_q_full &&
-        twiddle_re_full && twiddle_im_full;
+        uop_full && (uop_reg == UOP_RADIX3) &&
+        x0_i_full && x0_q_full && x1_i_full && x1_q_full &&
+        x2_i_full && x2_q_full && twiddle_re_full && twiddle_im_full;
 
+    assign combine_stage_fire = combine_stage_valid && output_available;
+    assign combine_stage_available = !combine_stage_valid || combine_stage_fire;
     assign arithmetic_stage_fire =
-        arithmetic_stage_valid && output_available;
+        arithmetic_stage_valid && combine_stage_available;
     assign arithmetic_stage_available =
         !arithmetic_stage_valid || arithmetic_stage_fire;
 
-    assign multiply_low_fire = premultiply_stage_valid &&
-        !multiply_low_valid && !multiply_high_valid;
-    assign multiply_high_fire = multiply_low_valid;
-    assign multiply_product_fire = multiply_high_valid &&
-        arithmetic_stage_available;
+    assign multiply_product_fire = premultiply_stage_valid &&
+        (multiply_phase == 3'd7) && arithmetic_stage_available;
     assign premultiply_stage_fire = multiply_product_fire;
     assign premultiply_stage_available =
         !premultiply_stage_valid || premultiply_stage_fire;
@@ -199,32 +180,24 @@ module mixed_radix_butterfly #(
     assign uop_ready = !uop_full || compute_fire;
 
     assign x0_i_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!x0_i_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!x0_i_full || compute_fire);
     assign x0_q_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!x0_q_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!x0_q_full || compute_fire);
 
     assign x1_i_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!x1_i_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!x1_i_full || compute_fire);
     assign x1_q_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!x1_q_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!x1_q_full || compute_fire);
 
     assign x2_i_ready =
-        selected_radix3 &&
-        (!x2_i_full || consume_x2);
+        selected_radix3 && (!x2_i_full || consume_x2);
     assign x2_q_ready =
-        selected_radix3 &&
-        (!x2_q_full || consume_x2);
+        selected_radix3 && (!x2_q_full || consume_x2);
 
     assign twiddle_re_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!twiddle_re_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!twiddle_re_full || compute_fire);
     assign twiddle_im_ready =
-        (selected_radix2 || selected_radix3) &&
-        (!twiddle_im_full || compute_fire);
+        (selected_radix2 || selected_radix3) && (!twiddle_im_full || compute_fire);
 
     assign take_uop        = uop_valid        && uop_ready;
     assign take_x0_i       = x0_i_valid       && x0_i_ready;
@@ -271,16 +244,22 @@ module mixed_radix_butterfly #(
     logic signed [16:0] multiplier_input_i;
     logic signed [16:0] multiplier_input_q;
 
-    // One time-folded 8x10 scalar-multiply layer implements the four partial
-    // products of the existing complex multiplier.  A signed 17-bit operand
-    // is decomposed exactly as high*512 + unsigned(low).  Low and high halves
-    // use the same four multiply operators on consecutive cycles.
+    // One 8x10 scalar multiplier implements all eight partial products of the
+    // complex multiply. A signed 17-bit operand is decomposed exactly as
+    // high*512 + unsigned(low); phases 0..3 evaluate the low chunks and phases
+    // 4..7 evaluate the signed high chunks. This preserves the original four-
+    // product arithmetic and every truncation point while removing three
+    // simultaneous scalar multipliers.
     logic signed [9:0] multiplier_chunk_i;
     logic signed [9:0] multiplier_chunk_q;
-    logic signed [17:0] partial_rr;
-    logic signed [17:0] partial_iq;
-    logic signed [17:0] partial_rq;
-    logic signed [17:0] partial_ii;
+    logic signed [7:0] scalar_coefficient;
+    logic signed [9:0] scalar_operand;
+    logic signed [9:0] scalar_operand_reg;
+    logic signed [17:0] scalar_partial;
+    logic signed [17:0] final_scalar_product_reg;
+    logic signed [7:0] scalar_coefficient_reg;
+    logic signed [9:0] next_scalar_operand;
+    logic signed [7:0] next_scalar_coefficient;
     logic signed [17:0] low_rr_reg;
     logic signed [17:0] low_iq_reg;
     logic signed [17:0] low_rq_reg;
@@ -288,11 +267,12 @@ module mixed_radix_butterfly #(
     logic signed [17:0] high_rr_reg;
     logic signed [17:0] high_iq_reg;
     logic signed [17:0] high_rq_reg;
-    logic signed [17:0] high_ii_reg;
     logic signed [25:0] product_rr;
     logic signed [25:0] product_iq;
     logic signed [25:0] product_rq;
     logic signed [25:0] product_ii;
+
+
 
     // The first cut isolates radix selection/pre-addition from the multiplier.
     // Data and mode remain aligned through the elastic pipeline.
@@ -301,12 +281,10 @@ module mixed_radix_butterfly #(
     logic signed [16:0] premultiply_input_q_reg;
     logic signed [7:0] premultiply_twiddle_re_reg;
     logic signed [7:0] premultiply_twiddle_im_reg;
-    logic signed [26:0] premultiply_x0_i_reg;
-    logic signed [26:0] premultiply_x0_q_reg;
-    logic signed [26:0] premultiply_sum_i_reg;
-    logic signed [26:0] premultiply_sum_q_reg;
-    logic signed [26:0] premultiply_half_sum_i_reg;
-    logic signed [26:0] premultiply_half_sum_q_reg;
+    logic signed [26:0] premultiply_x0_i_reg, premultiply_x0_q_reg;
+    logic signed [26:0] premultiply_sum_i_reg, premultiply_sum_q_reg;
+    logic signed [26:0] premultiply_half_sum_i_reg, premultiply_half_sum_q_reg;
+
 
     // Pipeline cut after the four shared complex-multiply partial products.
     // These registers preserve every pre-existing width/truncation point.
@@ -315,12 +293,18 @@ module mixed_radix_butterfly #(
     logic signed [24:0] product_iq_reg;
     logic signed [24:0] product_rq_reg;
     logic signed [24:0] product_ii_reg;
-    logic signed [26:0] arithmetic_x0_i_reg;
-    logic signed [26:0] arithmetic_x0_q_reg;
-    logic signed [26:0] arithmetic_sum_i_reg;
-    logic signed [26:0] arithmetic_sum_q_reg;
-    logic signed [26:0] arithmetic_half_sum_i_reg;
-    logic signed [26:0] arithmetic_half_sum_q_reg;
+    logic signed [26:0] arithmetic_x0_i_reg, arithmetic_x0_q_reg;
+    logic signed [26:0] arithmetic_sum_i_reg, arithmetic_sum_q_reg;
+    logic signed [26:0] arithmetic_half_sum_i_reg, arithmetic_half_sum_q_reg;
+
+    // Retiming cut between product reconstruction/scaling and the final
+    // radix add/subtract.  This adds latency but not throughput: the stage is
+    // elastic and accepts one completed complex product every eight cycles.
+    logic [1:0] combine_uop_reg;
+    logic signed [26:0] combine_product_re_reg, combine_product_im_reg;
+    logic signed [26:0] combine_x0_i_reg, combine_x0_q_reg;
+    logic signed [26:0] combine_sum_i_reg, combine_sum_q_reg;
+    logic signed [26:0] combine_half_sum_i_reg, combine_half_sum_q_reg;
 
     // Addition/subtraction of two 25-bit products requires 26 bits.
     logic signed [25:0] product_re_wide;
@@ -347,6 +331,7 @@ module mixed_radix_butterfly #(
     logic signed [26:0] next_X2_i_wide;
     logic signed [26:0] next_X2_q_wide;
 
+
     always @* begin
         x1_i_ext = {x1_i_reg[15], x1_i_reg};
         x1_q_ext = {x1_q_reg[15], x1_q_reg};
@@ -371,7 +356,7 @@ module mixed_radix_butterfly #(
             multiplier_input_q = x1_q_ext;
         end
 
-        if (multiply_low_valid) begin
+        if (multiply_phase >= 3'd4) begin
             multiplier_chunk_i =
                 {{2{premultiply_input_i_reg[16]}},
                  premultiply_input_i_reg[16:9]};
@@ -385,14 +370,33 @@ module mixed_radix_butterfly #(
                 {1'b0, premultiply_input_q_reg[8:0]};
         end
 
-        partial_rr = $signed(premultiply_twiddle_re_reg) *
-            $signed(multiplier_chunk_i);
-        partial_iq = $signed(premultiply_twiddle_im_reg) *
-            $signed(multiplier_chunk_q);
-        partial_rq = $signed(premultiply_twiddle_re_reg) *
-            $signed(multiplier_chunk_q);
-        partial_ii = $signed(premultiply_twiddle_im_reg) *
-            $signed(multiplier_chunk_i);
+        // The phase schedule is deterministic.  Register the operands for the
+        // following product while the current 8x10 multiply is in flight, so
+        // phase/radix selection is not in the multiplier's same-cycle cone.
+        case (multiply_phase + 3'd1)
+            3'd1: begin next_scalar_coefficient = premultiply_twiddle_im_reg;
+                next_scalar_operand = {1'b0, premultiply_input_q_reg[8:0]}; end
+            3'd2: begin next_scalar_coefficient = premultiply_twiddle_re_reg;
+                next_scalar_operand = {1'b0, premultiply_input_q_reg[8:0]}; end
+            3'd3: begin next_scalar_coefficient = premultiply_twiddle_im_reg;
+                next_scalar_operand = {1'b0, premultiply_input_i_reg[8:0]}; end
+            3'd4: begin next_scalar_coefficient = premultiply_twiddle_re_reg;
+                next_scalar_operand = {{2{premultiply_input_i_reg[16]}},
+                    premultiply_input_i_reg[16:9]}; end
+            3'd5: begin next_scalar_coefficient = premultiply_twiddle_im_reg;
+                next_scalar_operand = {{2{premultiply_input_q_reg[16]}},
+                    premultiply_input_q_reg[16:9]}; end
+            3'd6: begin next_scalar_coefficient = premultiply_twiddle_re_reg;
+                next_scalar_operand = {{2{premultiply_input_q_reg[16]}},
+                    premultiply_input_q_reg[16:9]}; end
+            default: begin next_scalar_coefficient = premultiply_twiddle_im_reg;
+                next_scalar_operand = {{2{premultiply_input_i_reg[16]}},
+                    premultiply_input_i_reg[16:9]}; end
+        endcase
+        scalar_coefficient = scalar_coefficient_reg;
+        scalar_operand = scalar_operand_reg;
+        scalar_partial = $signed(scalar_coefficient_reg) *
+            $signed(scalar_operand_reg);
 
         product_rr = ($signed({{8{high_rr_reg[17]}}, high_rr_reg}) <<< 9) +
             $signed({{8{low_rr_reg[17]}}, low_rr_reg});
@@ -400,7 +404,7 @@ module mixed_radix_butterfly #(
             $signed({{8{low_iq_reg[17]}}, low_iq_reg});
         product_rq = ($signed({{8{high_rq_reg[17]}}, high_rq_reg}) <<< 9) +
             $signed({{8{low_rq_reg[17]}}, low_rq_reg});
-        product_ii = ($signed({{8{high_ii_reg[17]}}, high_ii_reg}) <<< 9) +
+        product_ii = ($signed({{8{final_scalar_product_reg[17]}}, final_scalar_product_reg}) <<< 9) +
             $signed({{8{low_ii_reg[17]}}, low_ii_reg});
 
         product_re_wide =
@@ -425,29 +429,30 @@ module mixed_radix_butterfly #(
         product_re_ext = {product_re_scaled[25], product_re_scaled};
         product_im_ext = {product_im_scaled[25], product_im_scaled};
 
-        radix3_base_i = arithmetic_x0_i_reg - arithmetic_half_sum_i_reg;
-        radix3_base_q = arithmetic_x0_q_reg - arithmetic_half_sum_q_reg;
+        radix3_base_i = combine_x0_i_reg - combine_half_sum_i_reg;
+        radix3_base_q = combine_x0_q_reg - combine_half_sum_q_reg;
 
-        if (arithmetic_uop_reg == UOP_RADIX3) begin
-            next_X0_i_wide = arithmetic_x0_i_reg + arithmetic_sum_i_reg;
-            next_X0_q_wide = arithmetic_x0_q_reg + arithmetic_sum_q_reg;
+        if (combine_uop_reg == UOP_RADIX3) begin
+            next_X0_i_wide = combine_x0_i_reg + combine_sum_i_reg;
+            next_X0_q_wide = combine_x0_q_reg + combine_sum_q_reg;
 
-            next_X1_i_wide = radix3_base_i + product_re_ext;
-            next_X1_q_wide = radix3_base_q + product_im_ext;
+            next_X1_i_wide = radix3_base_i + combine_product_re_reg;
+            next_X1_q_wide = radix3_base_q + combine_product_im_reg;
 
-            next_X2_i_wide = radix3_base_i - product_re_ext;
-            next_X2_q_wide = radix3_base_q - product_im_ext;
+            next_X2_i_wide = radix3_base_i - combine_product_re_reg;
+            next_X2_q_wide = radix3_base_q - combine_product_im_reg;
         end else begin
-            next_X0_i_wide = arithmetic_x0_i_reg + product_re_ext;
-            next_X0_q_wide = arithmetic_x0_q_reg + product_im_ext;
+            next_X0_i_wide = combine_x0_i_reg + combine_product_re_reg;
+            next_X0_q_wide = combine_x0_q_reg + combine_product_im_reg;
 
-            next_X1_i_wide = arithmetic_x0_i_reg - product_re_ext;
-            next_X1_q_wide = arithmetic_x0_q_reg - product_im_ext;
+            next_X1_i_wide = combine_x0_i_reg - combine_product_re_reg;
+            next_X1_q_wide = combine_x0_q_reg - combine_product_im_reg;
 
             next_X2_i_wide = '0;
             next_X2_q_wide = '0;
         end
     end
+
 
     //==========================================================================
     // Sequential storage
@@ -476,8 +481,7 @@ module mixed_radix_butterfly #(
             twiddle_im_reg <= '0;
 
             premultiply_stage_valid <= 1'b0;
-            multiply_low_valid <= 1'b0;
-            multiply_high_valid <= 1'b0;
+            multiply_phase <= 3'd0;
             low_rr_reg <= '0;
             low_iq_reg <= '0;
             low_rq_reg <= '0;
@@ -485,7 +489,10 @@ module mixed_radix_butterfly #(
             high_rr_reg <= '0;
             high_iq_reg <= '0;
             high_rq_reg <= '0;
-            high_ii_reg <= '0;
+            scalar_coefficient_reg <= '0;
+            scalar_operand_reg <= '0;
+            final_scalar_product_reg <= '0;
+            final_scalar_pending <= 1'b0;
             premultiply_uop_reg <= '0;
             premultiply_input_i_reg <= '0;
             premultiply_input_q_reg <= '0;
@@ -511,13 +518,22 @@ module mixed_radix_butterfly #(
             arithmetic_half_sum_i_reg <= '0;
             arithmetic_half_sum_q_reg <= '0;
 
+            combine_stage_valid <= 1'b0;
+            combine_uop_reg <= '0;
+            combine_product_re_reg <= '0;
+            combine_product_im_reg <= '0;
+            combine_x0_i_reg <= '0;
+            combine_x0_q_reg <= '0;
+            combine_sum_i_reg <= '0;
+            combine_sum_q_reg <= '0;
+            combine_half_sum_i_reg <= '0;
+            combine_half_sum_q_reg <= '0;
+
             out_full <= 1'b0;
-            X0_i_reg <= '0;
-            X0_q_reg <= '0;
-            X1_i_reg <= '0;
-            X1_q_reg <= '0;
-            X2_i_reg <= '0;
-            X2_q_reg <= '0;
+            X0_i_reg <= '0; X0_q_reg <= '0;
+            X1_i_reg <= '0; X1_q_reg <= '0;
+            X2_i_reg <= '0; X2_q_reg <= '0;
+
         end else begin
             if (take_uop)
                 uop_reg <= uop_in;
@@ -600,23 +616,27 @@ module mixed_radix_butterfly #(
                 default:      premultiply_stage_valid <= premultiply_stage_valid;
             endcase
 
-            if (multiply_low_fire) begin
-                low_rr_reg <= partial_rr;
-                low_iq_reg <= partial_iq;
-                low_rq_reg <= partial_rq;
-                low_ii_reg <= partial_ii;
-                multiply_low_valid <= 1'b1;
-            end else if (multiply_high_fire) begin
-                multiply_low_valid <= 1'b0;
-                high_rr_reg <= partial_rr;
-                high_iq_reg <= partial_iq;
-                high_rq_reg <= partial_rq;
-                high_ii_reg <= partial_ii;
-                multiply_high_valid <= 1'b1;
-            end
-
-            if (multiply_product_fire) begin
-                multiply_high_valid <= 1'b0;
+            if (premultiply_stage_valid) begin
+                case (multiply_phase)
+                    3'd0: low_rr_reg  <= scalar_partial;
+                    3'd1: low_iq_reg  <= scalar_partial;
+                    3'd2: low_rq_reg  <= scalar_partial;
+                    3'd3: low_ii_reg  <= scalar_partial;
+                    3'd4: high_rr_reg <= scalar_partial;
+                    3'd5: high_iq_reg <= scalar_partial;
+                    3'd6: high_rq_reg <= scalar_partial;
+                    default: final_scalar_product_reg <= scalar_partial;
+                endcase
+                if (multiply_product_fire)
+                    multiply_phase <= 3'd0;
+                else
+                    multiply_phase <= multiply_phase + 1'b1;
+                if (!multiply_product_fire) begin
+                    scalar_coefficient_reg <= next_scalar_coefficient;
+                    scalar_operand_reg <= next_scalar_operand;
+                end
+            end else begin
+                multiply_phase <= 3'd0;
             end
 
             if (compute_fire) begin
@@ -631,9 +651,19 @@ module mixed_radix_butterfly #(
                 premultiply_sum_q_reg <= sum_q_ext;
                 premultiply_half_sum_i_reg <= half_sum_i_ext;
                 premultiply_half_sum_q_reg <= half_sum_q_ext;
+                // Product phase 0 is selected directly from the accepting
+                // operands.  This avoids a pipeline-fill cycle, including
+                // the back-to-back phase-7/phase-0 boundary.
+                scalar_coefficient_reg <= twiddle_re_reg;
+                scalar_operand_reg <= {1'b0, multiplier_input_i[8:0]};
             end
 
-            case ({arithmetic_stage_fire, multiply_product_fire})
+            if (multiply_product_fire)
+                final_scalar_pending <= 1'b1;
+            else if (final_scalar_pending)
+                final_scalar_pending <= 1'b0;
+
+            case ({arithmetic_stage_fire, final_scalar_pending})
                 2'b01, 2'b11: arithmetic_stage_valid <= 1'b1;
                 2'b10:        arithmetic_stage_valid <= 1'b0;
                 default:      arithmetic_stage_valid <= arithmetic_stage_valid;
@@ -644,7 +674,6 @@ module mixed_radix_butterfly #(
                 product_rr_reg <= product_rr[24:0];
                 product_iq_reg <= product_iq[24:0];
                 product_rq_reg <= product_rq[24:0];
-                product_ii_reg <= product_ii[24:0];
                 arithmetic_x0_i_reg <= premultiply_x0_i_reg;
                 arithmetic_x0_q_reg <= premultiply_x0_q_reg;
                 arithmetic_sum_i_reg <= premultiply_sum_i_reg;
@@ -653,7 +682,28 @@ module mixed_radix_butterfly #(
                 arithmetic_half_sum_q_reg <= premultiply_half_sum_q_reg;
             end
 
+            if (final_scalar_pending)
+                product_ii_reg <= product_ii[24:0];
+
+            case ({combine_stage_fire, arithmetic_stage_fire})
+                2'b01, 2'b11: combine_stage_valid <= 1'b1;
+                2'b10:        combine_stage_valid <= 1'b0;
+                default:      combine_stage_valid <= combine_stage_valid;
+            endcase
+
             if (arithmetic_stage_fire) begin
+                combine_uop_reg <= arithmetic_uop_reg;
+                combine_product_re_reg <= product_re_ext;
+                combine_product_im_reg <= product_im_ext;
+                combine_x0_i_reg <= arithmetic_x0_i_reg;
+                combine_x0_q_reg <= arithmetic_x0_q_reg;
+                combine_sum_i_reg <= arithmetic_sum_i_reg;
+                combine_sum_q_reg <= arithmetic_sum_q_reg;
+                combine_half_sum_i_reg <= arithmetic_half_sum_i_reg;
+                combine_half_sum_q_reg <= arithmetic_half_sum_q_reg;
+            end
+
+            if (combine_stage_fire) begin
                 X0_i_reg <= next_X0_i_wide[15:0];
                 X0_q_reg <= next_X0_q_wide[15:0];
                 X1_i_reg <= next_X1_i_wide[15:0];
@@ -664,6 +714,7 @@ module mixed_radix_butterfly #(
             end else if (out_full && out_ready) begin
                 out_full <= 1'b0;
             end
+
         end
     end
 

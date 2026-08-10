@@ -75,6 +75,10 @@ Command map:
 * 0x47: OFDM_RX long normal CP, 10 samples
 * 0x48: OFDM_TX short normal CP, 9 samples
 * 0x49: OFDM_TX long normal CP, 10 samples
+* 0x4A: ECHO, one input byte returned unchanged
+* 0x4B: MAGIC, returns ASCII `BFLD`
+* 0x4C: SRAM READ, address byte then 16-bit big-endian response
+* 0x4D: SRAM WRITE, address/data-high/data-low then ACK 0xAC
 
 Do not describe 0x47/0x49 as "extended CP."
 
@@ -84,6 +88,14 @@ For the current 15-kHz numerology:
 * long normal CP = 10 samples
 
 Slot/TDD scheduling is EXTERNAL to ButterFold and must not be implemented on-chip.
+
+Production symbol-allocation contract at 61.44 MHz:
+
+* maximum sustained grid-aligned allocation is 50%;
+* RX→RX and TX→TX starts require two symbol positions;
+* RX→TX starts require three symbol positions;
+* TX→RX may be adjacent;
+* this is an allocation-density restriction, not reduced FFT throughput.
 
 ## Datapath
 
@@ -143,31 +155,25 @@ Do not silently change arithmetic scaling.
 
 ## Memory architecture
 
-Current intended physical SRAM architecture:
+Current production physical SRAM architecture:
 
 FFT/IFFT compute storage:
 
-* logical 128×32-bit complex single-port synchronous memory
-* physically 4 × gf180mcu_fd_ip_sram__sram128x8m8wm1
-* byte mapping:
-
-  * macro 0 = I[7:0]
-  * macro 1 = I[15:8]
-  * macro 2 = Q[7:0]
-  * macro 3 = Q[15:8]
-
-Waveform ping-pong:
-
-* 2 × gf180mcu_fd_ip_sram__sram512x8m8wm1
-* shared between RX-input buffering and TX-output buffering because operation is half-duplex
+* logical 256×16-bit physical-half-word single-port memory
+* physically 2 × gf180mcu_fd_ip_sram__sram256x8m8wm1 in parallel
+* complex sample `n` mapping:
+  * address `2n` = I[15:0]
+  * address `2n+1` = Q[15:0]
+* RX discards CP and captures the 128-sample body directly into scratch.
+* TX generates CP and body output by reading IFFT results directly from scratch.
+* There is no dedicated waveform SRAM.
 
 Total intended foundry SRAM count:
 
-* 4 × 128×8
-* 2 × 512×8
-* 6 macros
+* 2 × 256×8
+* 2 macros
 
-The FFT SRAM is intentionally single-port for minimum area.
+The shared scratch SRAM is intentionally single-port for minimum area.
 Do not bank or duplicate it unless throughput analysis later demonstrates that the single-port architecture cannot meet requirements.
 
 The SRAM scheduler must respect:
@@ -210,8 +216,7 @@ Views:
 
 Used macros:
 
-* gf180mcu_fd_ip_sram__sram128x8m8wm1
-* gf180mcu_fd_ip_sram__sram512x8m8wm1
+* gf180mcu_fd_ip_sram__sram256x8m8wm1
 
 The official GF Verilog macro contains specify/timing constructs that Icarus may not fully support.
 
@@ -306,4 +311,3 @@ The current objective is:
 6. only then decide whether additional FFT memory banking is required.
 
 Do not prematurely implement the on-chip slot/TDD scheduler. Scheduling remains external.
-

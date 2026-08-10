@@ -5,13 +5,12 @@ VVP ?= vvp
 # Use the installed GF180MCU SRAM library by default.
 PDKPATH ?= /foss/pdks/gf180mcuD
 SRAM_VERILOG_DIR ?= $(PDKPATH)/libs.ref/gf180mcu_fd_ip_sram/verilog
-SRAM128_MODEL ?= $(SRAM_VERILOG_DIR)/gf180mcu_fd_ip_sram__sram128x8m8wm1.v
-SRAM512_MODEL ?= $(SRAM_VERILOG_DIR)/gf180mcu_fd_ip_sram__sram512x8m8wm1.v
+SRAM256_MODEL ?= $(SRAM_VERILOG_DIR)/gf180mcu_fd_ip_sram__sram256x8m8wm1.v
 
 COMMON_RTL = \
-	gf180_sram_128x8_wrapper.sv \
-	gf180_sram_512x8_wrapper.sv \
-	gf180_sram_128x32_complex.sv \
+	gf180_sram_256x8_wrapper.sv \
+	gf180_sram_256x16_complex.sv \
+	fft128_modulo_controller.sv \
 	fft128_twiddle_rom.sv \
 	mixed_radix_butterfly.sv \
 	tdiq_input_cp_remove.sv \
@@ -24,17 +23,22 @@ COMMON_RTL = \
 	transform_scheduler_core.sv \
 	butterfold_top.sv
 
-.PHONY: vectors wrapper behavioral foundry foundry-functional foundry-info \
-	characterize stress-fast stress-paced synth-sta clean
+.PHONY: vectors wrapper reset-recovery behavioral foundry foundry-functional foundry-info \
+	characterize stress-fast stress-paced scheduled-fast scheduled-paced synth-sta clean
 
 vectors:
 	$(PYTHON) gen_realtime_vectors.py
 
 wrapper:
 	$(IVERILOG) -g2012 -Wall -s gf180_sram_wrapper_tb -o sim_sram_wrapper.out \
-		gf180_sram_wrapper_tb.sv gf180_sram_128x8_wrapper.sv \
-		gf180_sram_512x8_wrapper.sv gf180_sram_128x32_complex.sv
+		gf180_sram_wrapper_tb.sv gf180_sram_256x8_wrapper.sv \
+		gf180_sram_256x16_complex.sv
 	$(VVP) sim_sram_wrapper.out
+
+reset-recovery:
+	$(IVERILOG) -g2012 -Wall -s reset_recovery_tb -o sim_reset_recovery.out \
+		reset_recovery_tb.sv $(COMMON_RTL)
+	$(VVP) sim_reset_recovery.out
 
 behavioral: vectors
 	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_butterfold_sram.out \
@@ -59,6 +63,17 @@ stress-paced: vectors
 		-o sim_butterfold_stress_paced.out butterfold_top_tb.sv $(COMMON_RTL)
 	$(VVP) sim_butterfold_stress_paced.out
 
+scheduled-fast: vectors
+	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_SCHEDULED -s butterfold_top_tb \
+		-o sim_butterfold_scheduled_fast.out butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_scheduled_fast.out
+
+scheduled-paced: vectors
+	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_SCHEDULED \
+		-DBUTTERFOLD_WAVE_PACED -s butterfold_top_tb \
+		-o sim_butterfold_scheduled_paced.out butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) sim_butterfold_scheduled_paced.out
+
 # Official GlobalFoundries SRAM Verilog models, FUNCTIONAL mode.
 # IMPORTANT: intentionally DO NOT pass -gspecify to Icarus.
 # The GF SRAM models contain bit-select specify path declarations that Icarus
@@ -68,17 +83,15 @@ stress-paced: vectors
 foundry: foundry-functional
 
 foundry-functional: vectors
-	@test -f "$(SRAM128_MODEL)" || (echo "Missing SRAM128 model: $(SRAM128_MODEL)"; exit 1)
-	@test -f "$(SRAM512_MODEL)" || (echo "Missing SRAM512 model: $(SRAM512_MODEL)"; exit 1)
+	@test -f "$(SRAM256_MODEL)" || (echo "Missing SRAM256 model: $(SRAM256_MODEL)"; exit 1)
 	$(IVERILOG) -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM \
 		-s butterfold_top_tb -o sim_butterfold_foundry_sram.out \
-		butterfold_top_tb.sv $(COMMON_RTL) $(SRAM128_MODEL) $(SRAM512_MODEL)
+		butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
 	$(VVP) sim_butterfold_foundry_sram.out
 
 foundry-info:
 	@echo "PDKPATH          = $(PDKPATH)"
-	@echo "SRAM128_MODEL    = $(SRAM128_MODEL)"
-	@echo "SRAM512_MODEL    = $(SRAM512_MODEL)"
+	@echo "SRAM256_MODEL    = $(SRAM256_MODEL)"
 	@echo ""
 	@echo "Icarus is used only for functional foundry-model simulation."
 	@echo "Do not enable -gspecify for these GF SRAM models under Icarus."
@@ -93,5 +106,7 @@ synth-sta:
 
 clean:
 	rm -f sim_sram_wrapper.out sim_butterfold_sram.out \
+		sim_reset_recovery.out \
 		sim_butterfold_foundry_sram.out sim_butterfold_characterize.out \
-		sim_butterfold_stress_fast.out sim_butterfold_stress_paced.out *.vcd
+		sim_butterfold_stress_fast.out sim_butterfold_stress_paced.out \
+		sim_butterfold_scheduled_fast.out sim_butterfold_scheduled_paced.out *.vcd

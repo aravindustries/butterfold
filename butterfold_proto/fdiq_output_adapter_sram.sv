@@ -13,6 +13,7 @@ module fdiq_output_adapter_sram #(
 
     output logic       mem_req_o,
     output logic [6:0] mem_addr_o,
+    input  logic        mem_ready_i,
     input  logic [31:0] mem_rdata_i,
     input  logic        mem_rvalid_i,
 
@@ -55,7 +56,7 @@ module fdiq_output_adapter_sram #(
             done_o <= 1'b0;
             case (state)
                 IDLE: if (start_i) begin sample_index <= START_SAMPLE; state <= READ_REQ; end
-                READ_REQ: state <= READ_WAIT;
+                READ_REQ: if (mem_ready_i) state <= READ_WAIT;
                 READ_WAIT: if (mem_rvalid_i) begin
                     sample_i_reg <= $signed(mem_rdata_i[15:0]);
                     sample_q_reg <= $signed(mem_rdata_i[31:16]);

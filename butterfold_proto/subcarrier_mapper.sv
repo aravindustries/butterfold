@@ -21,6 +21,7 @@ module subcarrier_mapper #(
     output logic [6:0] write_addr_o,
     output logic signed [15:0] write_i_o,
     output logic signed [15:0] write_q_o,
+    input  logic       write_ready_i,
 
     output logic busy_o,
     output logic done_o
@@ -71,7 +72,7 @@ module subcarrier_mapper #(
                 clear_index <= 7'd0;
                 map_index   <= 4'd0;
                 busy_o      <= 1'b1;
-            end else if (busy_o) begin
+            end else if (busy_o && write_ready_i) begin
                 if (clear_phase) begin
                     if (clear_index == 7'd127) begin
                         clear_phase <= 1'b0;

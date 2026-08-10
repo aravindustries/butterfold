@@ -1,168 +1,91 @@
 # ButterFold GF180 SRAM integration
 
-This revision replaces the physically significant behavioral memories with a cycle-accurate interface matching the GlobalFoundries GF180MCU synchronous single-port SRAM macros.
+This document describes the authoritative two-SRAM production architecture.
+Historical three-SRAM measurements and the selection rationale remain in
+`two_sram_experiment/REPORT.md` and `two_sram_experiment/TDD_WORKLOAD_STUDY.md`.
 
-## Final pin interface
+## Architecture
 
-Unchanged:
-
-```text
-Inputs:  rst_n, clk, din[7:0], din_valid_i
-Outputs: din_ready_o, dout[7:0], dout_valid_o
-Power:   VDD at the physical padframe level
-```
-
-No SRAM or debug signal reaches the chip boundary.
-
-## Physical memory map
-
-### FFT/IFFT scratch store
-
-Logical memory: 128 x 32 bits, one signed 16-bit I plus one signed 16-bit Q per address.
-
-Physical implementation:
+ButterFold retains a signed 16-bit, seven-fractional-bit datapath, one shared
+mixed-radix butterfly, and one simultaneous scalar multiplier.
 
 ```text
-4 x gf180mcu_fd_ip_sram__sram128x8m8wm1
+                     +---------------------+
+FDIQ -> DFT/map ---->|                     |
+                     | shared 2 x 256x8    |
+TDIQ -> CP removal ->| symbol/FFT scratch  |
+                     |                     |
+FDIQ <- extract/FFT <|                     |
+                     |                     |
+TDIQ <- CP/body <-----|                     |
+                     +----------+----------+
+                                |
+                         shared butterfly
 ```
 
-The four byte macros are operated in parallel and packed as:
+The two `gf180mcu_fd_ip_sram__sram256x8m8wm1` macros operate in parallel as
+one 256x16 synchronous single physical port. Complex sample `n` occupies:
 
 ```text
-macro 0 = I[7:0]
-macro 1 = I[15:8]
-macro 2 = Q[7:0]
-macro 3 = Q[15:8]
+address 2n   = I[15:0]
+address 2n+1 = Q[15:0]
 ```
 
-The FFT scheduler now obeys a real single-port access sequence. Every radix-2 operation reads the two operands through synchronous SRAM, issues the existing butterfly, latches the result, then performs two sequential SRAM writes.
+There is no 512x8 waveform SRAM. RX discards the 9/10-sample normal CP and
+writes the 128 body samples directly to bit-reversed scratch addresses. TX
+maps and transforms in scratch, then reads samples 119..127 or 118..127 for
+short/long CP followed by samples 0..127.
 
-### Shared waveform ping-pong store
+The FFT engine performs 448 radix-2 butterflies at a steady eight-cycle
+cadence; FFT128/IFFT128 take 3,601 compute cycles.
 
-Physical implementation:
+## External scheduling contract
+
+Active waveform bytes retain their 16-clock cadence at a 61.44-MHz core clock.
+The separate production constraint is symbol allocation density:
 
 ```text
-2 x gf180mcu_fd_ip_sram__sram512x8m8wm1
+maximum sustained grid-aligned allocation: 50%
+RX -> RX: next start +2 symbol positions
+TX -> TX: next start +2 symbol positions
+RX -> TX: next start +3 symbol positions
+TX -> RX: next start +1 symbol position (adjacent legal)
 ```
 
-The banks are shared because ButterFold is half duplex:
+Measured fluid capacities are 54.38--54.56% RX and 52.79--52.97% TX. Slot/TDD
+scheduling remains external.
 
-```text
-RX mode: external TDIQ -> bank A/B -> transform core
-TX mode: transform core -> bank A/B -> external TDIQ
-```
+## Commands
 
-A bank is never used for RX and TX simultaneously. This avoids four separate large input/output buffers.
+| Opcode | Command | Input after opcode | Output |
+|---:|---|---:|---:|
+| 0x40 | FFT2 | 4 bytes | 2 diagnostic records |
+| 0x41 | FFT128 | 256 bytes | 128 diagnostic records |
+| 0x42 | IFFT128 | 256 bytes | 128 diagnostic records |
+| 0x43 | IFFT2 | 4 bytes | 2 diagnostic records |
+| 0x44 | FFT3 | 6 bytes | 3 diagnostic records |
+| 0x45 | DFT12 | 24 bytes | 12 diagnostic records |
+| 0x46 | OFDM_RX short normal CP | 274 bytes | 24 FDIQ bytes |
+| 0x47 | OFDM_RX long normal CP | 276 bytes | 24 FDIQ bytes |
+| 0x48 | OFDM_TX short normal CP | 24 bytes | 274 TDIQ bytes |
+| 0x49 | OFDM_TX long normal CP | 24 bytes | 276 TDIQ bytes |
+| 0x4A | ECHO | 1 byte | same byte |
+| 0x4B | MAGIC | 0 bytes | `42 46 4c 44` (`BFLD`) |
+| 0x4C | SRAM READ | 8-bit half-word address | data high, data low |
+| 0x4D | SRAM WRITE | address, data high, data low | ACK `ac` |
 
-### Register-resident storage
+SRAM debug commands are accepted only while the transform engine is idle. The
+logical debug address is the physical 0..255 half-word address. Backpressure is
+provided only through the frozen `din_ready_o` interface.
 
-These intentionally remain local registers:
+## Functional foundry-model regression
 
-- DFT12 in-place working set: 12 x 32 bits.
-- TX DFT12 natural-order output buffer: 12 x 32 bits.
-- TX input ping-pong: 2 x 24 bytes.
-- RX one-RB output ping-pong: 2 x 24 bytes.
-- FFT2/IFFT2/FFT3 transaction FIFO.
-- Result metadata FIFO.
-- Mixed-radix butterfly elastic registers.
-- Scheduler counters, addresses, ownership metadata.
-
-The structures are too small and/or require too many simultaneous accesses for a single-port hard SRAM to be area-efficient.
-
-## Twiddle ROM
-
-The 64 forward W128 Q1.7 twiddles are now in `fft128_twiddle_rom.sv` as hard-coded combinational constants. The previous `$readmemh` twiddle arrays are gone from the physical RTL.
-
-This avoids two extra SRAM macros and avoids adding synchronous SRAM latency to every twiddle lookup.
-
-## SRAM wrappers
-
-`gf180_sram_128x8_wrapper.sv` and `gf180_sram_512x8_wrapper.sv` provide a common interface:
-
-```text
-req
-write
-addr
-wdata
-rdata
-rvalid
-```
-
-Contract:
-
-- one read OR write request per bank per clock;
-- write commits on the request rising edge;
-- read response is visible with `rvalid` one clock later;
-- there is no asynchronous combinational RAM read.
-
-### Fast behavioral mode
-
-The default wrapper contains a simple behavioral array that enforces the same synchronous, single-port cycle contract. Use this for normal regression.
-
-```bash
+```sh
 make -f Makefile.gf180_sram behavioral
-```
 
-### Official foundry-model mode
-
-Compile with the official GF180 SRAM Verilog models and define `GF180_USE_FOUNDRY_SRAM`:
-
-```bash
 make -f Makefile.gf180_sram foundry \
-  SRAM128_MODEL=/path/to/gf180mcu_fd_ip_sram__sram128x8m8wm1.v \
-  SRAM512_MODEL=/path/to/gf180mcu_fd_ip_sram__sram512x8m8wm1.v
+  SRAM256_MODEL=/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v
 ```
 
-The wrappers connect the macro ports `CLK`, `CEN`, `GWEN`, `WEN`, `A`, `D`, `Q`, `VDD`, and `VSS`. During reset, `CEN` is forced high so the macro satisfies its requirement to enter standby before its first active operation.
-
-For a typical open-pdks install, locate the views under `$PDK_ROOT/gf180mcu*/libs.ref/gf180mcu_fd_ip_sram/`. Exact installation paths vary, so the Makefile accepts explicit model paths.
-
-## Files changed
-
-- `butterfold_top.sv`: two shared 512x8 waveform SRAM banks; small TX input/RX output buffers remain registers.
-- `transform_scheduler_core.sv`: 128x32 scratch store converted to single-port synchronous SRAM scheduling.
-- `fft128_twiddle_rom.sv`: constant ROM replacing `$readmemh` twiddle storage.
-- `fdiq_output_adapter_sram.sv`: synchronous SRAM-aware frequency-domain serializer.
-- `tdiq_output_cp_insert_sram.sv`: synchronous SRAM-aware CP/time-domain serializer.
-- `gf180_sram_128x8_wrapper.sv`: 128x8 foundry/behavioral wrapper.
-- `gf180_sram_512x8_wrapper.sv`: 512x8 foundry/behavioral wrapper.
-- `gf180_sram_128x32_complex.sv`: four-byte-macro complex memory composition.
-
-## Verification
-
-Run the wrapper smoke test first:
-
-```bash
-make -f Makefile.gf180_sram wrapper
-```
-
-Then all final-pin modes:
-
-```bash
-make -f Makefile.gf180_sram behavioral
-```
-
-Expected final line:
-
-```text
-FINAL-PIN OVERALL RESULT: PASS
-```
-
-Then repeat against the official foundry models using the `foundry` target.
-
-## Timing implications
-
-This revision intentionally changes latency. The numerical golden vectors do not change, but the cycle counts will.
-
-The important new costs are:
-
-- synchronous operand fetches for every FFT/IFFT butterfly;
-- two single-port SRAM writes per radix-2 result;
-- synchronous reads when serializing final RX/TX transform data;
-- SRAM reads when an RX ping-pong bank is fed into the core.
-
-Do not use the old 2,324-cycle TX number for final throughput analysis. Once this regression passes locally, measure the new RX/TX cycle counts with this implementation and then evaluate whether the single-port architecture meets the 15-kHz-SCS symbol deadline. If it does not, the first fallback is a two-bank FFT scratch architecture rather than duplicating the transform core.
-
-## Physical-flow note
-
-The behavioral wrapper arrays are simulation conveniences only. The physical/synthesis configuration must define `GF180_USE_FOUNDRY_SRAM` (or otherwise black-box/replace the wrappers with the GF macro views) so the hard SRAMs are preserved and the behavioral arrays are not synthesized into flip-flops.
+The production foundry target compiles only the official 256x8 model. Do not
+enable Icarus `-gspecify`; physical timing comes from Liberty/OpenSTA.

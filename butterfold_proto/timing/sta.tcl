@@ -1,10 +1,8 @@
 set sc_lib /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
-set sram128_lib /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram128x8m8wm1__ss_125C_4v50.lib
-set sram512_lib /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ss_125C_4v50.lib
+set sram256_lib /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__ss_125C_4v50.lib
 
 read_liberty $sc_lib
-read_liberty $sram128_lib
-read_liberty $sram512_lib
+read_liberty $sram256_lib
 read_verilog timing/results/butterfold_mapped.v
 link_design butterfold_top
 
@@ -30,6 +28,10 @@ report_checks -path_delay max -group_path_count 10 \
     -endpoint_path_count 1 -unique_paths_to_endpoint -sort_by_slack \
     -format full_clock_expanded -fields {capacitance slew fanout input_pin net} \
     > timing/results/setup_top10.rpt
+report_checks -path_delay max -group_path_count 50 \
+    -endpoint_path_count 1 -unique_paths_to_endpoint -sort_by_slack \
+    -format full_clock_expanded -fields {capacitance slew fanout input_pin net} \
+    > timing/results/setup_top50.rpt
 report_checks -path_delay max -slack_max 0.0 -group_path_count 100000 \
     -endpoint_path_count 1 -unique_paths_to_endpoint -format end \
     > timing/results/setup_violations.rpt
@@ -40,6 +42,11 @@ report_checks -path_delay max -from $edge_register_output_pins \
     -endpoint_path_count 1 -unique_paths_to_endpoint -sort_by_slack \
     -format full_clock_expanded -fields {capacitance slew fanout input_pin net} \
     > timing/results/setup_edge_top10.rpt
+report_checks -path_delay max -from $edge_register_output_pins \
+    -to $edge_register_data_pins -group_path_count 50 \
+    -endpoint_path_count 1 -unique_paths_to_endpoint -sort_by_slack \
+    -format full_clock_expanded -fields {capacitance slew fanout input_pin net} \
+    > timing/results/setup_edge_top50.rpt
 report_checks -path_delay max -from $edge_register_output_pins \
     -to $edge_register_data_pins -slack_max 0.0 \
     -group_path_count 100000 -endpoint_path_count 1 \

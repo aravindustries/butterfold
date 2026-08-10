@@ -21,6 +21,10 @@ module butterfold_top_tb;
     localparam logic [7:0] CMD_RX_LONG  = 8'h47;
     localparam logic [7:0] CMD_TX_SHORT = 8'h48;
     localparam logic [7:0] CMD_TX_LONG  = 8'h49;
+    localparam logic [7:0] CMD_ECHO       = 8'h4a;
+    localparam logic [7:0] CMD_MAGIC      = 8'h4b;
+    localparam logic [7:0] CMD_SRAM_READ  = 8'h4c;
+    localparam logic [7:0] CMD_SRAM_WRITE = 8'h4d;
 
     logic clk;
     logic rst_n;
@@ -70,12 +74,16 @@ module butterfold_top_tb;
     integer perf_reads;
     integer perf_writes;
     integer perf_results;
+    integer perf_last_result_cycle;
+    integer perf_compute_count;
 
     initial begin
         perf_butterflies = 0;
         perf_reads = 0;
         perf_writes = 0;
         perf_results = 0;
+        perf_last_result_cycle = 0;
+        perf_compute_count = 0;
         for (perf_fft_index = 0; perf_fft_index <= 10;
              perf_fft_index = perf_fft_index + 1)
             perf_fft_state_cycles[perf_fft_index] = 0;
@@ -87,6 +95,8 @@ module butterfold_top_tb;
             perf_reads = 0;
             perf_writes = 0;
             perf_results = 0;
+            perf_last_result_cycle = cycle_count;
+            perf_compute_count = 0;
             for (perf_fft_index = 0; perf_fft_index <= 10;
                  perf_fft_index = perf_fft_index + 1)
                 perf_fft_state_cycles[perf_fft_index] = 0;
@@ -98,6 +108,12 @@ module butterfold_top_tb;
                 dut.u_transform_scheduler_core.tx_ifft_block_ready);
         end
         if (dut.u_transform_scheduler_core.fft128_active) begin
+            if (dut.u_transform_scheduler_core.u_mixed_radix_butterfly.compute_fire &&
+                perf_compute_count < 20) begin
+                $display("PERF BF_COMPUTE index=%0d cycle=%0d",
+                    perf_compute_count, cycle_count);
+                perf_compute_count = perf_compute_count + 1;
+            end
             perf_fft_state_cycles[dut.u_transform_scheduler_core.fft128_state] =
                 perf_fft_state_cycles[dut.u_transform_scheduler_core.fft128_state] + 1;
             if (dut.u_transform_scheduler_core.fft_mem_req &&
@@ -107,6 +123,11 @@ module butterfold_top_tb;
                 dut.u_transform_scheduler_core.fft_mem_write)
                 perf_writes = perf_writes + 1;
             if (dut.u_transform_scheduler_core.bf_result_fire) begin
+                if (perf_results < 20)
+                    $display("PERF BF_RESULT index=%0d cycle=%0d delta=%0d",
+                        perf_results, cycle_count,
+                        cycle_count - perf_last_result_cycle);
+                perf_last_result_cycle = cycle_count;
                 perf_results = perf_results + 1;
                 if (!dut.u_transform_scheduler_core.dft12_active)
                     perf_butterflies = perf_butterflies + 1;
@@ -215,6 +236,77 @@ module butterfold_top_tb;
                         $fatal(1, "Timeout waiting for dout byte");
                 end
             end
+        end
+    endtask
+
+    task automatic debug_write(input logic [7:0] addr, input logic [15:0] value);
+        logic [7:0] ack;
+        begin
+            send_byte(CMD_SRAM_WRITE);
+            send_byte(addr);
+            send_byte(value[15:8]);
+            send_byte(value[7:0]);
+            recv_byte(ack);
+            if (ack !== 8'hac) begin
+                $display("SRAM WRITE ack mismatch addr=%02h got=%02h", addr, ack);
+                errors = errors + 1;
+            end
+        end
+    endtask
+
+    task automatic debug_read(input logic [7:0] addr, output logic [15:0] value);
+        logic [7:0] hi, lo;
+        begin
+            send_byte(CMD_SRAM_READ);
+            send_byte(addr);
+            recv_byte(hi);
+            recv_byte(lo);
+            value = {hi,lo};
+        end
+    endtask
+
+    task automatic run_debug_protocol;
+        logic [7:0] b;
+        logic [15:0] got, expected_debug;
+        integer a;
+        begin
+            send_byte(CMD_ECHO); send_byte(8'ha5); recv_byte(b);
+            if (b !== 8'ha5) begin $display("ECHO mismatch"); errors=errors+1; end
+
+            send_byte(CMD_MAGIC);
+            recv_byte(b); if (b!==8'h42) begin $display("MAGIC[0] mismatch"); errors=errors+1; end
+            recv_byte(b); if (b!==8'h46) begin $display("MAGIC[1] mismatch"); errors=errors+1; end
+            recv_byte(b); if (b!==8'h4c) begin $display("MAGIC[2] mismatch"); errors=errors+1; end
+            recv_byte(b); if (b!==8'h44) begin $display("MAGIC[3] mismatch"); errors=errors+1; end
+
+            debug_write(8'h00,16'h0000); debug_read(8'h00,got);
+            if(got!==16'h0000) begin $display("SRAM zero mismatch"); errors=errors+1; end
+            debug_write(8'h01,16'hffff); debug_read(8'h01,got);
+            if(got!==16'hffff) begin $display("SRAM ones mismatch"); errors=errors+1; end
+            debug_write(8'h02,16'haaaa); debug_read(8'h02,got);
+            if(got!==16'haaaa) begin $display("SRAM AAAA mismatch"); errors=errors+1; end
+            debug_write(8'h03,16'h5555); debug_read(8'h03,got);
+            if(got!==16'h5555) begin $display("SRAM 5555 mismatch"); errors=errors+1; end
+
+            for(a=0;a<16;a=a+1) begin
+                debug_write(8'h10+a[7:0],16'h0001<<a);
+                debug_read(8'h10+a[7:0],got);
+                if(got!==(16'h0001<<a)) begin $display("SRAM walking-1 mismatch %0d",a); errors=errors+1; end
+                debug_write(8'h20+a[7:0],~(16'h0001<<a));
+                debug_read(8'h20+a[7:0],got);
+                if(got!==(~(16'h0001<<a))) begin $display("SRAM walking-0 mismatch %0d",a); errors=errors+1; end
+            end
+
+            for(a=0;a<256;a=a+1) begin
+                expected_debug = (a * 16'h9e37) ^ 16'ha5a5;
+                debug_write(a[7:0],expected_debug);
+                debug_read(a[7:0],got);
+                if(got!==expected_debug) begin
+                    $display("SRAM sweep mismatch addr=%02h exp=%04h got=%04h",a[7:0],expected_debug,got);
+                    errors=errors+1;
+                end
+            end
+            $display("PASS debug protocol: ECHO MAGIC SRAM READ/WRITE full sweep");
         end
     endtask
 
@@ -517,6 +609,28 @@ module butterfold_top_tb;
     endtask
 `endif
 
+`ifdef BUTTERFOLD_SCHEDULED
+    integer scheduled_accept_cycle [0:7];
+    integer scheduled_input_done_cycle [0:7];
+    logic [7:0] scheduled_accept_command [0:7];
+    integer scheduled_accept_count;
+    integer scheduled_input_done_count;
+    always @(posedge clk) begin
+        if (rst_n && (dut.ext_state == 0) && din_valid_i && din_ready_o &&
+            ((din == CMD_RX_SHORT) || (din == CMD_RX_LONG) ||
+             (din == CMD_TX_SHORT) || (din == CMD_TX_LONG)) &&
+            scheduled_accept_count < 8) begin
+            scheduled_accept_cycle[scheduled_accept_count] = cycle_count;
+            scheduled_accept_command[scheduled_accept_count] = din;
+            scheduled_accept_count = scheduled_accept_count + 1;
+        end
+        if (rst_n && dut.job_push && scheduled_input_done_count < 8) begin
+            scheduled_input_done_cycle[scheduled_input_done_count] = cycle_count;
+            scheduled_input_done_count = scheduled_input_done_count + 1;
+        end
+    end
+`endif
+
     initial begin
         clk=1'b0; rst_n=1'b0; din=8'h00; din_valid_i=1'b0;
         errors=0; cycle_count=0;
@@ -550,7 +664,39 @@ module butterfold_top_tb;
         $display("Only din/din_valid/din_ready and dout/dout_valid are used.");
         $display("============================================================");
 
-`ifdef BUTTERFOLD_STRESS
+        run_debug_protocol();
+
+`ifdef BUTTERFOLD_SCHEDULED
+        scheduled_accept_count = 0;
+        scheduled_input_done_count = 0;
+        run_rx(CMD_RX_SHORT,1'b0);
+        run_rx(CMD_RX_LONG,1'b1);
+        run_tx(CMD_TX_SHORT,1'b0);
+        run_tx(CMD_TX_LONG,1'b1);
+        run_rx(CMD_RX_SHORT,1'b0);
+        run_rx(CMD_RX_LONG,1'b1);
+        run_tx(CMD_TX_SHORT,1'b0);
+        run_tx(CMD_TX_LONG,1'b1);
+        for (integer si=1; si<8; si=si+1) begin
+            $display("SCHEDULED command=%02h interval=%0d post_input_gap=%0d cycles",
+                scheduled_accept_command[si-1],
+                scheduled_accept_cycle[si]-scheduled_accept_cycle[si-1],
+                scheduled_accept_cycle[si]-scheduled_input_done_cycle[si-1]);
+            case (scheduled_accept_command[si-1])
+              CMD_RX_SHORT: if ((scheduled_accept_cycle[si]-scheduled_accept_cycle[si-1]) != 4226) begin
+                  $display("SCHEDULED RX short acceptance mismatch"); errors=errors+1; end
+              CMD_RX_LONG: if ((scheduled_accept_cycle[si]-scheduled_accept_cycle[si-1]) != 4230) begin
+                  $display("SCHEDULED RX long acceptance mismatch"); errors=errors+1; end
+              CMD_TX_SHORT: if ((scheduled_accept_cycle[si]-scheduled_accept_cycle[si-1]) !=
+                                  ((TEST_TX_BYTE_INTERVAL==16) ? 8305 : 4210)) begin
+                  $display("SCHEDULED TX short acceptance mismatch"); errors=errors+1; end
+              CMD_TX_LONG: if ((scheduled_accept_cycle[si]-scheduled_accept_cycle[si-1]) !=
+                                 ((TEST_TX_BYTE_INTERVAL==16) ? 8337 : 4212)) begin
+                  $display("SCHEDULED TX long acceptance mismatch"); errors=errors+1; end
+              default: begin end
+            endcase
+        end
+`elsif BUTTERFOLD_STRESS
         stress_feeder_count = 0;
         fork
             begin
