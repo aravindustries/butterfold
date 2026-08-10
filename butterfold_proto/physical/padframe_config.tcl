@@ -10,7 +10,7 @@ set cell_lib "$pdk_root/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9
 set sram_lib "$pdk_root/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__ss_125C_4v50.lib"
 set io_lib "$io_root/lib/gf180mcu_fd_io__ss_125C_4v50.lib"
 set mapped_core "$root_dir/timing/results/butterfold_mapped.v"
-set wrapper "$root_dir/butterfold_padframe_top.sv"
+set wrapper "$root_dir/rtl/padframe/butterfold_padframe_top.sv"
 set pad_sdc "$phys_dir/padframe_constraints.sdc"
 set pad_result "$phys_dir/results/padframe/route"
 file mkdir $pad_result

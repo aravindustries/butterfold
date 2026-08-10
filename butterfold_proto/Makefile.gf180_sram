@@ -1,6 +1,8 @@
 PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
+SIM_BUILD := build/sim
+TB_DIR := verification/tb
 
 # Use the installed GF180MCU SRAM library by default.
 PDKPATH ?= /foss/pdks/gf180mcuD
@@ -8,20 +10,20 @@ SRAM_VERILOG_DIR ?= $(PDKPATH)/libs.ref/gf180mcu_fd_ip_sram/verilog
 SRAM256_MODEL ?= $(SRAM_VERILOG_DIR)/gf180mcu_fd_ip_sram__sram256x8m8wm1.v
 
 COMMON_RTL = \
-	gf180_sram_256x8_wrapper.sv \
-	gf180_sram_256x16_complex.sv \
-	fft128_modulo_controller.sv \
-	fft128_twiddle_rom.sv \
-	mixed_radix_butterfly.sv \
-	tdiq_input_cp_remove.sv \
-	fdiq_input_adapter.sv \
-	fdiq_output_adapter_sram.sv \
-	tdiq_output_cp_insert_sram.sv \
-	subcarrier_mapper.sv \
-	subcarrier_extractor.sv \
-	standalone_result_serializer.sv \
-	transform_scheduler_core.sv \
-	butterfold_top.sv
+	rtl/memory/gf180_sram_256x8_wrapper.sv \
+	rtl/memory/gf180_sram_256x16_complex.sv \
+	rtl/transform/fft128_modulo_controller.sv \
+	rtl/transform/fft128_twiddle_rom.sv \
+	rtl/transform/mixed_radix_butterfly.sv \
+	rtl/io/tdiq_input_cp_remove.sv \
+	rtl/io/fdiq_input_adapter.sv \
+	rtl/io/fdiq_output_adapter_sram.sv \
+	rtl/io/tdiq_output_cp_insert_sram.sv \
+	rtl/io/subcarrier_mapper.sv \
+	rtl/io/subcarrier_extractor.sv \
+	rtl/io/standalone_result_serializer.sv \
+	rtl/scheduler/transform_scheduler_core.sv \
+	rtl/top/butterfold_top.sv
 
 .PHONY: vectors wrapper reset-recovery behavioral foundry foundry-functional foundry-info \
 	characterize stress-fast stress-paced scheduled-fast scheduled-paced padframe-smoke synth-sta clean
@@ -30,58 +32,67 @@ vectors:
 	$(PYTHON) gen_realtime_vectors.py
 
 wrapper:
-	$(IVERILOG) -g2012 -Wall -s gf180_sram_wrapper_tb -o sim_sram_wrapper.out \
-		gf180_sram_wrapper_tb.sv gf180_sram_256x8_wrapper.sv \
-		gf180_sram_256x16_complex.sv
-	$(VVP) sim_sram_wrapper.out
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -s gf180_sram_wrapper_tb -o $(SIM_BUILD)/sim_sram_wrapper.out \
+		$(TB_DIR)/gf180_sram_wrapper_tb.sv rtl/memory/gf180_sram_256x8_wrapper.sv \
+		rtl/memory/gf180_sram_256x16_complex.sv
+	$(VVP) $(SIM_BUILD)/sim_sram_wrapper.out
 
 reset-recovery:
-	$(IVERILOG) -g2012 -Wall -s reset_recovery_tb -o sim_reset_recovery.out \
-		reset_recovery_tb.sv $(COMMON_RTL)
-	$(VVP) sim_reset_recovery.out
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -s reset_recovery_tb -o $(SIM_BUILD)/sim_reset_recovery.out \
+		$(TB_DIR)/reset_recovery_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_reset_recovery.out
 
 padframe-smoke:
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -Dfunctional -s butterfold_padframe_tb \
-		-o sim_padframe_smoke.out butterfold_padframe_tb.sv \
-		butterfold_padframe_top.sv $(COMMON_RTL) \
+		-o $(SIM_BUILD)/sim_padframe_smoke.out $(TB_DIR)/butterfold_padframe_tb.sv \
+		rtl/padframe/butterfold_padframe_top.sv $(COMMON_RTL) \
 		$(PDKPATH)/libs.ref/gf180mcu_fd_io/verilog/gf180mcu_fd_io.v \
 		$(PDKPATH)/libs.ref/gf180mcu_fd_sc_mcu9t5v0/verilog/primitives.v \
 		$(PDKPATH)/libs.ref/gf180mcu_fd_sc_mcu9t5v0/verilog/gf180mcu_fd_sc_mcu9t5v0.v
-	$(VVP) sim_padframe_smoke.out
+	$(VVP) $(SIM_BUILD)/sim_padframe_smoke.out
 
 behavioral: vectors
-	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_butterfold_sram.out \
-		butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_sram.out
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_sram.out \
+		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_sram.out
 
 characterize: vectors
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_PERF -s butterfold_top_tb \
-		-o sim_butterfold_characterize.out butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_characterize.out
+		-o $(SIM_BUILD)/sim_butterfold_characterize.out $(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_characterize.out
 
 stress-fast: vectors
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_STRESS -s butterfold_top_tb \
-		-o sim_butterfold_stress_fast.out butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_stress_fast.out
+		-o $(SIM_BUILD)/sim_butterfold_stress_fast.out $(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_stress_fast.out
 
 # At 61.44 MHz, 16 core clocks per output byte gives 3.84 Mbyte/s,
 # corresponding to 1.92 Msamples/s for interleaved complex waveform bytes.
 stress-paced: vectors
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_STRESS \
 		-DBUTTERFOLD_WAVE_PACED -s butterfold_top_tb \
-		-o sim_butterfold_stress_paced.out butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_stress_paced.out
+		-o $(SIM_BUILD)/sim_butterfold_stress_paced.out $(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_stress_paced.out
 
 scheduled-fast: vectors
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_SCHEDULED -s butterfold_top_tb \
-		-o sim_butterfold_scheduled_fast.out butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_scheduled_fast.out
+		-o $(SIM_BUILD)/sim_butterfold_scheduled_fast.out $(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_scheduled_fast.out
 
 scheduled-paced: vectors
+	mkdir -p $(SIM_BUILD)
 	$(IVERILOG) -g2012 -Wall -DBUTTERFOLD_SCHEDULED \
 		-DBUTTERFOLD_WAVE_PACED -s butterfold_top_tb \
-		-o sim_butterfold_scheduled_paced.out butterfold_top_tb.sv $(COMMON_RTL)
-	$(VVP) sim_butterfold_scheduled_paced.out
+		-o $(SIM_BUILD)/sim_butterfold_scheduled_paced.out $(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_scheduled_paced.out
 
 # Official GlobalFoundries SRAM Verilog models, FUNCTIONAL mode.
 # IMPORTANT: intentionally DO NOT pass -gspecify to Icarus.
@@ -92,11 +103,12 @@ scheduled-paced: vectors
 foundry: foundry-functional
 
 foundry-functional: vectors
+	mkdir -p $(SIM_BUILD)
 	@test -f "$(SRAM256_MODEL)" || (echo "Missing SRAM256 model: $(SRAM256_MODEL)"; exit 1)
 	$(IVERILOG) -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM \
-		-s butterfold_top_tb -o sim_butterfold_foundry_sram.out \
-		butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
-	$(VVP) sim_butterfold_foundry_sram.out
+		-s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_foundry_sram.out \
+		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_foundry_sram.out
 
 foundry-info:
 	@echo "PDKPATH          = $(PDKPATH)"
@@ -114,8 +126,4 @@ synth-sta:
 	sta -no_init -exit timing/sta.tcl | tee timing/results/sta_summary.log
 
 clean:
-	rm -f sim_sram_wrapper.out sim_butterfold_sram.out \
-		sim_reset_recovery.out \
-		sim_butterfold_foundry_sram.out sim_butterfold_characterize.out \
-		sim_butterfold_stress_fast.out sim_butterfold_stress_paced.out \
-		sim_butterfold_scheduled_fast.out sim_butterfold_scheduled_paced.out *.vcd
+	rm -f $(SIM_BUILD)/*.out *.vcd

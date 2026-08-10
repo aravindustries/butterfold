@@ -1,5 +1,9 @@
 # Authoritative two-SRAM physical flow
 
+The current routed-run pointer and artifact provenance are recorded in
+[`results/CURRENT_RUN.md`](results/CURRENT_RUN.md). A GDS stream-out stage has
+not yet been implemented; do not treat an older result family as a substitute.
+
 This directory implements the real synthesized ButterFold netlist. It is not
 the historical area-only macro harness.
 
