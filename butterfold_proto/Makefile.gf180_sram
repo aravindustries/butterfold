@@ -24,7 +24,7 @@ COMMON_RTL = \
 	butterfold_top.sv
 
 .PHONY: vectors wrapper reset-recovery behavioral foundry foundry-functional foundry-info \
-	characterize stress-fast stress-paced scheduled-fast scheduled-paced synth-sta clean
+	characterize stress-fast stress-paced scheduled-fast scheduled-paced padframe-smoke synth-sta clean
 
 vectors:
 	$(PYTHON) gen_realtime_vectors.py
@@ -39,6 +39,15 @@ reset-recovery:
 	$(IVERILOG) -g2012 -Wall -s reset_recovery_tb -o sim_reset_recovery.out \
 		reset_recovery_tb.sv $(COMMON_RTL)
 	$(VVP) sim_reset_recovery.out
+
+padframe-smoke:
+	$(IVERILOG) -g2012 -Wall -Dfunctional -s butterfold_padframe_tb \
+		-o sim_padframe_smoke.out butterfold_padframe_tb.sv \
+		butterfold_padframe_top.sv $(COMMON_RTL) \
+		$(PDKPATH)/libs.ref/gf180mcu_fd_io/verilog/gf180mcu_fd_io.v \
+		$(PDKPATH)/libs.ref/gf180mcu_fd_sc_mcu9t5v0/verilog/primitives.v \
+		$(PDKPATH)/libs.ref/gf180mcu_fd_sc_mcu9t5v0/verilog/gf180mcu_fd_sc_mcu9t5v0.v
+	$(VVP) sim_padframe_smoke.out
 
 behavioral: vectors
 	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_butterfold_sram.out \

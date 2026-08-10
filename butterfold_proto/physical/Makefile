@@ -4,7 +4,10 @@ STAGE ?= route
 
 .PHONY: synth floorplan place cts route timing pdn all clean \
 	physical-signoff-setup physical-signoff-hold physical-signoff-io \
-	physical-signoff-summary
+	physical-signoff-summary padframe-build padframe-smoke padframe-floorplan \
+	padframe-place padframe-cts padframe-route padframe-signoff padframe-summary
+
+.PHONY: padframe-electrical
 
 synth:
 	$(MAKE) -C .. -f Makefile.gf180_sram synth-sta
@@ -53,6 +56,35 @@ physical-signoff-summary: physical-signoff-io
 	SIGNOFF_CORNER=ss_125C_4v50 SIGNOFF_RC=max SIGNOFF_IO_CONTRACT=1 $(OPENROAD) -no_init -exit signoff_sta.tcl
 	SIGNOFF_CORNER=tt_025C_5v00 SIGNOFF_RC=nom SIGNOFF_IO_CONTRACT=1 $(OPENROAD) -no_init -exit signoff_sta.tcl
 	SIGNOFF_CORNER=ff_n40C_5v50 SIGNOFF_RC=min SIGNOFF_IO_CONTRACT=1 $(OPENROAD) -no_init -exit signoff_sta.tcl
+
+padframe-build:
+	$(MAKE) -C .. -f Makefile.gf180_sram synth-sta
+
+padframe-smoke:
+	$(MAKE) -C .. -f Makefile.gf180_sram padframe-smoke
+
+padframe-floorplan: padframe-build
+	PADFRAME_STAGE=floorplan $(OPENROAD) -no_init -exit padframe_flow.tcl
+
+padframe-place: padframe-build
+	PADFRAME_STAGE=place $(OPENROAD) -no_init -exit padframe_flow.tcl
+
+padframe-electrical:
+	PAD_ELECTRICAL_STAGE=place $(OPENROAD) -no_init -exit padframe_electrical.tcl
+
+padframe-cts: padframe-build
+	PADFRAME_STAGE=cts $(OPENROAD) -no_init -exit padframe_flow.tcl
+
+padframe-route: padframe-build
+	PADFRAME_STAGE=route $(OPENROAD) -no_init -exit padframe_flow.tcl
+
+padframe-signoff:
+	SIGNOFF_CORNER=ss_125C_4v50 SIGNOFF_RC=max $(OPENROAD) -no_init -exit padframe_signoff.tcl
+	SIGNOFF_CORNER=tt_025C_5v00 SIGNOFF_RC=nom $(OPENROAD) -no_init -exit padframe_signoff.tcl
+	SIGNOFF_CORNER=ff_n40C_5v50 SIGNOFF_RC=min $(OPENROAD) -no_init -exit padframe_signoff.tcl
+
+padframe-summary: padframe-signoff
+	@for f in results/padframe/signoff/*/*wns.rpt results/padframe/signoff/*/*tns.rpt; do echo "$$f"; sed -n '1,4p' "$$f"; done
 
 clean:
 	rm -rf results
