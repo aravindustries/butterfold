@@ -21,10 +21,11 @@ clock root are valid. Output-pad electrical closure at the assumed 5 pF load
 is still in progress; do not begin clock gating from an assumption that the
 complete pad specification is frozen.
 
-No GDS was streamed from the current authoritative run. See
+A structurally verified candidate GDS has been streamed from the authoritative
+routed ODB. It is not final tapeout GDS because output-pad electrical closure,
+full GDS DRC, and LVS remain outstanding. See
 [`physical/results/CURRENT_RUN.md`](physical/results/CURRENT_RUN.md) for the
-authoritative ODB, DEF, SPEFs, DRC report, STA directory, and required future
-GDS merge collateral.
+authoritative ODB, DEF, candidate GDS, SPEFs, DRC report, and STA directory.
 
 ## Project map
 

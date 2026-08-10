@@ -1,11 +1,14 @@
 OPENROAD ?= openroad
+PYTHON ?= python3
+PDKPATH ?= /foss/pdks/gf180mcuD
 ARRANGEMENT ?= C
 STAGE ?= route
 
 .PHONY: synth floorplan place cts route timing pdn all clean \
 	physical-signoff-setup physical-signoff-hold physical-signoff-io \
 	physical-signoff-summary padframe-build padframe-smoke padframe-floorplan \
-	padframe-place padframe-cts padframe-route padframe-signoff padframe-summary
+	padframe-place padframe-cts padframe-route padframe-signoff padframe-summary \
+	candidate-gds
 
 .PHONY: padframe-electrical
 
@@ -85,6 +88,17 @@ padframe-signoff:
 
 padframe-summary: padframe-signoff
 	@for f in results/padframe/signoff/*/*wns.rpt results/padframe/signoff/*/*tns.rpt; do echo "$$f"; sed -n '1,4p' "$$f"; done
+
+# Non-signoff stream-out of the existing authoritative routed padframe ODB.
+# This does not rerun or modify any P&R stage.
+candidate-gds:
+	mkdir -p results/padframe/gds
+	STREAMOUT_DEF=results/padframe/gds/route_for_streamout.def \
+		$(OPENROAD) -no_init -exit streamout_odb.tcl
+	ROUTE_DEF=results/padframe/gds/route_for_streamout.def \
+		OUTPUT_GDS=results/padframe/gds/butterfold_padframe_candidate.gds \
+		PDKPATH=$(PDKPATH) \
+		$(PYTHON) streamout_gds.py
 
 clean:
 	rm -rf results

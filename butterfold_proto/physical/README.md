@@ -2,7 +2,17 @@
 
 The current routed-run pointer and artifact provenance are recorded in
 [`results/CURRENT_RUN.md`](results/CURRENT_RUN.md). A GDS stream-out stage has
-not yet been implemented; do not treat an older result family as a substitute.
+been added for a clearly labeled candidate snapshot; do not treat it as final
+signoff or substitute an older result family.
+
+```sh
+make -C physical candidate-gds
+```
+
+This target reads the authoritative padframe `route.odb`, validates the top,
+SRAM and pad masters, exports a stream-out DEF, and uses KLayout's LEF/DEF
+reader plus the installed GF180 standard-cell, SRAM, and I/O GDS views. It does
+not rerun or alter synthesis, placement, CTS, routing, or extracted timing.
 
 This directory implements the real synthesized ButterFold netlist. It is not
 the historical area-only macro harness.

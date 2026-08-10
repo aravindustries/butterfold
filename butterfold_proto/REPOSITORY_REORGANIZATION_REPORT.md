@@ -1,5 +1,10 @@
 # ButterFold repository reorganization and artifact-provenance report
 
+> Point-in-time note: this report records the repository state during the
+> reorganization task, when no GDS existed. A subsequent candidate stream-out
+> is documented by `reports/current/CANDIDATE_GDS_STREAMOUT_REPORT.md` and
+> `physical/results/CURRENT_RUN.md`.
+
 Date: 2026-08-10  
 Branch: `icarus-implementation`  
 Repository: `/headless/aravindustries-repos/butterfold/butterfold_proto`
