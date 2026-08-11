@@ -38,6 +38,7 @@ make_io_sites -horizontal_site GF_IO_Site -vertical_site GF_IO_Site \
   -corner_site GF_COR_Site -offset 0
 source "$phys_dir/padframe_place_pads.tcl"
 place_pins -hor_layers Metal3 -ver_layers Metal2
+source "$phys_dir/padframe_connect_signal_pads.tcl"
 source "$phys_dir/padframe_place_buffers.tcl"
 
 # Preserve the correlated two-byte SRAM arrangement from the validated core.
@@ -54,16 +55,9 @@ foreach n {VDD VSS one_ zero_ {u_core/one_} {u_core/zero_}} {
   set dbnet [[ord::get_db_block] findNet $n]
   if {$dbnet ne "NULL"} { $dbnet setSpecial }
 }
-foreach n {pad_clk pad_rst_n pad_din_valid_i pad_din_ready_o pad_dout_valid_o} {
-  set dbnet [[ord::get_db_block] findNet $n]
-  if {$dbnet ne "NULL"} { $dbnet setSpecial }
-}
-for {set i 0} {$i < 8} {incr i} {
-  foreach stem {pad_din pad_dout} {
-    set dbnet [[ord::get_db_block] findNet "${stem}\[$i\]"]
-    if {$dbnet ne "NULL"} { $dbnet setSpecial }
-  }
-}
+# External signal BTerms now intentionally own the pad Metal5 conductor.  The
+# helper marks those completed boundary nets special so TritonRoute does not
+# seek an ordinary core-routing access point inside a bond pad.
 set_voltage_domain -name CORE -power {u_core/one_} -ground {u_core/zero_}
 define_pdn_grid -name core_grid -voltage_domains CORE -starts_with POWER
 add_pdn_stripe -grid core_grid -layer Metal1 -followpins -width 0.48
@@ -117,6 +111,8 @@ detailed_placement
 estimate_parasitics -placement
 pad_save cts
 if {$pad_stage eq "cts"} { exit }
+
+source "$phys_dir/padframe_connect_static_controls.tcl"
 
 global_route -guide_file "$pad_result/route.guide" -congestion_iterations 60 -allow_congestion \
   -congestion_report_file "$pad_result/congestion.rpt"

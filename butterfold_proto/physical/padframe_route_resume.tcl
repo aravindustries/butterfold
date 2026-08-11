@@ -12,16 +12,8 @@ foreach n {VDD VSS one_ zero_ {u_core/one_} {u_core/zero_}} {
   set dbnet [[ord::get_db_block] findNet $n]
   if {$dbnet ne "NULL"} { $dbnet setSpecial }
 }
-foreach n {pad_clk pad_rst_n pad_din_valid_i pad_din_ready_o pad_dout_valid_o} {
-  set dbnet [[ord::get_db_block] findNet $n]
-  if {$dbnet ne "NULL"} { $dbnet setSpecial }
-}
-for {set i 0} {$i < 8} {incr i} {
-  foreach stem {pad_din pad_dout} {
-    set dbnet [[ord::get_db_block] findNet "${stem}\[$i\]"]
-    if {$dbnet ne "NULL"} { $dbnet setSpecial }
-  }
-}
+source [file join [file dirname [file normalize [info script]]] padframe_connect_signal_pads.tcl]
+source [file join [file dirname [file normalize [info script]]] padframe_connect_static_controls.tcl]
 read_sdc $pad_sdc
 set_propagated_clock [get_clocks pad_clk_ext]
 set_wire_rc -signal -layer Metal2

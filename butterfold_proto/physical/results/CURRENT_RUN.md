@@ -14,12 +14,32 @@ the current physical blocker.
 - TT/RCnom SPEF: `physical/results/padframe/signoff/tt_025C_5v00_nom/padframe.spef`
 - FF/RCmin SPEF: `physical/results/padframe/signoff/ff_n40C_5v50_min/padframe.spef`
 - Multi-corner STA: `physical/results/padframe/signoff/`
-- Current report: `reports/current/PAD_CORE_BUFFER_CTS_REPAIR_REPORT.md`
+- Current report: `reports/current/PAD_BOUNDARY_CONNECTIVITY_REPAIR_REPORT.md`
 - Latest candidate GDS: `physical/results/padframe/gds/butterfold_padframe_candidate.gds`
-- Candidate GDS SHA-256: `f4601ed31b30a58fb2b5c8aface9db1b62759e842c79f3d53788de2ec21c5da1`
+- Candidate GDS SHA-256: `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
 - GDS status: **CANDIDATE — output-pad electrical/load specification is not frozen**
 - Full GF180 GDS signoff DRC: **NOT RUN**
-- LVS: **NOT RUN**
+- LVS GDS: `physical/results/padframe/gds/butterfold_padframe_candidate.gds`
+- LVS GDS SHA-256: `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
+- LVS top: `butterfold_padframe_top`
+- LVS reference: `physical/results/padframe/route/butterfold_padframe_physical.v`
+- LVS tool: **Magic 8.3 hierarchical extraction + Netgen 1.5.318**
+- LVS setup: `/foss/pdks/gf180mcuD/libs.tech/netgen/gf180mcuD_setup.tcl`
+- LVS report: `physical/results/padframe/lvs/lvs_report.out`
+- LVS status: **PASS — hierarchical foundry-leaf connectivity; 21/21 signal terminals, 2/2 SRAM macros, negative control fails as expected**
+- Full transistor LVS: **NOT RUN**
+
+The original boundary failure is preserved in the diagnostic history. The
+current milestone treats GF180 standard cells, I/O cells, and SRAMs as verified
+leaf cells and compares their instance/pin connectivity against the current
+post-route physical netlist. It does not claim transistor-level library LVS.
+See `reports/current/HIERARCHICAL_LVS_MILESTONE_REPORT.md`.
+
+Candidate hash history:
+
+- `f4601ed31b30a58fb2b5c8aface9db1b62759e842c79f3d53788de2ec21c5da1`: old tracked candidate.
+- `beedd2310bbe56e0ff14a1391c59bec4da8625eb234b285dc4a46fff0ec8424c`: superseded intermediate candidate.
+- `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`: current authoritative candidate and hierarchical-LVS milestone.
 
 The reproducible `make -C physical candidate-gds` target loads and validates
 the routed ODB, exports a stream-out DEF, then merges that routed geometry with

@@ -8,7 +8,7 @@ STAGE ?= route
 	physical-signoff-setup physical-signoff-hold physical-signoff-io \
 	physical-signoff-summary padframe-build padframe-smoke padframe-floorplan \
 	padframe-place padframe-cts padframe-route padframe-signoff padframe-summary \
-	candidate-gds
+	pad-boundary-repair candidate-gds
 
 .PHONY: padframe-electrical
 
@@ -100,5 +100,18 @@ candidate-gds:
 		PDKPATH=$(PDKPATH) \
 		$(PYTHON) streamout_gds.py
 
+# Hierarchical connectivity comparison using Magic, Netgen, and foundry LEF
+# leaf boundaries.  This does not re-extract foundry-cell transistors.
+lvs:
+	$(PYTHON) run_lvs.py
+
+lvs-diagnostic:
+	$(PYTHON) audit_lvs_pins.py
+
 clean:
 	rm -rf results
+
+# Focused repair/rebuild from the existing CTS database.  This updates only
+# top-level BPin ownership and regenerates routed artifacts.
+pad-boundary-repair:
+	$(OPENROAD) -no_init -exit padframe_route_resume.tcl

@@ -5615,6 +5615,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_05636_ ;
  wire \u_core/_05637_ ;
  wire \u_core/_05638_ ;
+ wire u_pad_din1_tie_lo_net;
  wire \u_core/_05640_ ;
  wire \u_core/_05641_ ;
  wire \u_core/_05642_ ;
@@ -5782,9 +5783,11 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/net463 ;
  wire \u_core/net1080 ;
  wire \u_core/net541 ;
+ wire u_pad_din2_tie_lo_net;
  wire \u_core/_05808_ ;
  wire net1130;
  wire \u_core/_05810_ ;
+ wire u_pad_din3_tie_lo_net;
  wire \u_core/net457 ;
  wire net516;
  wire \u_core/_05814_ ;
@@ -5989,11 +5992,18 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_06016_ ;
  wire \u_core/net543 ;
  wire \u_core/_06018_ ;
+ wire u_pad_dout_valid_tie_hi_net;
  wire \u_core/_06022_ ;
  wire \u_core/_06023_ ;
+ wire u_pad_dout1_tie_hi_net;
+ wire u_pad_din_ready_tie_hi_net;
+ wire u_pad_dout_valid_tie_lo_net;
+ wire u_pad_dout7_tie_hi_net;
+ wire u_pad_dout7_tie_lo_net;
  wire \u_core/net1137 ;
  wire \u_core/_06030_ ;
  wire \u_core/_06033_ ;
+ wire u_pad_dout6_tie_hi_net;
  wire \u_core/_06035_ ;
  wire \u_core/_06036_ ;
  wire \u_core/_06037_ ;
@@ -6526,6 +6536,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_06572_ ;
  wire \u_core/_06573_ ;
  wire \u_core/_06574_ ;
+ wire u_pad_din_ready_tie_lo_net;
  wire \u_core/_06576_ ;
  wire \u_core/_06577_ ;
  wire \u_core/_06578_ ;
@@ -6606,6 +6617,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_06653_ ;
  wire \u_core/_06654_ ;
  wire \u_core/_06655_ ;
+ wire u_pad_rst_n_tie_lo_net;
  wire \u_core/_06657_ ;
  wire \u_core/_06658_ ;
  wire \u_core/_06659_ ;
@@ -6633,6 +6645,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_06681_ ;
  wire \u_core/_06682_ ;
  wire \u_core/_06683_ ;
+ wire u_pad_clk_tie_lo_net;
  wire \u_core/_06685_ ;
  wire \u_core/_06686_ ;
  wire \u_core/_06687_ ;
@@ -7249,6 +7262,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07298_ ;
  wire \u_core/_07299_ ;
  wire \u_core/_07300_ ;
+ wire u_pad_dout6_tie_lo_net;
  wire \u_core/net651 ;
  wire \u_core/_07303_ ;
  wire \u_core/_07304_ ;
@@ -7346,6 +7360,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07398_ ;
  wire \u_core/_07399_ ;
  wire \u_core/_07400_ ;
+ wire u_pad_din7_tie_lo_net;
  wire \u_core/_07402_ ;
  wire \u_core/_07403_ ;
  wire \u_core/_07404_ ;
@@ -7511,6 +7526,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07567_ ;
  wire \u_core/_07568_ ;
  wire \u_core/_07569_ ;
+ wire u_pad_din6_tie_lo_net;
  wire \u_core/_07571_ ;
  wire \u_core/_07572_ ;
  wire \u_core/_07573_ ;
@@ -7597,10 +7613,12 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07654_ ;
  wire \u_core/_07655_ ;
  wire \u_core/_07656_ ;
+ wire u_pad_din0_tie_lo_net;
  wire net1139;
  wire \u_core/_07659_ ;
  wire \u_core/_07660_ ;
  wire \u_core/_07661_ ;
+ wire u_pad_dout5_tie_lo_net;
  wire \u_core/_07663_ ;
  wire \u_core/_07664_ ;
  wire \u_core/_07665_ ;
@@ -7609,6 +7627,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07668_ ;
  wire \u_core/_07669_ ;
  wire \u_core/_07670_ ;
+ wire u_pad_dout4_tie_hi_net;
  wire \u_core/_07672_ ;
  wire \u_core/_07673_ ;
  wire \u_core/_07674_ ;
@@ -7679,6 +7698,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07739_ ;
  wire \u_core/_07740_ ;
  wire \u_core/_07741_ ;
+ wire u_pad_dout4_tie_lo_net;
  wire \u_core/_07743_ ;
  wire \u_core/_07744_ ;
  wire net1138;
@@ -7687,6 +7707,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07748_ ;
  wire \u_core/_07749_ ;
  wire \u_core/_07750_ ;
+ wire u_pad_dout3_tie_hi_net;
  wire \u_core/net702 ;
  wire \u_core/_07753_ ;
  wire \u_core/_07754_ ;
@@ -7740,6 +7761,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07802_ ;
  wire \u_core/_07803_ ;
  wire \u_core/_07804_ ;
+ wire u_pad_dout3_tie_lo_net;
  wire \u_core/_07806_ ;
  wire \u_core/_07807_ ;
  wire \u_core/_07808_ ;
@@ -7747,6 +7769,8 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_07810_ ;
  wire \u_core/_07811_ ;
  wire \u_core/net539 ;
+ wire u_pad_din5_tie_lo_net;
+ wire u_pad_din4_tie_lo_net;
  wire \u_core/_07815_ ;
  wire \u_core/_07816_ ;
  wire clknet_leaf_37_core_clk_regs;
@@ -8137,6 +8161,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_08206_ ;
  wire \u_core/_08207_ ;
  wire \u_core/_08208_ ;
+ wire u_pad_dout2_tie_hi_net;
  wire \u_core/_08210_ ;
  wire \u_core/_08211_ ;
  wire \u_core/_08212_ ;
@@ -8432,6 +8457,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_08503_ ;
  wire \u_core/_08504_ ;
  wire \u_core/_08505_ ;
+ wire u_pad_dout2_tie_lo_net;
  wire \u_core/_08507_ ;
  wire \u_core/_08508_ ;
  wire \u_core/_08509_ ;
@@ -8752,6 +8778,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_08826_ ;
  wire \u_core/_08827_ ;
  wire \u_core/net542 ;
+ wire u_pad_din_valid_tie_lo_net;
  wire \u_core/_08830_ ;
  wire \u_core/_08831_ ;
  wire \u_core/net696 ;
@@ -9112,6 +9139,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/_09187_ ;
  wire \u_core/_09188_ ;
  wire \u_core/_09189_ ;
+ wire u_pad_dout1_tie_lo_net;
  wire \u_core/_09191_ ;
  wire \u_core/_09192_ ;
  wire \u_core/_09193_ ;
@@ -9260,6 +9288,8 @@ module butterfold_padframe_top (pad_clk,
  wire clknet_leaf_65_core_clk_regs;
  wire \u_core/_09337_ ;
  wire clknet_leaf_66_core_clk_regs;
+ wire u_pad_dout0_tie_hi_net;
+ wire u_pad_dout0_tie_lo_net;
  wire \u_core/_09341_ ;
  wire clknet_leaf_67_core_clk_regs;
  wire \u_core/_09343_ ;
@@ -9551,6 +9581,7 @@ module butterfold_padframe_top (pad_clk,
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.arithmetic_stage_valid ;
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.combine_stage_valid ;
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.final_scalar_pending ;
+ wire u_pad_dout5_tie_hi_net;
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.premultiply_stage_valid ;
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.twiddle_im_full ;
  wire \u_core/u_transform_scheduler_core.u_mixed_radix_butterfly.twiddle_re_full ;
@@ -54513,151 +54544,182 @@ module butterfold_padframe_top (pad_clk,
  gf180mcu_fd_sc_mcu9t5v0__buf_1 u_din7_iso (.I(net1139),
     .Z(core_din_iso[7]));
  gf180mcu_fd_io__in_c u_pad_clk (.PAD(pad_clk),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_clk_tie_lo_net),
+    .PU(u_pad_clk_tie_lo_net),
     .Y(clk_iso));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_clk_tie_lo (.ZN(u_pad_clk_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din0 (.PAD(pad_din[0]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din0_tie_lo_net),
+    .PU(u_pad_din0_tie_lo_net),
     .Y(core_din_pad[0]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din0_tie_lo (.ZN(u_pad_din0_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din1 (.PAD(pad_din[1]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din1_tie_lo_net),
+    .PU(u_pad_din1_tie_lo_net),
     .Y(core_din_pad[1]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din1_tie_lo (.ZN(u_pad_din1_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din2 (.PAD(pad_din[2]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din2_tie_lo_net),
+    .PU(u_pad_din2_tie_lo_net),
     .Y(core_din_pad[2]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din2_tie_lo (.ZN(u_pad_din2_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din3 (.PAD(pad_din[3]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din3_tie_lo_net),
+    .PU(u_pad_din3_tie_lo_net),
     .Y(core_din_pad[3]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din3_tie_lo (.ZN(u_pad_din3_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din4 (.PAD(pad_din[4]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din4_tie_lo_net),
+    .PU(u_pad_din4_tie_lo_net),
     .Y(core_din_pad[4]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din4_tie_lo (.ZN(u_pad_din4_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din5 (.PAD(pad_din[5]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din5_tie_lo_net),
+    .PU(u_pad_din5_tie_lo_net),
     .Y(core_din_pad[5]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din5_tie_lo (.ZN(u_pad_din5_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din6 (.PAD(pad_din[6]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din6_tie_lo_net),
+    .PU(u_pad_din6_tie_lo_net),
     .Y(core_din_pad[6]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din6_tie_lo (.ZN(u_pad_din6_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din7 (.PAD(pad_din[7]),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din7_tie_lo_net),
+    .PU(u_pad_din7_tie_lo_net),
     .Y(core_din_pad[7]));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din7_tie_lo (.ZN(u_pad_din7_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_din_ready (.A(net504),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_din_ready_tie_lo_net),
+    .IE(u_pad_din_ready_tie_lo_net),
+    .OE(u_pad_din_ready_tie_hi_net),
     .PAD(pad_din_ready_o),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_din_ready_tie_lo_net),
+    .PDRV0(u_pad_din_ready_tie_hi_net),
+    .PDRV1(u_pad_din_ready_tie_hi_net),
+    .PU(u_pad_din_ready_tie_lo_net),
+    .SL(u_pad_din_ready_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_din_ready_tie_hi (.Z(u_pad_din_ready_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din_ready_tie_lo (.ZN(u_pad_din_ready_tie_lo_net));
  gf180mcu_fd_io__in_c u_pad_din_valid (.PAD(pad_din_valid_i),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_din_valid_tie_lo_net),
+    .PU(u_pad_din_valid_tie_lo_net),
     .Y(core_din_valid_pad));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_din_valid_tie_lo (.ZN(u_pad_din_valid_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout0 (.A(net516),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout0_tie_lo_net),
+    .IE(u_pad_dout0_tie_lo_net),
+    .OE(u_pad_dout0_tie_hi_net),
     .PAD(pad_dout[0]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout0_tie_lo_net),
+    .PDRV0(u_pad_dout0_tie_hi_net),
+    .PDRV1(u_pad_dout0_tie_hi_net),
+    .PU(u_pad_dout0_tie_lo_net),
+    .SL(u_pad_dout0_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout0_tie_hi (.Z(u_pad_dout0_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout0_tie_lo (.ZN(u_pad_dout0_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout1 (.A(net502),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout1_tie_lo_net),
+    .IE(u_pad_dout1_tie_lo_net),
+    .OE(u_pad_dout1_tie_hi_net),
     .PAD(pad_dout[1]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout1_tie_lo_net),
+    .PDRV0(u_pad_dout1_tie_hi_net),
+    .PDRV1(u_pad_dout1_tie_hi_net),
+    .PU(u_pad_dout1_tie_lo_net),
+    .SL(u_pad_dout1_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout1_tie_hi (.Z(u_pad_dout1_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout1_tie_lo (.ZN(u_pad_dout1_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout2 (.A(net517),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout2_tie_lo_net),
+    .IE(u_pad_dout2_tie_lo_net),
+    .OE(u_pad_dout2_tie_hi_net),
     .PAD(pad_dout[2]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout2_tie_lo_net),
+    .PDRV0(u_pad_dout2_tie_hi_net),
+    .PDRV1(u_pad_dout2_tie_hi_net),
+    .PU(u_pad_dout2_tie_lo_net),
+    .SL(u_pad_dout2_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout2_tie_hi (.Z(u_pad_dout2_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout2_tie_lo (.ZN(u_pad_dout2_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout3 (.A(net524),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout3_tie_lo_net),
+    .IE(u_pad_dout3_tie_lo_net),
+    .OE(u_pad_dout3_tie_hi_net),
     .PAD(pad_dout[3]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout3_tie_lo_net),
+    .PDRV0(u_pad_dout3_tie_hi_net),
+    .PDRV1(u_pad_dout3_tie_hi_net),
+    .PU(u_pad_dout3_tie_lo_net),
+    .SL(u_pad_dout3_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout3_tie_hi (.Z(u_pad_dout3_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout3_tie_lo (.ZN(u_pad_dout3_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout4 (.A(net518),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout4_tie_lo_net),
+    .IE(u_pad_dout4_tie_lo_net),
+    .OE(u_pad_dout4_tie_hi_net),
     .PAD(pad_dout[4]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout4_tie_lo_net),
+    .PDRV0(u_pad_dout4_tie_hi_net),
+    .PDRV1(u_pad_dout4_tie_hi_net),
+    .PU(u_pad_dout4_tie_lo_net),
+    .SL(u_pad_dout4_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout4_tie_hi (.Z(u_pad_dout4_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout4_tie_lo (.ZN(u_pad_dout4_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout5 (.A(net525),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout5_tie_lo_net),
+    .IE(u_pad_dout5_tie_lo_net),
+    .OE(u_pad_dout5_tie_hi_net),
     .PAD(pad_dout[5]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout5_tie_lo_net),
+    .PDRV0(u_pad_dout5_tie_hi_net),
+    .PDRV1(u_pad_dout5_tie_hi_net),
+    .PU(u_pad_dout5_tie_lo_net),
+    .SL(u_pad_dout5_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout5_tie_hi (.Z(u_pad_dout5_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout5_tie_lo (.ZN(u_pad_dout5_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout6 (.A(net503),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout6_tie_lo_net),
+    .IE(u_pad_dout6_tie_lo_net),
+    .OE(u_pad_dout6_tie_hi_net),
     .PAD(pad_dout[6]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout6_tie_lo_net),
+    .PDRV0(u_pad_dout6_tie_hi_net),
+    .PDRV1(u_pad_dout6_tie_hi_net),
+    .PU(u_pad_dout6_tie_lo_net),
+    .SL(u_pad_dout6_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout6_tie_hi (.Z(u_pad_dout6_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout6_tie_lo (.ZN(u_pad_dout6_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout7 (.A(net520),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout7_tie_lo_net),
+    .IE(u_pad_dout7_tie_lo_net),
+    .OE(u_pad_dout7_tie_hi_net),
     .PAD(pad_dout[7]),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout7_tie_lo_net),
+    .PDRV0(u_pad_dout7_tie_hi_net),
+    .PDRV1(u_pad_dout7_tie_hi_net),
+    .PU(u_pad_dout7_tie_lo_net),
+    .SL(u_pad_dout7_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout7_tie_hi (.Z(u_pad_dout7_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout7_tie_lo (.ZN(u_pad_dout7_tie_lo_net));
  gf180mcu_fd_io__bi_t u_pad_dout_valid (.A(net580),
-    .CS(zero_),
-    .IE(zero_),
-    .OE(one_),
+    .CS(u_pad_dout_valid_tie_lo_net),
+    .IE(u_pad_dout_valid_tie_lo_net),
+    .OE(u_pad_dout_valid_tie_hi_net),
     .PAD(pad_dout_valid_o),
-    .PD(zero_),
-    .PDRV0(one_),
-    .PDRV1(one_),
-    .PU(zero_),
-    .SL(zero_));
+    .PD(u_pad_dout_valid_tie_lo_net),
+    .PDRV0(u_pad_dout_valid_tie_hi_net),
+    .PDRV1(u_pad_dout_valid_tie_hi_net),
+    .PU(u_pad_dout_valid_tie_lo_net),
+    .SL(u_pad_dout_valid_tie_lo_net));
+ gf180mcu_fd_sc_mcu9t5v0__tieh u_pad_dout_valid_tie_hi (.Z(u_pad_dout_valid_tie_hi_net));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_dout_valid_tie_lo (.ZN(u_pad_dout_valid_tie_lo_net));
  gf180mcu_fd_io__dvdd u_pad_dvdd ();
  gf180mcu_fd_io__dvss u_pad_dvss ();
  gf180mcu_fd_io__in_c u_pad_rst_n (.PAD(pad_rst_n),
-    .PD(zero_),
-    .PU(zero_),
+    .PD(u_pad_rst_n_tie_lo_net),
+    .PU(u_pad_rst_n_tie_lo_net),
     .Y(rst_iso));
+ gf180mcu_fd_sc_mcu9t5v0__tiel u_pad_rst_n_tie_lo (.ZN(u_pad_rst_n_tie_lo_net));
  gf180mcu_fd_sc_mcu9t5v0__buf_1 u_rst_iso (.I(rst_iso),
     .Z(rst_root_in));
  gf180mcu_fd_sc_mcu9t5v0__buf_20 u_rst_root (.I(rst_root_in),
