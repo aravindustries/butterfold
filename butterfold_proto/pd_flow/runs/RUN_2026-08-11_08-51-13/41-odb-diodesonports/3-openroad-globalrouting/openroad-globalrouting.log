@@ -1,0 +1,87 @@
+Reading timing models for corner nom_tt_025C_5v00…
+Reading timing library for the 'nom_tt_025C_5v00' corner at '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib'…
+Reading timing library for the 'nom_tt_025C_5v00' corner at '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__tt_025C_5v00.lib'…
+Reading OpenROAD database at '/foss/designs/butterfold/butterfold_proto/pd_flow/runs/RUN_2026-08-11_08-51-13/41-odb-diodesonports/2-openroad-detailedplacement/butterfold_top.odb'…
+Reading design constraints file at '/usr/local/lib/python3.12/dist-packages/librelane/scripts/base.sdc'…
+[INFO] Using clock clk…
+[INFO] Setting output delay to: 6
+[INFO] Setting input delay to: 6
+[INFO] Setting load to: 0.07291
+[INFO] Setting clock uncertainty to: 0.25
+[INFO] Setting clock transition to: 0.1499999999999999944488848768742172978818416595458984375
+[INFO] Setting timing derate to: 5%
+[INFO] Setting signal min routing layer to: Metal2 and clock min routing layer to Metal2. 
+[INFO] Setting signal max routing layer to: Metal5 and clock max routing layer to Metal5. 
++ global_route -congestion_iterations 50 -verbose
+[INFO GRT-0020] Min routing layer: Metal2
+[INFO GRT-0021] Max routing layer: Metal5
+[INFO GRT-0022] Global adjustment: 20%
+[INFO GRT-0023] Grid origin: (0, 0)
+[INFO GRT-0088] Layer Metal1  Track-Pitch = 0.5600  line-2-Via Pitch: 0.4750
+[INFO GRT-0088] Layer Metal2  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal3  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal4  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal5  Track-Pitch = 0.9000  line-2-Via Pitch: 0.8200
+[INFO GRT-0003] Macros: 2
+[INFO GRT-0004] Blockages: 4
+[INFO GRT-0019] Found 400 clock nets.
+[INFO GRT-0001] Minimum degree: 2
+[INFO GRT-0002] Maximum degree: 17
+
+[INFO GRT-0053] Routing resources analysis:
+          Routing      Original      Derated      Resource
+Layer     Direction    Resources     Resources    Reduction (%)
+---------------------------------------------------------------
+Metal1     Horizontal          0             0          0.00%
+Metal2     Vertical       185135        146776          20.72%
+Metal3     Horizontal     206646        164507          20.39%
+Metal4     Vertical       234230        185850          20.65%
+Metal5     Horizontal     169983        133569          21.42%
+---------------------------------------------------------------
+
+[INFO GRT-0101] Running extra iterations to remove overflow.
+[INFO GRT-0102] Start extra iteration 1/50
+[INFO GRT-0102] Start extra iteration 2/50
+[INFO GRT-0102] Start extra iteration 3/50
+[INFO GRT-0102] Start extra iteration 4/50
+[INFO GRT-0197] Via related to pin nodes: 88855
+[INFO GRT-0198] Via related Steiner nodes: 2542
+[INFO GRT-0199] Via filling finished.
+[INFO GRT-0111] Final number of vias: 113788
+[INFO GRT-0112] Final usage 3D: 467288
+
+[INFO GRT-0096] Final congestion report:
+Layer         Resource        Demand        Usage (%)    Max H / Max V / Total Overflow
+---------------------------------------------------------------------------------------
+Metal1               0             0            0.00%             0 /  0 /  0
+Metal2          146776         49677           33.85%             0 /  0 /  0
+Metal3          164507         60348           36.68%             0 /  0 /  0
+Metal4          185850          6756            3.64%             0 /  0 /  0
+Metal5          133569          9143            6.85%             0 /  0 /  0
+---------------------------------------------------------------------------------------
+Total           630702        125924           19.97%             0 /  0 /  0
+
+[INFO GRT-0018] Total wirelength: 1421901 um
+[INFO GRT-0014] Routed nets: 14136
+[INFO GRT-0303] Global routing runtime = 00:00:02
+Setting global connections for newly added cells…
+[INFO] Setting global connections...
+u_transform_scheduler_core.u_fft_scratch_sram.u_(hi|lo).u_sram matched with u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram
+u_transform_scheduler_core.u_fft_scratch_sram.u_(hi|lo).u_sram matched with u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram
+[INFO ODB-0403] 0 connections made, 0 conflicts skipped.
+Updating metrics…
+Cell type report:                       Count       Area
+  Macro                                     2  294424.87
+  Endcap cell                             878    3854.77
+  Tap cell                               6304   27677.08
+  Antenna cell                             12      52.68
+  Buffer                                   32     983.45
+  Clock buffer                            501   27066.82
+  Timing Repair Buffer                   1605   47504.13
+  Inverter                                646    5751.42
+  Clock inverter                          196    3358.66
+  Sequential cell                        1991  142745.08
+  Multi-Input combinational cell         9436  179497.11
+  Total                                 21603  732916.07
+Writing OpenROAD database to '/foss/designs/butterfold/butterfold_proto/pd_flow/runs/RUN_2026-08-11_08-51-13/41-odb-diodesonports/3-openroad-globalrouting/butterfold_top.odb'…
+Writing layout to '/foss/designs/butterfold/butterfold_proto/pd_flow/runs/RUN_2026-08-11_08-51-13/41-odb-diodesonports/3-openroad-globalrouting/butterfold_top.def'…
