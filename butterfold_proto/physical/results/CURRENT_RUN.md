@@ -15,10 +15,20 @@ the current physical blocker.
 - FF/RCmin SPEF: `physical/results/padframe/signoff/ff_n40C_5v50_min/padframe.spef`
 - Multi-corner STA: `physical/results/padframe/signoff/`
 - Current report: `reports/current/PAD_BOUNDARY_CONNECTIVITY_REPAIR_REPORT.md`
+- Layout-review evidence: `reports/current/LAYOUT_REVIEW_RUBRIC_EVIDENCE.md`
+- Slide metrics: `reports/current/LAYOUT_REVIEW_SLIDE_METRICS.md`
 - Latest candidate GDS: `physical/results/padframe/gds/butterfold_padframe_candidate.gds`
 - Candidate GDS SHA-256: `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
 - GDS status: **CANDIDATE — output-pad electrical/load specification is not frozen**
-- Full GF180 GDS signoff DRC: **NOT RUN**
+- Full GF180 GDS DRC: **FAIL — 37,494 markers in 54 nonzero rule categories**
+- Full GDS DRC tool: **KLayout 0.30.8 with installed GF180 Open_PDKs variant-C main FEOL/BEOL/connectivity deck; optional density mode not run**
+- Full GDS DRC report: `physical/results/padframe/drc_gf180_serial/butterfold_padframe_candidate_main.lyrdb`
+- Full GDS DRC summary: `physical/results/padframe/drc_gf180_serial/violations.json`
+- GF180 antenna check: **FAIL — 24 `ANT.16_ii_ANT.3` markers; 0 antenna diodes**
+- Antenna report: `physical/results/padframe/antenna_gf180/butterfold_padframe_candidate_antenna.lyrdb`
+- Power-grid connectivity: **NOT ESTABLISHED — pad `VDD`/`VSS` are separate from core `u_core/one_`/`u_core/zero_`; no physical supply BTerm**
+- Failed PDN vias: **3** (`physical/results/padframe/route/pdn_failed_vias.rpt`)
+- Quantitative IR drop: **NOT ESTABLISHED**
 - LVS GDS: `physical/results/padframe/gds/butterfold_padframe_candidate.gds`
 - LVS GDS SHA-256: `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
 - LVS top: `butterfold_padframe_top`
@@ -28,6 +38,12 @@ the current physical blocker.
 - LVS report: `physical/results/padframe/lvs/lvs_report.out`
 - LVS status: **PASS — hierarchical foundry-leaf connectivity; 21/21 signal terminals, 2/2 SRAM macros, negative control fails as expected**
 - Full transistor LVS: **NOT RUN**
+
+Current extracted STA was regenerated from the authoritative `route.odb` with
+the established OpenROAD/OpenRCX padframe-signoff target. At 61.44 MHz all
+three analyzed corners pass setup and hold: SS/RCmax +0.45/+1.29 ns,
+TT/RCnom +7.64/+0.66 ns, and FF/RCmin +10.78/+0.40 ns overall path slack.
+The 5-pF output-pad max-transition failure remains open.
 
 The original boundary failure is preserved in the diagnostic history. The
 current milestone treats GF180 standard cells, I/O cells, and SRAMs as verified
