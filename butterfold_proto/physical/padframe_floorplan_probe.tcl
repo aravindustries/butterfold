@@ -10,7 +10,8 @@ read_liberty $io_lib
 read_verilog $mapped_core
 read_verilog $wrapper
 link_design butterfold_padframe_top
-initialize_floorplan -die_area "0 0 $die_w $die_h" -core_area "$core_ll $core_ll $core_ur $core_ur" -site $site
+initialize_floorplan -die_area "0 0 $die_w $die_h" \
+  -core_area "$core_x1 $core_y1 $core_x2 $core_y2" -site $site
 make_io_sites -horizontal_site GF_IO_Site -vertical_site GF_IO_Site -corner_site GF_COR_Site -offset 0
 place_corners gf180mcu_fd_io__cor
 set y 500

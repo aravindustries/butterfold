@@ -26,8 +26,8 @@ proc create_pad_tie {pad_name value x y pins} {
   set out_pin [expr {$value ? "Z" : "ZN"}]
   connect_iterm_to_net [$inst findITerm $out_pin] $net
 
-  set vdd [$block findNet one_]
-  set vss [$block findNet zero_]
+  set vdd [$block findNet VDD]
+  set vss [$block findNet VSS]
   if {$vdd eq "NULL" || $vss eq "NULL"} { error "missing padframe supply nets" }
   foreach pin {VDD VNW} {
     set it [$inst findITerm $pin]

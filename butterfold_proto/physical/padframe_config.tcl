@@ -16,10 +16,21 @@ set pad_result "$phys_dir/results/padframe/route"
 file mkdir $pad_result
 set die_w 2235.0
 set die_h 2235.0
-set core_ll 370.0
-set core_ur 1865.0
+set core_x1 558.88
+set core_y1 559.44
+set core_x2 1675.52
+set core_y2 1673.28
+set butterfold_max_area_um2 1250000.0
+set butterfold_core_area_um2 [expr {($core_x2 - $core_x1) * ($core_y2 - $core_y1)}]
+puts [format "BUTTERFOLD MAX AREA: %.6f mm^2" [expr {$butterfold_max_area_um2 / 1.0e6}]]
+puts [format "CONFIGURED CORE AREA: %.6f mm^2" [expr {$butterfold_core_area_um2 / 1.0e6}]]
+if {$butterfold_core_area_um2 > $butterfold_max_area_um2} {
+  error [format "ButterFold core area %.3f um^2 exceeds hard limit %.3f um^2" \
+    $butterfold_core_area_um2 $butterfold_max_area_um2]
+}
+puts "AREA CONSTRAINT: PASS"
 set site GF018hv5v_green_sc9
-set target_density 0.40
+set target_density 0.60
 set lo_inst {u_core/u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram}
 set hi_inst {u_core/u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram}
 set pad_stage [expr {[info exists ::env(PADFRAME_STAGE)] ? $::env(PADFRAME_STAGE) : "route"}]

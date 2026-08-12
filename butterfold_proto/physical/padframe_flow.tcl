@@ -29,7 +29,7 @@ link_design butterfold_padframe_top
 read_sdc $pad_sdc
 
 initialize_floorplan -die_area "0 0 $die_w $die_h" \
-  -core_area "$core_ll $core_ll $core_ur $core_ur" -site $site
+  -core_area "$core_x1 $core_y1 $core_x2 $core_y2" -site $site
 foreach layer {Metal1 Metal2 Metal3 Metal4} {
   make_tracks $layer -x_offset 0.28 -x_pitch 0.56 -y_offset 0.28 -y_pitch 0.56
 }
@@ -42,15 +42,21 @@ source "$phys_dir/padframe_connect_signal_pads.tcl"
 source "$phys_dir/padframe_place_buffers.tcl"
 
 # Preserve the correlated two-byte SRAM arrangement from the validated core.
-place_inst -name $lo_inst -origin {390.0 1504.12} -orientation R0 -status FIRM
-place_inst -name $hi_inst -origin {1845.0 1504.12} -orientation MY -status FIRM
+place_inst -name $lo_inst -origin {610.0 1280.0} -orientation R0 -status FIRM
+place_inst -name $hi_inst -origin {1085.0 1280.0} -orientation R0 -status FIRM
 cut_rows -halo_width_x 20 -halo_width_y 20
 
 tapcell -tapcell_master gf180mcu_fd_sc_mcu9t5v0__filltie \
   -endcap_master gf180mcu_fd_sc_mcu9t5v0__endcap -distance 120
-add_global_connection -net {u_core/one_} -inst_pattern .* -pin_pattern {VDD|VNW|DVDD} -power
-add_global_connection -net {u_core/zero_} -inst_pattern .* -pin_pattern {VSS|VPW|DVSS} -ground
-global_connect
+# Tap/endcap insertion creates new PG ITerms after the initial netlist-level
+# global connection pass.
+global_connect -force
+add_global_connection -net VDD -inst_pattern .* -pin_pattern {VDD|VNW|DVDD} -power
+add_global_connection -net VSS -inst_pattern .* -pin_pattern {VSS|VPW|DVSS} -ground
+# The synthesized constants and wrapper supplies arrive as separate logical
+# nets.  Force every physical PG pin onto the padframe VDD/VSS domain before
+# PDN generation so the pad rails, core rails, and SRAM pins share one source.
+global_connect -force
 foreach n {VDD VSS one_ zero_ {u_core/one_} {u_core/zero_}} {
   set dbnet [[ord::get_db_block] findNet $n]
   if {$dbnet ne "NULL"} { $dbnet setSpecial }
@@ -58,23 +64,21 @@ foreach n {VDD VSS one_ zero_ {u_core/one_} {u_core/zero_}} {
 # External signal BTerms now intentionally own the pad Metal5 conductor.  The
 # helper marks those completed boundary nets special so TritonRoute does not
 # seek an ordinary core-routing access point inside a bond pad.
-set_voltage_domain -name CORE -power {u_core/one_} -ground {u_core/zero_}
-define_pdn_grid -name core_grid -voltage_domains CORE -starts_with POWER
+set_voltage_domain -name CORE -power VDD -ground VSS
+define_pdn_grid -name core_grid -voltage_domains CORE -starts_with POWER \
+  -pins {Metal5} -connect_to_pads -connect_to_pad_layers {Metal5}
+add_pdn_ring -grid core_grid -layers {Metal4 Metal5} -widths 3.0 \
+  -spacings 2.0 -core_offsets 5.0 -connect_to_pads \
+  -connect_to_pad_layers {Metal5}
 add_pdn_stripe -grid core_grid -layer Metal1 -followpins -width 0.48
-add_pdn_stripe -grid core_grid -layer Metal4 -width 3.0 -pitch 80.0 -offset 390.0 -starts_with POWER
-add_pdn_stripe -grid core_grid -layer Metal5 -width 3.0 -pitch 80.0 -offset 390.0 -starts_with GROUND
+add_pdn_stripe -grid core_grid -layer Metal4 -width 3.0 -pitch 80.0 -offset 20.0 -starts_with POWER
+add_pdn_stripe -grid core_grid -layer Metal5 -width 3.0 -pitch 80.0 -offset 20.0 -starts_with GROUND
 add_pdn_connect -grid core_grid -layers {Metal1 Metal4}
 add_pdn_connect -grid core_grid -layers {Metal4 Metal5}
 define_pdn_grid -name macro_grid -macro -cells gf180mcu_fd_ip_sram__sram256x8m8wm1 \
   -grid_over_pg_pins -voltage_domains CORE -starts_with POWER
 add_pdn_connect -grid macro_grid -layers {Metal3 Metal4}
 pdngen -failed_via_report "$pad_result/pdn_failed_vias.rpt"
-# The mapped core represents supplies as constant nets without top-level
-# BTerms; PSM therefore cannot seed check_power_grid even though pdngen binds
-# the SRAM and pad-ring PG pins.  Preserve this limitation explicitly.
-set fp [open "$pad_result/pdn_check_scope.rpt" w]
-puts $fp "pdngen completed for u_core/one_ and u_core/zero_; check_power_grid requires a physical supply BTerm not present in the mapped core handoff."
-close $fp
 
 set_wire_rc -signal -layer Metal2
 set_wire_rc -clock -layer Metal4
@@ -113,6 +117,7 @@ pad_save cts
 if {$pad_stage eq "cts"} { exit }
 
 source "$phys_dir/padframe_connect_static_controls.tcl"
+estimate_parasitics -placement
 
 global_route -guide_file "$pad_result/route.guide" -congestion_iterations 60 -allow_congestion \
   -congestion_report_file "$pad_result/congestion.rpt"
@@ -129,5 +134,9 @@ if {$pad_stage eq "global_route"} { exit }
 detailed_route -output_drc "$pad_result/detailed_route_drc.rpt" \
   -output_maze "$pad_result/detailed_route_maze.log"
 estimate_parasitics -global_routing
+check_power_grid -net VDD -error_file "$pad_result/pdn_check_vdd_errors.rpt" \
+  > "$pad_result/pdn_check_vdd.rpt"
+check_power_grid -net VSS -error_file "$pad_result/pdn_check_vss_errors.rpt" \
+  > "$pad_result/pdn_check_vss.rpt"
 pad_save route
 write_verilog "$pad_result/butterfold_padframe_physical.v"

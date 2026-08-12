@@ -1,8 +1,22 @@
 # Current authoritative physical run
 
-Status: pad-aware two-SRAM routed implementation. Input-pad transitions and
-clock-root architecture are closed; output-pad 5 pF slew/load closure remains
-the current physical blocker.
+Status: **PARTIAL 1.25 mm² migration milestone.** The frozen two-SRAM design
+places, legalizes, and detailed-routes with zero OpenROAD routing DRC in a
+1.243758 mm² core. Standard OpenROAD `check_power_grid` still fails and reports
+10 failed SRAM-grid via candidates, so no constrained GDS or downstream LVS/STA
+claim has been made.
+
+- Full die: `2235.0 um x 2235.0 um` (unchanged)
+- Final routed core: `(558.880, 559.440) - (1675.520, 1673.280) um`
+- Core dimensions/area: `1116.640 um x 1113.840 um = 1.243758 mm²`
+- Maximum ButterFold allocation: `1.250000 mm²` — **PASS**
+- Routed instance area/utilization: `0.775957 mm² / 62.3%`
+- SRAM area: `0.294435 mm²`; remaining standard-cell/filler area: `0.481522 mm²`
+- Placement/legalization/detailed routing: **PASS / PASS / PASS**
+- OpenROAD routing DRC: **PASS — 0 violations**
+- Power-grid connectivity: **FAIL — standard `check_power_grid` reports disconnected VDD components**
+- Failed PDN vias: **10** (SRAM-grid Metal3-to-Metal4 candidates)
+- New constrained GDS: **NOT GENERATED** (power gate failed)
 
 - Run directory: `physical/results/padframe/route/`
 - Top level: `butterfold_padframe_top`
@@ -19,11 +33,12 @@ the current physical blocker.
 - Slide metrics: `reports/current/LAYOUT_REVIEW_SLIDE_METRICS.md`
 - Latest candidate GDS: `physical/results/padframe/gds/butterfold_padframe_candidate.gds`
 - Candidate GDS SHA-256: `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
-- GDS status: **CANDIDATE — output-pad electrical/load specification is not frozen**
+- GDS status: **HISTORICAL OVERSIZED-FLOORPLAN REFERENCE — not area compliant**
 - Full GF180 GDS DRC: **FAIL — 37,494 markers in 54 nonzero rule categories**
 - Full GDS DRC tool: **KLayout 0.30.8 with installed GF180 Open_PDKs variant-C main FEOL/BEOL/connectivity deck; optional density mode not run**
 - Full GDS DRC report: `physical/results/padframe/drc_gf180_serial/butterfold_padframe_candidate_main.lyrdb`
 - Full GDS DRC summary: `physical/results/padframe/drc_gf180_serial/violations.json`
+- Full GDS DRC triage: `reports/current/GF180_DRC_TRIAGE.md` (**PARTIAL — 37,006 markers lose source hierarchy in the official deep-mode report; no waivers applied**)
 - GF180 antenna check: **FAIL — 24 `ANT.16_ii_ANT.3` markers; 0 antenna diodes**
 - Antenna report: `physical/results/padframe/antenna_gf180/butterfold_padframe_candidate_antenna.lyrdb`
 - Power-grid connectivity: **NOT ESTABLISHED — pad `VDD`/`VSS` are separate from core `u_core/one_`/`u_core/zero_`; no physical supply BTerm**

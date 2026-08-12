@@ -12,6 +12,9 @@ foreach n {VDD VSS one_ zero_ {u_core/one_} {u_core/zero_}} {
   set dbnet [[ord::get_db_block] findNet $n]
   if {$dbnet ne "NULL"} { $dbnet setSpecial }
 }
+add_global_connection -net VDD -inst_pattern .* -pin_pattern {VDD|VNW|DVDD} -power
+add_global_connection -net VSS -inst_pattern .* -pin_pattern {VSS|VPW|DVSS} -ground
+global_connect -force
 source [file join [file dirname [file normalize [info script]]] padframe_connect_signal_pads.tcl]
 source [file join [file dirname [file normalize [info script]]] padframe_connect_static_controls.tcl]
 read_sdc $pad_sdc
@@ -26,6 +29,10 @@ detailed_route -output_drc "$pad_result/detailed_route_drc.rpt" -output_maze "$p
 write_db "$pad_result/route.odb"
 write_def "$pad_result/route.def"
 write_verilog "$pad_result/butterfold_padframe_physical.v"
+check_power_grid -net VDD -error_file "$pad_result/pdn_check_vdd_errors.rpt" \
+  > "$pad_result/pdn_check_vdd.rpt"
+check_power_grid -net VSS -error_file "$pad_result/pdn_check_vss_errors.rpt" \
+  > "$pad_result/pdn_check_vss.rpt"
 report_design_area > "$pad_result/route_area.rpt"
 report_wns -max > "$pad_result/route_setup_wns.rpt"
 report_tns -max > "$pad_result/route_setup_tns.rpt"

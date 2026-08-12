@@ -1,3 +1,26 @@
+# 0. 1.25 mm² PRODUCTION FLOORPLAN MIGRATION
+
+The production core allocation has been corrected without RTL, architecture,
+clock, interface, or SRAM changes. The final routed OpenDB core is
+`(558.880, 559.440) - (1675.520, 1673.280) um`, or
+`1116.640 x 1113.840 um = 1.243758 mm²`; the configured hard limit is
+`1.250000 mm²` and the existing production flow terminates if it is exceeded.
+The full padframe die remains `2235 x 2235 um` (`4.995225 mm²`).
+
+The frozen `2 x gf180mcu_fd_ip_sram__sram256x8m8wm1` implementation places,
+legalizes, and detailed-routes successfully. Routed instance area is
+`0.775957 mm²` (`62.3%` utilization), comprising `0.294435 mm²` of SRAM and
+approximately `0.481522 mm²` of standard cells/fillers. The detailed-route DRC
+report is empty (zero violations).
+
+The framework-first power gate did not pass: OpenROAD `check_power_grid`
+reports disconnected VDD components and the standard PDN generator reports 10
+failed Metal3-to-Metal4 SRAM-grid via candidates. No custom PDN geometry or
+flow was introduced. Consequently the constrained database was not streamed
+to GDS and LVS/STA/antenna/foundry-DRC were not rerun. The GDS hash
+`a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`
+is retained only as the **historical oversized-floorplan reference**.
+
 # 1. DRC AND LVS CORRECTNESS
 
 The reviewed layout is `physical/results/padframe/gds/butterfold_padframe_candidate.gds`, top `butterfold_padframe_top`, SHA-256 `a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d`.
@@ -9,6 +32,8 @@ The reviewed layout is `physical/results/padframe/gds/butterfold_padframe_candid
 | Hierarchical GDS LVS | **PASS** | `reports/current/HIERARCHICAL_LVS_MILESTONE_REPORT.md` and `physical/results/padframe/lvs/milestone/lvs_summary.txt`. |
 
 The GDS DRC failure is not waived. The largest categories are `DF.13_MV` (14,410), `DF.14_MV` (11,355), `NW.2b_LV` (961), `PP.5b` (806), `DF.3b` (735), `PP.5dii` (642), and `NP.2` (573). Other categories include contact, well, implant, dual-gate, CUP, and Metal1 spacing rules. The report database attributes 37,006 markers to the flattened/top context and 488 to named foundry leaf/bond-pad transforms. This establishes a real failing main-deck result; it does not yet establish which top-context markers are integration errors versus hierarchy/deck-context effects. No waivers or geometry changes were made. The runner's optional density mode was not enabled because the mandatory main deck already failed; density compliance is therefore also not established.
+
+The focused closure audit is recorded in `reports/current/GF180_DRC_TRIAGE.md`. Of the 488 markers retaining leaf context, 64 are standard-cell contexts and 424 are I/O/bond-pad contexts; none retain an SRAM context. The remaining 37,006 cannot be divided safely with the installed standard report because the deck emits them in flattened top context. No populated GF180 9-track hardened-cell DRC exclusion/waiver list or hierarchy-preserving attribution mode was found. The framework-first stop condition therefore prevented speculative waivers and physical edits.
 
 The preserved hierarchical LVS result is bound to the same GDS hash. It reports:
 

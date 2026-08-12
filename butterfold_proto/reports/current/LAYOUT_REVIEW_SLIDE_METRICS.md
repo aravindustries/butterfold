@@ -1,5 +1,23 @@
 # ButterFold layout-review metrics
 
+**2.235 mm x 2.235 mm — 4.995 mm²** — FULL PADFRAME DIE
+
+**1.250000 mm²** — MAXIMUM BUTTERFOLD ALLOCATION
+
+**1116.640 um x 1113.840 um — 1.243758 mm²** — FINAL ROUTED BUTTERFOLD CORE — AREA CONSTRAINT PASS
+
+**0.775957 mm² — 62.3%** — ROUTED INSTANCE AREA / UTILIZATION
+
+**0.294435 mm² / 0.481522 mm²** — SRAM AREA / STANDARD-CELL AND FILLER AREA
+
+**PASS / PASS / PASS / 0 DRC** — PLACEMENT / LEGALIZATION / DETAILED ROUTING / OPENROAD VIOLATIONS
+
+**FAIL — 10 FAILED SRAM-GRID VIA CANDIDATES** — STANDARD OPENROAD POWER-GRID CHECK
+
+The existing GDS hash `a7820a...f4d` is a **historical oversized-floorplan
+reference**, not the current area-compliant routed database. No constrained
+GDS was generated because the power-grid gate failed.
+
 **61.44 MHz**  
 TARGET CLOCK (16.2760416667 ns)
 
@@ -28,6 +46,7 @@ FULL GF180 GDS DRC MARKERS (54 NONZERO RULE CATEGORIES)
 
 - Hierarchical GDS LVS: **PASS**, negative control fails as expected.
 - Full GF180 GDS DRC: **FAIL**; no waivers applied.
+- DRC triage: **PARTIAL**; 488 markers retain foundry-leaf attribution (64 standard-cell, 424 I/O/bond-pad), while 37,006 remain flattened/top-context and cannot be safely attributed by the installed standard report.
 - PDN connectivity: **NOT ESTABLISHED**; pad/core supply nets are separate and OpenROAD has no physical supply BTerm.
 - Failed PDN vias: **3**.
 - Quantitative IR drop: **NOT ESTABLISHED**.
