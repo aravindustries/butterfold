@@ -1,0 +1,28 @@
+PYTHON ?= uv run python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+RTL = scheduler.sv transform_scheduler_core.sv mixed_radix_butterfly.sv \
+      tdiq_input_cp_remove.sv fdiq_output_adapter.sv fdiq_input_adapter.sv \
+      subcarrier_mapper.sv tdiq_output_cp_insert.sv subcarrier_extractor.sv
+
+.PHONY: vectors full pingpong all clean
+
+vectors:
+	$(PYTHON) gen_realtime_vectors.py
+
+full: vectors
+	$(IVERILOG) -g2012 -Wall -s scheduler_realtime_full_tb \
+		-o sim_realtime_full.out scheduler_realtime_full_tb.sv $(RTL)
+	$(VVP) sim_realtime_full.out
+
+pingpong: vectors
+	$(IVERILOG) -g2012 -Wall -s scheduler_pingpong_tb \
+		-o sim_pingpong.out scheduler_pingpong_tb.sv $(RTL)
+	$(VVP) sim_pingpong.out
+
+all: full pingpong
+
+clean:
+	rm -f sim_realtime_full.out sim_pingpong.out \
+	      scheduler_full_regression_tb.vcd scheduler_pingpong_tb.vcd

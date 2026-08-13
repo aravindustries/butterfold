@@ -1,0 +1,30 @@
+PYTHON ?= python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+RTL = scheduler_ofdm_rx.sv \
+      tdiq_input_cp_remove.sv \
+      fdiq_output_adapter.sv \
+      mixed_radix_butterfly.sv
+
+.PHONY: all vectors ofdm standalone clean wave
+
+all: ofdm standalone
+
+vectors:
+	$(PYTHON) gen_dft12_vectors.py
+	$(PYTHON) gen_ofdm_rx_vectors.py
+
+ofdm: vectors
+	$(IVERILOG) -g2012 -Wall -o sim_ofdm.out scheduler_ofdm_rx_tb.sv $(RTL)
+	$(VVP) sim_ofdm.out
+
+standalone: vectors
+	$(IVERILOG) -g2012 -Wall -o sim_standalone.out scheduler_dft12_tb.sv $(RTL)
+	$(VVP) sim_standalone.out
+
+wave:
+	gtkwave scheduler_ofdm_rx_tb.vcd
+
+clean:
+	rm -f sim_ofdm.out sim_standalone.out scheduler_ofdm_rx_tb.vcd scheduler_dft12_tb.vcd

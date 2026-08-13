@@ -1,0 +1,21 @@
+PYTHON ?= uv run python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+SV = butterfold_top_tb.sv butterfold_top.sv standalone_result_serializer.sv \
+     transform_scheduler_core.sv mixed_radix_butterfly.sv \
+     tdiq_input_cp_remove.sv fdiq_output_adapter.sv \
+     fdiq_input_adapter.sv subcarrier_mapper.sv tdiq_output_cp_insert.sv \
+     subcarrier_extractor.sv
+
+.PHONY: vectors run clean
+
+vectors:
+	$(PYTHON) gen_realtime_vectors.py
+
+run: vectors
+	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o sim_final_pin.out $(SV)
+	$(VVP) sim_final_pin.out
+
+clean:
+	rm -f sim_final_pin.out butterfold_top_tb.vcd

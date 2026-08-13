@@ -1,0 +1,32 @@
+PYTHON   ?= python3
+IVERILOG ?= iverilog
+VVP      ?= vvp
+
+SIM := sim_full_regression.out
+
+SOURCES := \
+	scheduler_full_regression_tb.sv \
+	scheduler_ofdm_tx.sv \
+	mixed_radix_butterfly.sv \
+	tdiq_input_cp_remove.sv \
+	fdiq_output_adapter.sv \
+	fdiq_input_adapter.sv \
+	subcarrier_mapper.sv \
+	tdiq_output_cp_insert.sv
+
+.PHONY: all vectors compile run clean
+
+all: run
+
+vectors:
+	$(PYTHON) gen_full_regression_vectors.py
+
+compile: vectors
+	$(IVERILOG) -g2012 -Wall -s scheduler_full_regression_tb \
+		-o $(SIM) $(SOURCES)
+
+run: compile
+	$(VVP) $(SIM)
+
+clean:
+	rm -f $(SIM) scheduler_full_regression_tb.vcd

@@ -1,0 +1,40 @@
+PYTHON   ?= python3
+IVERILOG ?= iverilog
+VVP      ?= vvp
+
+COMMON_SV = \
+	scheduler_ofdm_tx.sv \
+	mixed_radix_butterfly.sv \
+	tdiq_input_cp_remove.sv \
+	fdiq_output_adapter.sv \
+	fdiq_input_adapter.sv \
+	subcarrier_mapper.sv \
+	tdiq_output_cp_insert.sv
+
+.PHONY: all vectors tx rx standalone clean
+
+all: tx rx standalone
+
+vectors:
+	$(PYTHON) gen_ofdm_tx_vectors.py
+	$(PYTHON) gen_ofdm_rx_vectors.py
+	$(PYTHON) gen_dft12_vectors.py
+
+tx: vectors
+	$(IVERILOG) -g2012 -Wall -o sim_ofdm_tx.out \
+		scheduler_ofdm_tx_tb.sv $(COMMON_SV)
+	$(VVP) sim_ofdm_tx.out
+
+rx: vectors
+	$(IVERILOG) -g2012 -Wall -o sim_ofdm_rx.out \
+		scheduler_ofdm_rx_tb.sv $(COMMON_SV)
+	$(VVP) sim_ofdm_rx.out
+
+standalone: vectors
+	$(IVERILOG) -g2012 -Wall -o sim_standalone.out \
+		scheduler_dft12_tb.sv $(COMMON_SV)
+	$(VVP) sim_standalone.out
+
+clean:
+	rm -f sim_ofdm_tx.out sim_ofdm_rx.out sim_standalone.out
+	rm -f scheduler_ofdm_tx_tb.vcd scheduler_ofdm_rx_tb.vcd scheduler_dft12_tb.vcd

@@ -1,0 +1,24 @@
+PYTHON ?= python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+SIM := sim_mixed.out
+RTL := scheduler_mixed_radix.sv mixed_radix_butterfly.sv
+TB := scheduler_mixed_radix_tb.sv
+
+.PHONY: all vectors sim wave clean
+
+all: vectors sim
+
+vectors:
+	$(PYTHON) gen_mixed_radix_vectors.py
+
+sim:
+	$(IVERILOG) -g2012 -Wall -o $(SIM) $(TB) $(RTL)
+	$(VVP) $(SIM)
+
+wave:
+	gtkwave scheduler_mixed_radix_tb.vcd
+
+clean:
+	rm -f $(SIM) scheduler_mixed_radix_tb.vcd

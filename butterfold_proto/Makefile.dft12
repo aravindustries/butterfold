@@ -1,0 +1,25 @@
+PYTHON ?= python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+SIM := sim_dft12.out
+SOURCES := scheduler_dft12_tb.sv scheduler_dft12.sv mixed_radix_butterfly.sv
+
+.PHONY: all vectors compile run wave clean
+
+all: vectors run
+
+vectors:
+	$(PYTHON) gen_dft12_vectors.py
+
+compile:
+	$(IVERILOG) -g2012 -Wall -o $(SIM) $(SOURCES)
+
+run: compile
+	$(VVP) $(SIM)
+
+wave:
+	gtkwave scheduler_dft12_tb.vcd
+
+clean:
+	rm -f $(SIM) scheduler_dft12_tb.vcd

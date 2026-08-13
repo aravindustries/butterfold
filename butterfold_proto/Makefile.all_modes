@@ -1,0 +1,24 @@
+PYTHON ?= python3
+IVERILOG ?= iverilog
+VVP ?= vvp
+
+RTL = scheduler_all_modes.sv two_point_dft.sv
+TB  = scheduler_all_modes_tb.sv
+SIM = sim_all_modes.out
+
+.PHONY: all vectors sim wave clean
+
+all: vectors sim
+
+vectors:
+	$(PYTHON) gen_all_mode_vectors.py
+
+sim:
+	$(IVERILOG) -g2012 -Wall -o $(SIM) $(TB) $(RTL)
+	$(VVP) $(SIM)
+
+wave:
+	gtkwave scheduler_all_modes_tb.vcd
+
+clean:
+	rm -f $(SIM) scheduler_all_modes_tb.vcd
