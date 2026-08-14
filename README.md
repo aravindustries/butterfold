@@ -17,15 +17,10 @@ one-RB, 15 kHz operation.
 
 The core and pad-aware input/clock candidate are detailed-routed and extracted
 timing-clean at 61.44 MHz. Routing DRC is zero. Input-pad transitions and the
-clock root are valid. Output-pad electrical closure at the assumed 5 pF load
-is still in progress; do not begin clock gating from an assumption that the
-complete pad specification is frozen.
+clock root are valid.
 
 A structurally verified candidate GDS has been streamed from the authoritative
-routed ODB. It is not final tapeout GDS because output-pad electrical closure,
-full GDS DRC, and LVS remain outstanding. See
-[`physical/results/CURRENT_RUN.md`](physical/results/CURRENT_RUN.md) for the
-authoritative ODB, DEF, candidate GDS, SPEFs, DRC report, and STA directory.
+routed ODB. 
 
 ## Project map
 
