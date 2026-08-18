@@ -1,0 +1,144 @@
+[tools]
+uv = "latest"
+python = "3.12"
+
+[settings]
+python.uv_venv_auto = "create|source"
+
+[env]
+PROJECT_ROOT_DIR = "{{ exec(command='git rev-parse --show-toplevel')}}"
+PROJECT_NAME     = '''{{ env.PROJECT_ROOT_DIR | replace(from="\\", to="/") | split(pat="/") | last }}'''
+
+PROJ_DIR = "{{ env.PROJECT_ROOT_DIR }}/proj"
+RTL_DIR  = "{{ env.PROJECT_ROOT_DIR }}/rtl"
+SIM_DIR  = "{{ env.PROJECT_ROOT_DIR }}/sim"
+SYN_DIR  = "{{ env.PROJECT_ROOT_DIR }}/syn"
+
+GOTO_ENV_DIR = '''
+{%- if os() == 'linux' or 'macos' -%}
+{{ env.PROJECT_ROOT_DIR }}
+{%- endif -%}
+'''
+
+# Vivado
+_.source = '''
+{%- if os() == 'linux' -%}
+{{ env.TOOLS_HOME }}/xilinx/2025.1/Vivado/settings64.sh
+{%- endif -%}
+'''
+XSIM_COLOR = 1
+
+################### Start of Cadence ###################
+# CDS_LIC_FILE = '''
+# {%- if os() == 'linux' -%}
+# {{xdg_data_home}}/cadence/license.dat
+# {%- elif os() == 'windows' -%}
+# {%- elif os() == 'macos' -%}
+# {%- endif -%}
+# '''
+# export CDS_ROOT="$TOOLS_HOME/cadence/XCELIUM2303"
+# export CDS_INST_DIR="$CDS_ROOT"
+# export CDSDIR="$CDS_ROOT"
+# export CDS_HOME="$CDS_ROOT"
+# # export PATH="$CDS_ROOT":$PATH
+# export PATH="$CDS_ROOT/tools.lnx86/bin/":$PATH
+
+# Conformal191
+# export PATH="$TOOLS_HOME/cadence/CONFORMAL191/tools.lnx86/bin":$PATH # run 'lec' to launch
+
+# # GENUS191
+# export PATH="$TOOLS_HOME/cadence/GENUS191/tools.lnx86/bin":$PATH
+
+# # IC231
+# export PATH="$TOOLS_HOME/cadence/IC231/tools.lnx86/bin":$PATH
+################### END of Cadence #######################
+
+################### Start of mentor ########################
+# # Mentor Graphics
+# export LM_LICENSE_FILE="$XDG_DATA_HOME/mentor/license.dat"
+# export MGLS_LICENSE_FILE="$XDG_DATA_HOME/mentor/mgls.lic"
+#
+# # Questasim
+# export PATH="$TOOLS_HOME/mentor/questasim/linux_x86_64":$PATH
+# export PATH="$TOOLS_HOME/mentor/questasim/RUVM_2021.2":$PATH
+################### End of Mentor ##########################
+
+[tasks.setup]
+description = "Run immediately after clone/branch"
+dir = "{{ config_root }}"
+run = """
+mise install
+uv pip install -r requirements.txt
+mkdir -p $PROJ_DIR/tools/vivado && cd "$PROJ_DIR/tools/vivado"
+vivado -mode batch -notrace -source $PROJ_DIR/scripts/create_project.tcl
+"""
+
+[tasks.dev-session]
+description = "Launch Zellij workspace & project directory"
+dir = "{{ config_root }}"
+run = """
+open $PROJECT_ROOT_DIR
+zellij delete-session $PROJECT_NAME >/dev/null 2>&1 || true
+zellij --layout=$PROJECT_ROOT_DIR/zellij_layout.kdl attach --create $PROJECT_NAME
+"""
+
+[tasks."vivado:launch"]
+dir = "{{ env.PROJ_DIR }}/tools/vivado"
+run = "vivado -mode gui -notrace -source $PROJ_DIR/scripts/init.tcl > /dev/null 2>&1 &"
+
+[tasks."vivado:lint"]
+hide = true
+# run the vivado linter & paste output here
+
+[tasks."vivado:compile"]
+hide = true
+# check for compile errors with the current code
+
+[tasks."vivado:simulate"]
+run = """
+clear
+vivado -mode batch -notrace -source $PROJ_DIR/scripts/run_sim.tcl
+"""
+
+[tasks."vivado:generate-bitstream"]
+hide = true
+    # run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
+
+[tasks."commit-prepare"]
+    # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI
+
+[tasks.clean]
+hide = true
+    # remove all temporary files & vivado generated files
+
+[tasks.start-container]
+description = "Start the gf180-x Docker container and attach shell"
+usage = '''
+flag --jupyter help="Launch Jupyter Notebook in the background"
+'''
+run = """
+if [ -z "$(docker ps -q -f name=^/gf180-x$)" ]; then
+    DOCKER_TAG=chipathon26 \
+    CONTAINER_NAME=gf180-x \
+    DESIGNS="$RTL_DIR" \
+    bash "$PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_x.sh"
+fi
+
+if [ "$usage_jupyter" = "true" ]; then
+    (cd "$RTL_DIR" && jupyter notebook >/dev/null 2>&1 &)
+fi
+
+docker exec -it gf180-x bash
+"""
+# In the docker terminal
+# source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0 
+# librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk
+
+# NOTE: set an env var path for runs/ if possible
+
+
+# _optimise-area:
+#
+# _optimise-power:
+#
+# _optimise-timing:
