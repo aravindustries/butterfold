@@ -1,6 +1,5 @@
 [tools]
 uv = "latest"
-python = "3.12"
 
 [settings]
 python.uv_venv_auto = "create|source"
@@ -71,7 +70,7 @@ description = "Run immediately after clone/branch"
 dir = "{{ config_root }}"
 run = """
 mise install
-uv pip install -r requirements.txt
+uv sync
 mkdir -p $PROJ_DIR/tools/vivado && cd "$PROJ_DIR/tools/vivado"
 vivado -mode batch -notrace -source $PROJ_DIR/scripts/create_project.tcl
 """
@@ -120,7 +119,7 @@ description = "Start the gf180-x Docker container and attach shell"
 usage = '''
 flag --jupyter help="Launch Jupyter Notebook in the background"
 '''
-run = """
+run = '''
 if [ -z "$(docker ps -q -f name=^/gf180-x$)" ]; then
     DOCKER_TAG=chipathon26 \
     CONTAINER_NAME=gf180-x \
@@ -133,7 +132,7 @@ if [ "$usage_jupyter" = "true" ]; then
 fi
 
 docker exec -it gf180-x bash
-"""
+'''
 # In the docker terminal
 # source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0 
 # librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk
