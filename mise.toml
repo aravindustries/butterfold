@@ -6,8 +6,9 @@ python = "3.12"
 python.uv_venv_auto = "create|source"
 
 [env]
-PROJECT_ROOT_DIR = "{{ exec(command='git rev-parse --show-toplevel')}}"
-PROJECT_NAME     = '''{{ env.PROJECT_ROOT_DIR | replace(from="\\", to="/") | split(pat="/") | last }}'''
+# _GIT_CHECK = 
+PROJECT_ROOT_DIR = "{{ config_root }}"
+PROJECT_NAME     = "{{ config_root | split(pat='/') | last }}"
 
 PROJ_DIR = "{{ env.PROJECT_ROOT_DIR }}/proj"
 RTL_DIR  = "{{ env.PROJECT_ROOT_DIR }}/rtl"
@@ -15,7 +16,7 @@ SIM_DIR  = "{{ env.PROJECT_ROOT_DIR }}/sim"
 SYN_DIR  = "{{ env.PROJECT_ROOT_DIR }}/syn"
 
 GOTO_ENV_DIR = '''
-{%- if os() == 'linux' or 'macos' -%}
+{%- if os() in ['linux', 'macos'] -%}
 {{ env.PROJECT_ROOT_DIR }}
 {%- endif -%}
 '''
@@ -24,6 +25,8 @@ GOTO_ENV_DIR = '''
 _.source = '''
 {%- if os() == 'linux' -%}
 {{ env.TOOLS_HOME }}/xilinx/2025.1/Vivado/settings64.sh
+{%- else -%}
+/dev/null
 {%- endif -%}
 '''
 XSIM_COLOR = 1
@@ -84,7 +87,7 @@ zellij --layout=$PROJECT_ROOT_DIR/zellij_layout.kdl attach --create $PROJECT_NAM
 
 [tasks."vivado:launch"]
 dir = "{{ env.PROJ_DIR }}/tools/vivado"
-run = "vivado -mode gui -notrace -source $PROJ_DIR/scripts/init.tcl > /dev/null 2>&1 &"
+run = "nohup vivado -mode gui -notrace -source $PROJ_DIR/scripts/init.tcl > /dev/null 2>&1 &"
 
 [tasks."vivado:lint"]
 hide = true
@@ -105,7 +108,8 @@ hide = true
     # run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
 
 [tasks."commit-prepare"]
-    # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI
+hide = true
+    # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
 
 [tasks.clean]
 hide = true
