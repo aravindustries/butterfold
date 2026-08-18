@@ -18,6 +18,10 @@ module gf180_sram_256x16_complex (
     input logic [7:0] half_addr_i, input logic [15:0] half_wdata_i,
     output logic half_ready_o, output logic [15:0] half_rdata_o,
     output logic half_rvalid_o
+`ifdef USE_POWER_PINS
+    , inout wire VDD
+    , inout wire VSS
+`endif
 );
     typedef enum logic [1:0] {IDLE, READ_Q, READ_Q_WAIT, WRITE_Q} state_t;
     state_t state;
@@ -57,11 +61,19 @@ module gf180_sram_256x16_complex (
     gf180_sram_256x8_wrapper u_lo (
         .clk(clk),.rst_n(rst_n),.req_i(macro_req),.write_i(macro_write),
         .addr_i(macro_addr),.wdata_i(macro_wdata[7:0]),.wmask_i(8'hff),
-        .rdata_o(macro_rdata[7:0]),.rvalid_o(rv_lo));
+        .rdata_o(macro_rdata[7:0]),.rvalid_o(rv_lo)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
+    );
     gf180_sram_256x8_wrapper u_hi (
         .clk(clk),.rst_n(rst_n),.req_i(macro_req),.write_i(macro_write),
         .addr_i(macro_addr),.wdata_i(macro_wdata[15:8]),.wmask_i(8'hff),
-        .rdata_o(macro_rdata[15:8]),.rvalid_o(rv_hi));
+        .rdata_o(macro_rdata[15:8]),.rvalid_o(rv_hi)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
+    );
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin

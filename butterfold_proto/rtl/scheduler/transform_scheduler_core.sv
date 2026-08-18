@@ -54,6 +54,10 @@ module transform_scheduler_core #(
     output logic        debug_ready_o,
     output logic [15:0] debug_rdata_o,
     output logic        debug_rvalid_o
+`ifdef USE_POWER_PINS
+    , inout wire VDD
+    , inout wire VSS
+`endif
 );
 
     //==========================================================================
@@ -647,6 +651,9 @@ module transform_scheduler_core #(
                       (tx_output_busy ? 16'd0 : debug_wdata_i)),
         .half_ready_o(mod_half_ready),
         .half_rdata_o(mod_half_rdata), .half_rvalid_o(mod_half_rvalid)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
     );
 
     assign debug_ready_o = debug_mode_i && !mod_active && !tx_output_busy &&

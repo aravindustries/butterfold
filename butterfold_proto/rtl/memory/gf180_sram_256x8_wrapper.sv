@@ -12,11 +12,17 @@ module gf180_sram_256x8_wrapper (
     input  logic [7:0] wmask_i,
     output logic [7:0] rdata_o,
     output logic       rvalid_o
+`ifdef USE_POWER_PINS
+    , inout wire VDD
+    , inout wire VSS
+`endif
 );
 `ifdef GF180_USE_FOUNDRY_SRAM
     wire [7:0] macro_q;
+`ifndef USE_POWER_PINS
     supply1 sim_vdd;
     supply0 sim_vss;
+`endif
 `ifdef SYNTHESIS
     // Dedicated strong drivers isolate macro-pin capacitance and prevent the
     // identical controls of the two byte macros from merging after flattening.
@@ -63,8 +69,12 @@ module gf180_sram_256x8_wrapper (
 `endif
     gf180mcu_fd_ip_sram__sram256x8m8wm1 u_sram (
         .CLK(clk), .CEN(macro_cen), .GWEN(macro_gwen), .WEN(macro_wen),
-        .A(macro_addr), .D(macro_wdata), .Q(macro_q),
-        .VDD(sim_vdd), .VSS(sim_vss)
+        .A(macro_addr), .D(macro_wdata), .Q(macro_q)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`else
+        , .VDD(sim_vdd), .VSS(sim_vss)
+`endif
     );
     always @(posedge clk or negedge rst_n)
         if (!rst_n) rvalid_o <= 1'b0;

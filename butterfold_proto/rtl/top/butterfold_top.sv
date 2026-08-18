@@ -17,6 +17,10 @@ module butterfold_top #(
     output logic       din_ready_o,
     output logic [7:0] dout,
     output logic       dout_valid_o
+`ifdef USE_POWER_PINS
+    , inout wire VDD
+    , inout wire VSS
+`endif
 );
     localparam logic [7:0] CMD_FFT2       = 8'h40;
     localparam logic [7:0] CMD_FFT128     = 8'h41;
@@ -170,6 +174,9 @@ module butterfold_top #(
         .debug_write_i(debug_write), .debug_addr_i(debug_addr),
         .debug_wdata_i(debug_wdata), .debug_ready_o(debug_ready),
         .debug_rdata_o(debug_rdata), .debug_rvalid_o(debug_rvalid)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
     );
 
     standalone_result_serializer u_serializer (

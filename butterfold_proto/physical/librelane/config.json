@@ -1,0 +1,66 @@
+{
+  "DESIGN_NAME": "butterfold_top",
+  "VERILOG_FILES": [
+    "dir::../../rtl/memory/gf180_sram_256x8_wrapper.sv",
+    "dir::../../rtl/memory/gf180_sram_256x16_complex.sv",
+    "dir::../../rtl/transform/fft128_modulo_controller.sv",
+    "dir::../../rtl/transform/fft128_twiddle_rom.sv",
+    "dir::../../rtl/transform/mixed_radix_butterfly.sv",
+    "dir::../../rtl/io/tdiq_input_cp_remove.sv",
+    "dir::../../rtl/io/fdiq_input_adapter.sv",
+    "dir::../../rtl/io/fdiq_output_adapter_sram.sv",
+    "dir::../../rtl/io/tdiq_output_cp_insert_sram.sv",
+    "dir::../../rtl/io/subcarrier_mapper.sv",
+    "dir::../../rtl/io/subcarrier_extractor.sv",
+    "dir::../../rtl/io/standalone_result_serializer.sv",
+    "dir::../../rtl/scheduler/transform_scheduler_core.sv",
+    "dir::../../rtl/top/butterfold_top.sv"
+  ],
+  "VERILOG_DEFINES": ["GF180_USE_FOUNDRY_SRAM", "USE_POWER_PINS"],
+
+  "CLOCK_PORT": "clk",
+  "CLOCK_PERIOD": 16.2760416667,
+  "PNR_SDC_FILE": "dir::../constraints.sdc",
+  "SIGNOFF_SDC_FILE": "dir::../constraints.sdc",
+
+  "DIE_AREA": [0, 0, 1116.640, 1113.840],
+  "CORE_AREA": [0, 0, 1116.640, 1113.840],
+  "FP_CORE_UTIL": 60,
+  "PL_TARGET_DENSITY_PCT": 65,
+  "RUN_LINTER": false,
+  "ERROR_ON_SYNTH_CHECKS": false,
+  "VDD_NETS": ["VDD"],
+  "GND_NETS": ["VSS"],
+
+  "MACROS": {
+    "gf180mcu_fd_ip_sram__sram256x8m8wm1": {
+      "gds": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram256x8m8wm1.gds"],
+      "lef": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram256x8m8wm1.lef"],
+      "vh": ["dir::gf180mcu_fd_ip_sram__sram256x8m8wm1.vh"],
+      "spice": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/cdl/gf180mcu_fd_ip_sram__sram256x8m8wm1.cdl"],
+      "lib": {
+        "*ss_125C_4v50*": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__ss_125C_4v50.lib"],
+        "*tt_025C_5v00*": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__tt_025C_5v00.lib"],
+        "*ff_n40C_5v50*": ["/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__ff_n40C_5v50.lib"]
+      },
+      "instances": {
+        "u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram": {
+          "location": [51.120, 720.560],
+          "orientation": "R0"
+        },
+        "u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram": {
+          "location": [531.120, 720.560],
+          "orientation": "R0"
+        }
+      }
+    }
+  },
+
+  "PDN_ENABLE_GLOBAL_CONNECTIONS": true,
+  "PDN_CONNECT_MACROS_TO_GRID": true,
+  "PDN_MACRO_CONNECTIONS": [
+    ".*u_lo.*u_sram VDD VSS VDD VSS",
+    ".*u_hi.*u_sram VDD VSS VDD VSS"
+  ],
+  "ERROR_ON_SYNTH_CHECKS": false
+}
