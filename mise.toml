@@ -5,7 +5,6 @@ uv = "latest"
 python.uv_venv_auto = "create|source"
 
 [env]
-# _GIT_CHECK = 
 PROJECT_ROOT_DIR = "{{ config_root }}"
 PROJECT_NAME     = "{{ config_root | split(pat='/') | last }}"
 
@@ -24,46 +23,9 @@ GOTO_ENV_DIR = '''
 _.source = '''
 {%- if os() == 'linux' -%}
 {{ env.TOOLS_HOME }}/xilinx/2025.1/Vivado/settings64.sh
-{%- else -%}
-/dev/null
 {%- endif -%}
 '''
 XSIM_COLOR = 1
-
-################### Start of Cadence ###################
-# CDS_LIC_FILE = '''
-# {%- if os() == 'linux' -%}
-# {{xdg_data_home}}/cadence/license.dat
-# {%- elif os() == 'windows' -%}
-# {%- elif os() == 'macos' -%}
-# {%- endif -%}
-# '''
-# export CDS_ROOT="$TOOLS_HOME/cadence/XCELIUM2303"
-# export CDS_INST_DIR="$CDS_ROOT"
-# export CDSDIR="$CDS_ROOT"
-# export CDS_HOME="$CDS_ROOT"
-# # export PATH="$CDS_ROOT":$PATH
-# export PATH="$CDS_ROOT/tools.lnx86/bin/":$PATH
-
-# Conformal191
-# export PATH="$TOOLS_HOME/cadence/CONFORMAL191/tools.lnx86/bin":$PATH # run 'lec' to launch
-
-# # GENUS191
-# export PATH="$TOOLS_HOME/cadence/GENUS191/tools.lnx86/bin":$PATH
-
-# # IC231
-# export PATH="$TOOLS_HOME/cadence/IC231/tools.lnx86/bin":$PATH
-################### END of Cadence #######################
-
-################### Start of mentor ########################
-# # Mentor Graphics
-# export LM_LICENSE_FILE="$XDG_DATA_HOME/mentor/license.dat"
-# export MGLS_LICENSE_FILE="$XDG_DATA_HOME/mentor/mgls.lic"
-#
-# # Questasim
-# export PATH="$TOOLS_HOME/mentor/questasim/linux_x86_64":$PATH
-# export PATH="$TOOLS_HOME/mentor/questasim/RUVM_2021.2":$PATH
-################### End of Mentor ##########################
 
 [tasks.setup]
 description = "Run immediately after clone/branch"
@@ -104,15 +66,7 @@ vivado -mode batch -notrace -source $PROJ_DIR/scripts/run_sim.tcl
 
 [tasks."vivado:generate-bitstream"]
 hide = true
-    # run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
-
-[tasks."commit-prepare"]
-hide = true
-    # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
-
-[tasks.clean]
-hide = true
-    # remove all temporary files & vivado generated files
+# run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
 
 [tasks.start-container]
 description = "Start the gf180-x Docker container and attach shell"
@@ -120,28 +74,80 @@ usage = '''
 flag --jupyter help="Launch Jupyter Notebook in the background"
 '''
 run = '''
-if [ -z "$(docker ps -q -f name=^/gf180-x$)" ]; then
+if [ -z "$(docker ps -q -f name=^/gf180$)" ]; then
+    CONTAINER_NAME=gf180 \
     DOCKER_TAG=chipathon26 \
-    CONTAINER_NAME=gf180-x \
-    DESIGNS="$RTL_DIR" \
-    bash "$PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_x.sh"
+    DESIGNS=$RTL_DIR \
+    bash "$PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
+    docker exec -u 0 gf180-x groupadd -g 1000 hostgroup
 fi
 
 if [ "$usage_jupyter" = "true" ]; then
-    (cd "$RTL_DIR" && jupyter notebook >/dev/null 2>&1 &)
+    (cd $RTL_DIR && jupyter notebook >/dev/null 2>&1 &)
 fi
 
-docker exec -it gf180-x bash
+docker exec -it gf180-x bash -lc '
+    source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
+    librelane --version
+    exec bash
+'
 '''
-# In the docker terminal
-# source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0 
+# # In the docker terminal run
+# source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
 # librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk
+# # Or create rtl/scripts/ which will contain python scripts to setup env vars & like how the examples show
 
-# NOTE: set an env var path for runs/ if possible
+[tasks.commit-prepare]
+hide = true
+# run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
 
+[tasks.clean]
+hide = true
+# remove all temporary tool generated files
 
 # _optimise-area:
 #
 # _optimise-power:
 #
 # _optimise-timing:
+
+
+
+
+
+# Envs
+################### Start of Cadence ###################
+# CDS_LIC_FILE = '''
+# {%- if os() == 'linux' -%}
+# {{xdg_data_home}}/cadence/license.dat
+# {%- elif os() == 'windows' -%}
+# {%- elif os() == 'macos' -%}
+# {%- endif -%}
+# '''
+# export CDS_ROOT="$TOOLS_HOME/cadence/XCELIUM2303"
+# export CDS_INST_DIR="$CDS_ROOT"
+# export CDSDIR="$CDS_ROOT"
+# export CDS_HOME="$CDS_ROOT"
+# # export PATH="$CDS_ROOT":$PATH
+# export PATH="$CDS_ROOT/tools.lnx86/bin/":$PATH
+
+# Conformal191
+# export PATH="$TOOLS_HOME/cadence/CONFORMAL191/tools.lnx86/bin":$PATH # run 'lec' to launch
+
+# # GENUS191
+# export PATH="$TOOLS_HOME/cadence/GENUS191/tools.lnx86/bin":$PATH
+
+# # IC231
+# export PATH="$TOOLS_HOME/cadence/IC231/tools.lnx86/bin":$PATH
+################### END of Cadence #######################
+
+################### Start of mentor ########################
+# # Mentor Graphics
+# export LM_LICENSE_FILE="$XDG_DATA_HOME/mentor/license.dat"
+# export MGLS_LICENSE_FILE="$XDG_DATA_HOME/mentor/mgls.lic"
+#
+# # Questasim
+# export PATH="$TOOLS_HOME/mentor/questasim/linux_x86_64":$PATH
+# export PATH="$TOOLS_HOME/mentor/questasim/RUVM_2021.2":$PATH
+################### End of Mentor ##########################
+
