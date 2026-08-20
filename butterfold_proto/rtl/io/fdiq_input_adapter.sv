@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Converts exactly 12 interleaved 8-bit signed Q1.7 frequency-domain samples

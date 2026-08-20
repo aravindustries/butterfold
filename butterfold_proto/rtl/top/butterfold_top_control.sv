@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Top-level command/control block for ButterFold.
@@ -79,7 +78,7 @@ module butterfold_top_control (
         is_rx = (c == CMD_RX_SHORT) || (c == CMD_RX_LONG);
     endfunction
 
-    function automatic [8:0] transform_input_bytes(input logic [7:0] c);
+    function automatic logic [8:0] transform_input_bytes(input logic [7:0] c);
         case (c)
           CMD_FFT2, CMD_IFFT2: transform_input_bytes = 9'd4;
           CMD_FFT3:            transform_input_bytes = 9'd6;
@@ -94,7 +93,7 @@ module butterfold_top_control (
         endcase
     endfunction
 
-    function automatic [8:0] ofdm_output_bytes(input logic [7:0] c);
+    function automatic logic [8:0] ofdm_output_bytes(input logic [7:0] c);
         case (c)
           CMD_RX_SHORT, CMD_RX_LONG: ofdm_output_bytes = 9'd24;
           CMD_TX_SHORT:              ofdm_output_bytes = 9'd274;
@@ -133,8 +132,40 @@ module butterfold_top_control (
     logic [7:0] echo_data;
     logic [2:0] magic_index;
 
+    // ------------------------------------------------------------------
+    // Command decode.
+    //
+    // The command-classification functions are evaluated ONCE here, in
+    // continuous assignments, and the FSM below consumes the resulting nets.
+    //
+    // Calling them directly inside the clocked always block instead leaves
+    // Yosys with orphaned per-call-site temporaries (\<fn>$func$<file>:<line>$N.c
+    // and .$result), which the pre-synthesis `check` pass reports as
+    // "used but has no driver".  Those warnings are harmless - the logic is
+    // correctly inlined into the DFF input cone and opt_clean deletes the
+    // dangling names - but hoisting the calls removes the noise entirely and
+    // makes the decode explicit in schematics and area reports rather than
+    // relying on common-subexpression elimination to merge four copies of
+    // the same comparator chain.
+    // ------------------------------------------------------------------
+    logic       din_is_standalone;
+    logic       din_is_ofdm;
+    logic       din_is_accepted;
+    logic [8:0] din_input_bytes;
+    logic [8:0] din_output_bytes;
+    logic       active_is_ofdm;
+    logic       active_is_rx;
+
+    assign din_is_standalone = is_standalone(din);
+    assign din_is_ofdm       = is_ofdm(din);
+    assign din_is_accepted   = din_is_standalone || din_is_ofdm;
+    assign din_input_bytes   = transform_input_bytes(din);
+    assign din_output_bytes  = ofdm_output_bytes(din);
+    assign active_is_ofdm    = is_ofdm(active_command);
+    assign active_is_rx      = is_rx(active_command);
+
     assign external_fire = din_valid_i && din_ready_o;
-    assign feeder_start = external_fire && (top_state == TOP_IDLE) && is_ofdm(din);
+    assign feeder_start = external_fire && (top_state == TOP_IDLE) && din_is_ofdm;
     assign job_head_command = active_command;
     assign core_ofdm_active = ofdm_active;
     assign drain_active = ofdm_active && (top_state == TOP_TRANSFORM_WAIT);
@@ -159,7 +190,7 @@ module butterfold_top_control (
     // acceptance, so feeding ready back into valid only creates a long
     // combinational control cone without changing protocol behavior.
     assign core_din_valid_o = din_valid_i &&
-        (((top_state == TOP_IDLE) && (is_standalone(din) || is_ofdm(din))) ||
+        (((top_state == TOP_IDLE) && din_is_accepted) ||
          (top_state == TOP_TRANSFORM_INPUT));
 
     assign debug_mode_o = (top_state == TOP_SRAM_READ_REQ) ||
@@ -238,11 +269,11 @@ module butterfold_top_control (
             case (top_state)
               TOP_IDLE: if (external_fire) begin
                   active_command <= din;
-                  if (is_standalone(din) || is_ofdm(din)) begin
-                      standalone_active_o <= is_standalone(din);
-                      ofdm_active <= is_ofdm(din);
-                      input_left <= transform_input_bytes(din);
-                      output_left <= ofdm_output_bytes(din);
+                  if (din_is_accepted) begin
+                      standalone_active_o <= din_is_standalone;
+                      ofdm_active <= din_is_ofdm;
+                      input_left <= din_input_bytes;
+                      output_left <= din_output_bytes;
                       top_state <= TOP_TRANSFORM_INPUT;
                   end else case (din)
                     CMD_ECHO:       top_state <= TOP_ECHO_INPUT;
@@ -259,7 +290,7 @@ module butterfold_top_control (
               TOP_TRANSFORM_INPUT: if (external_fire) begin
                   input_left <= input_left - 1'b1;
                   if (input_left == 9'd1) begin
-                      job_push <= is_ofdm(active_command);
+                      job_push <= active_is_ofdm;
                       top_state <= TOP_TRANSFORM_WAIT;
                   end
               end
@@ -274,7 +305,7 @@ module butterfold_top_control (
                       if (output_left == 9'd1) begin
                           ofdm_active <= 1'b0;
                           top_state <= TOP_IDLE;
-                          if (is_rx(active_command)) begin
+                          if (active_is_rx) begin
                               core_rx_selected_complete <= 1'b1;
                               core_rx_complete <= 1'b1;
                           end else begin

@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Builds a 128-bin bit-reversed IFFT input grid from 12 natural-order DFT

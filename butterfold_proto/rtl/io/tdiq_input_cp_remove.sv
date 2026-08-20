@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Converts an interleaved 8-bit Q1.7 time-domain byte stream into 16-bit

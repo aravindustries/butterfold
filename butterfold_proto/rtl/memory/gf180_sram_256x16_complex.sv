@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Two parallel 256x8 macros form one 256x16 physical single port.  A logical

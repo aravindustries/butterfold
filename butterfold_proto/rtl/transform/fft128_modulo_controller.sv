@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Deterministic physical-half-word FFT controller.  The SRAM port performs

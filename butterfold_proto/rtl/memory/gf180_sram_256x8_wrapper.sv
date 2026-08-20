@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Cycle-accurate wrapper for the GF180MCU 256x8 synchronous single-port SRAM.

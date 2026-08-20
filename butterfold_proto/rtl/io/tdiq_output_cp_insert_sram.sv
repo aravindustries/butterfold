@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Physical-half-word TX reader. I and Q are fetched on consecutive clocks;

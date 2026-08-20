@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Hard-coded 64-entry forward W128 twiddle ROM. No SRAM macro is used.

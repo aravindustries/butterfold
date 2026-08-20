@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // Stream-side one-RB extractor for the OFDM_RX path.

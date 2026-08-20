@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 // SRAM-aware 128-bin FDIQ output adapter. Requests one 32-bit complex word,
