@@ -11,6 +11,9 @@ ROOT = Path(__file__).resolve().parent
 VECTOR_DIR = ROOT / "vectors"
 
 GENERATORS = (
+    "gen_fft64_twiddles.py",
+    "gen_fft64_vectors.py",
+    "gen_ifft64_vectors.py",
     "gen_dft12_vectors.py",
     "gen_ofdm_rx_vectors.py",
     "gen_ofdm_tx_vectors.py",
