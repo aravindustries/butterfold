@@ -23,8 +23,8 @@ module butterfold_top #(
 `endif
 );
     localparam logic [7:0] CMD_FFT2       = 8'h40;
-    localparam logic [7:0] CMD_FFT128     = 8'h41;
-    localparam logic [7:0] CMD_IFFT128    = 8'h42;
+    localparam logic [7:0] CMD_FFT64      = 8'h41;
+    localparam logic [7:0] CMD_IFFT64     = 8'h42;
     localparam logic [7:0] CMD_IFFT2      = 8'h43;
     localparam logic [7:0] CMD_FFT3       = 8'h44;
     localparam logic [7:0] CMD_DFT12      = 8'h45;
@@ -52,11 +52,11 @@ module butterfold_top #(
         case (c)
           CMD_FFT2, CMD_IFFT2: transform_input_bytes = 9'd4;
           CMD_FFT3:            transform_input_bytes = 9'd6;
-          CMD_FFT128,
-          CMD_IFFT128:         transform_input_bytes = 9'd256;
+          CMD_FFT64,
+          CMD_IFFT64:          transform_input_bytes = 9'd128;
           CMD_DFT12:           transform_input_bytes = 9'd24;
-          CMD_RX_SHORT:        transform_input_bytes = 9'd274;
-          CMD_RX_LONG:         transform_input_bytes = 9'd276;
+          CMD_RX_SHORT:        transform_input_bytes = 9'd136;
+          CMD_RX_LONG:         transform_input_bytes = 9'd138;
           CMD_TX_SHORT,
           CMD_TX_LONG:         transform_input_bytes = 9'd24;
           default:             transform_input_bytes = 9'd0;
@@ -65,8 +65,8 @@ module butterfold_top #(
     function automatic [8:0] ofdm_output_bytes(input logic [7:0] c);
         case (c)
           CMD_RX_SHORT, CMD_RX_LONG: ofdm_output_bytes = 9'd24;
-          CMD_TX_SHORT:              ofdm_output_bytes = 9'd274;
-          CMD_TX_LONG:               ofdm_output_bytes = 9'd276;
+          CMD_TX_SHORT:              ofdm_output_bytes = 9'd136;
+          CMD_TX_LONG:               ofdm_output_bytes = 9'd138;
           default:                   ofdm_output_bytes = 9'd0;
         endcase
     endfunction

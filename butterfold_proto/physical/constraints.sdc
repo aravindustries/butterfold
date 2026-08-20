@@ -1,4 +1,4 @@
-create_clock -name core_clk -period 16.2760416667 [get_ports clk]
+create_clock -name core_clk -period 20.000 [get_ports clk]
 set_clock_uncertainty 0.0 [get_clocks core_clk]
 set_input_delay 0.0 -clock core_clk [get_ports {din_valid_i din[*]}]
 set_output_delay 0.0 -clock core_clk [get_ports {din_ready_o dout_valid_o dout[*]}]

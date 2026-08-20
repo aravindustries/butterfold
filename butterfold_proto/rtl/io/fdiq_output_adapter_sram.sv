@@ -1,11 +1,11 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// SRAM-aware 128-bin FDIQ output adapter. Requests one 32-bit complex word,
+// SRAM-aware FDIQ output adapter. Requests one 32-bit complex word,
 // waits for the synchronous read response, then emits I and Q bytes.
 module fdiq_output_adapter_sram #(
     parameter logic [6:0] START_SAMPLE = 7'd0,
-    parameter logic [7:0] SAMPLE_COUNT = 8'd128
+    parameter logic [7:0] SAMPLE_COUNT = 8'd64
 ) (
     input  logic clk,
     input  logic rst_n,

@@ -130,7 +130,7 @@ module tdiq_input_cp_remove (
                         expect_q <= 1'b0;
 
                         if (current_sample_is_useful) begin
-                            if (useful_sample_index == 7'd127) begin
+                            if (useful_sample_index == 7'd63) begin
                                 // Stop accepting input after the final useful
                                 // sample. done_o waits until that sample is
                                 // accepted by the RAM-side consumer.
