@@ -169,4 +169,3 @@ endmodule: async_fifo
 //     // Need a fifo from slow to fast if, the slow freq is too close to the fast freq
 //     // then double flopping the valid signal will be too late to capture the data
 // endmodule
-

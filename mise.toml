@@ -69,7 +69,7 @@ hide = true
 # run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
 
 [tasks.start-container]
-description = "Start the gf180-x Docker container and attach shell"
+description = "Start the gf180 Docker container and attach shell"
 usage = '''
 flag --jupyter help="Launch Jupyter Notebook in the background"
 '''
@@ -79,14 +79,14 @@ if [ -z "$(docker ps -q -f name=^/gf180$)" ]; then
     DOCKER_TAG=chipathon26 \
     DESIGNS=$RTL_DIR \
     bash "$PROJ_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
-    docker exec -u 0 gf180-x groupadd -g 1000 hostgroup
+    docker exec -u 0 gf180 groupadd -g 1000 hostgroup
 fi
 
 if [ "$usage_jupyter" = "true" ]; then
     (cd $RTL_DIR && jupyter notebook >/dev/null 2>&1 &)
 fi
 
-docker exec -it gf180-x bash -lc '
+docker exec -it gf180 bash -lc '
     source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
     librelane --version
     exec bash
