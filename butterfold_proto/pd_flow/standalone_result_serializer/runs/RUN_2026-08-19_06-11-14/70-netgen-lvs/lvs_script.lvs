@@ -1,0 +1,7 @@
+set circuit1 [readnet spice /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/68-magic-spiceextraction/standalone_result_serializer.spice]
+set circuit2 [readnet verilog /dev/null]
+puts "Reading SPICE netlist file '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/spice/gf180mcu_fd_sc_mcu7t5v0.spice'..."
+readnet spice /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/spice/gf180mcu_fd_sc_mcu7t5v0.spice $circuit2
+puts "Reading Verilog netlist file '/foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/52-openroad-fillinsertion/standalone_result_serializer.pnl.v'..."
+readnet verilog /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/52-openroad-fillinsertion/standalone_result_serializer.pnl.v $circuit2
+lvs "$circuit1 standalone_result_serializer" "$circuit2 standalone_result_serializer" /usr/local/lib/python3.12/dist-packages/librelane/scripts/netgen/setup.tcl /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/70-netgen-lvs/reports/lvs.netgen.rpt -blackbox -json

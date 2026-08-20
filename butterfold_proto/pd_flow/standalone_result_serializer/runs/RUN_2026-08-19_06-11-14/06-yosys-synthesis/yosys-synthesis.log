@@ -1,0 +1,1149 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)
+
+1. Executing Liberty frontend: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/lib/gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib
+Imported 229 cell types from liberty file.
+[INFO] Using SDC file '/foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/06-yosys-synthesis/synthesis.abc.sdc' for ABC…wtaf
+
+2. Executing Verilog-2005 frontend: /foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv
+Parsing SystemVerilog input from `/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv' to AST representation.
+Storing AST representation for module `$abstract\standalone_result_serializer'.
+Successfully finished Verilog frontend.
+
+3. Executing HIERARCHY pass (managing design hierarchy).
+
+4. Executing AST frontend in derive mode using pre-parsed AST for module `\standalone_result_serializer'.
+Generating RTLIL representation for module `\standalone_result_serializer'.
+
+4.1. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+
+4.2. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+Removing unused module `$abstract\standalone_result_serializer'.
+Removed 1 unused modules.
+Renaming module standalone_result_serializer to standalone_result_serializer.
+
+5. Executing ATTRMAP pass (move or copy attributes).
+
+6. Executing HIERARCHY pass (managing design hierarchy).
+
+6.1. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+
+6.2. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+Removed 0 unused modules.
+
+7. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Cleaned up 0 empty switches.
+
+8. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
+Marked 3 switch rules as full_case in process $proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8 in module standalone_result_serializer.
+Marked 1 switch rules as full_case in process $proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:70$7 in module standalone_result_serializer.
+Removed a total of 0 dead cases.
+
+9. Executing PROC_PRUNE pass (remove redundant assignments in processes).
+Removed 2 redundant assignments.
+Promoted 1 assignment to connection.
+
+10. Executing PROC_INIT pass (extract init attributes).
+
+11. Executing PROC_ARST pass (detect async resets in processes).
+Found async reset \rst_n in `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+
+12. Executing PROC_ROM pass (convert switches to ROMs).
+Converted 0 switches.
+<suppressed ~5 debug messages>
+
+13. Executing PROC_MUX pass (convert decision trees to multiplexers).
+Creating decoders for process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+     1/4: $0\job_done_o[0:0]
+     2/4: $0\transaction_done_o[0:0]
+     3/4: $0\byte_index[3:0]
+     4/4: $0\busy_o[0:0]
+Creating decoders for process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:70$7'.
+     1/1: $1\dout_o[7:0]
+
+14. Executing PROC_DLATCH pass (convert process syncs to latches).
+No latch inferred for signal `\standalone_result_serializer.\dout_o' from process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:70$7'.
+
+15. Executing PROC_DFF pass (convert process syncs to FFs).
+Creating register for signal `\standalone_result_serializer.\busy_o' using process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+  created $adff cell `$procdff$70' with positive edge clock and positive level reset.
+Creating register for signal `\standalone_result_serializer.\transaction_done_o' using process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+  created $adff cell `$procdff$75' with positive edge clock and positive level reset.
+Creating register for signal `\standalone_result_serializer.\job_done_o' using process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+  created $adff cell `$procdff$80' with positive edge clock and positive level reset.
+Creating register for signal `\standalone_result_serializer.\byte_index' using process `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+  created $adff cell `$procdff$85' with positive edge clock and positive level reset.
+
+16. Executing PROC_MEMWR pass (convert process memory writes to cells).
+
+17. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+Found and cleaned up 4 empty switches in `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+Removing empty process `standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:94$8'.
+Found and cleaned up 1 empty switch in `\standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:70$7'.
+Removing empty process `standalone_result_serializer.$proc$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:70$7'.
+Cleaned up 5 empty switches.
+
+18. Executing CHECK pass (checking for obvious problems).
+Checking module standalone_result_serializer...
+Found and reported 0 problems.
+
+19. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+<suppressed ~9 debug messages>
+
+20. Executing FLATTEN pass (flatten design).
+
+21. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+22. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 6 unused cells and 33 unused wires.
+<suppressed ~8 debug messages>
+
+23. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+24. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 43 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Computing hashes of 42 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+<suppressed ~3 debug messages>
+Removed a total of 1 cells.
+
+25. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+      Replacing known input bits on port A of cell $procmux$44: \busy_o -> 1'0
+      Replacing known input bits on port A of cell $procmux$42: \busy_o -> 1'1
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~21 debug messages>
+
+26. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+27. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 42 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+28. Executing OPT_DFF pass (perform DFF optimizations).
+
+29. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 1 unused wires.
+<suppressed ~1 debug messages>
+
+30. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+31. Rerunning OPT passes. (Maybe there is more to do…)
+
+32. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~21 debug messages>
+
+33. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+34. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 42 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+35. Executing OPT_DFF pass (perform DFF optimizations).
+
+36. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+37. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+38. Executing FSM pass (extract and optimize FSM).
+
+38.1. Executing FSM_DETECT pass (finding FSMs in design).
+
+38.2. Executing FSM_EXTRACT pass (extracting FSM from design).
+
+38.3. Executing FSM_OPT pass (simple optimizations of FSMs).
+
+38.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+38.5. Executing FSM_OPT pass (simple optimizations of FSMs).
+
+38.6. Executing FSM_RECODE pass (re-assigning FSM state encoding).
+
+38.7. Executing FSM_INFO pass (dumping all available information on FSM cells).
+
+38.8. Executing FSM_MAP pass (mapping FSMs to basic logic).
+
+39. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+40. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 42 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+41. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~21 debug messages>
+
+42. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+43. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 42 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+44. Executing OPT_DFF pass (perform DFF optimizations).
+Adding EN signal on $procdff$85 ($adff) from module standalone_result_serializer (D = $0\byte_index[3:0], Q = \byte_index).
+
+45. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+46. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+<suppressed ~1 debug messages>
+
+47. Rerunning OPT passes. (Maybe there is more to do…)
+
+48. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~21 debug messages>
+
+49. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+50. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 43 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+51. Executing OPT_DFF pass (perform DFF optimizations).
+
+52. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+53. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+54. Executing WREDUCE pass (reducing word size of cells).
+Removed top 1 bits (of 4) from mux cell standalone_result_serializer.$ternary$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:59$2 ($mux).
+Removed top 1 bits (of 4) from port B of cell standalone_result_serializer.$procmux$58_CMP0 ($eq).
+Removed top 1 bits (of 4) from port B of cell standalone_result_serializer.$procmux$59_CMP0 ($eq).
+Removed top 1 bits (of 4) from port B of cell standalone_result_serializer.$procmux$60_CMP0 ($eq).
+Removed top 1 bits (of 4) from port B of cell standalone_result_serializer.$procmux$61_CMP0 ($eq).
+Removed top 2 bits (of 4) from port B of cell standalone_result_serializer.$procmux$62_CMP0 ($eq).
+Removed top 2 bits (of 4) from port B of cell standalone_result_serializer.$procmux$63_CMP0 ($eq).
+Removed top 3 bits (of 4) from port B of cell standalone_result_serializer.$procmux$64_CMP0 ($eq).
+Removed top 1 bits (of 4) from wire standalone_result_serializer.final_byte_index.
+
+55. Executing PEEPOPT pass (run peephole optimizers).
+
+56. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 1 unused wires.
+<suppressed ~1 debug messages>
+
+57. Executing ALUMACC pass (create $alu and $macc cells).
+Extracting $alu and $macc cells in module standalone_result_serializer:
+  creating $macc model for $add$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:115$14 ($add).
+  creating $alu model for $macc $add$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:115$14.
+  creating $alu cell for $add$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:115$14: $auto$alumacc.cc:512:replace_alu$90
+  created 1 $alu and 0 $macc cells.
+
+58. Executing SHARE pass (SAT-based resource sharing).
+
+59. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+60. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 43 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+61. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~21 debug messages>
+
+62. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+63. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 43 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+64. Executing OPT_DFF pass (perform DFF optimizations).
+
+65. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+66. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+67. Executing MEMORY pass.
+
+67.1. Executing OPT_MEM pass (optimize memories).
+Performed a total of 0 transformations.
+
+67.2. Executing OPT_MEM_PRIORITY pass (removing unnecessary memory write priority relations).
+Performed a total of 0 transformations.
+
+67.3. Executing OPT_MEM_FEEDBACK pass (finding memory read-to-write feedback paths).
+
+67.4. Executing MEMORY_BMUX2ROM pass (converting muxes to ROMs).
+
+67.5. Executing MEMORY_DFF pass (merging $dff cells to $memrd).
+
+67.6. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+67.7. Executing MEMORY_SHARE pass (consolidating $memrd/$memwr cells).
+
+67.8. Executing OPT_MEM_WIDEN pass (optimize memories where all ports are wide).
+Performed a total of 0 transformations.
+
+67.9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+67.10. Executing MEMORY_COLLECT pass (generating $mem cells).
+
+68. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+69. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+<suppressed ~9 debug messages>
+
+70. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 40 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+71. Executing OPT_DFF pass (perform DFF optimizations).
+
+72. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 3 unused wires.
+<suppressed ~1 debug messages>
+
+73. Executing MEMORY_MAP pass (converting memories to logic and flip-flops).
+
+74. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+75. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 40 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+76. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~11 debug messages>
+
+77. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+    Consolidated identical input bits for $mux cell $ternary$/foss/designs/butterfold/butterfold_proto/rtl/io/standalone_result_serializer.sv:59$2:
+      Old ports: A=3'001, B=3'110, Y=\final_byte_index
+      New ports: A=2'01, B=2'10, Y=\final_byte_index [1:0]
+      New connections: \final_byte_index [2] = \final_byte_index [1]
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 1 changes.
+
+78. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 40 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+79. Executing OPT_SHARE pass.
+
+80. Executing OPT_DFF pass (perform DFF optimizations).
+
+81. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+82. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+83. Rerunning OPT passes. (Maybe there is more to do…)
+
+84. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  Evaluating internal representation of mux trees.
+  Analyzing evaluation results.
+Removed 0 multiplexer ports.
+<suppressed ~11 debug messages>
+
+85. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+86. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 40 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+87. Executing OPT_SHARE pass.
+
+88. Executing OPT_DFF pass (perform DFF optimizations).
+
+89. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+90. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+91. Executing TECHMAP pass (map to technology primitives).
+
+91.1. Executing Verilog-2005 frontend: /foss/tools/yosys/bin/../share/yosys/techmap.v
+Parsing Verilog input from `/foss/tools/yosys/bin/../share/yosys/techmap.v' to AST representation.
+Generating RTLIL representation for module `\_90_simplemap_bool_ops'.
+Generating RTLIL representation for module `\_90_simplemap_reduce_ops'.
+Generating RTLIL representation for module `\_90_simplemap_logic_ops'.
+Generating RTLIL representation for module `\_90_simplemap_compare_ops'.
+Generating RTLIL representation for module `\_90_simplemap_various'.
+Generating RTLIL representation for module `\_90_simplemap_registers'.
+Generating RTLIL representation for module `\_90_shift_ops_shr_shl_sshl_sshr'.
+Generating RTLIL representation for module `\_90_shift_shiftx'.
+Generating RTLIL representation for module `\_90_fa'.
+Generating RTLIL representation for module `\_90_lcu_brent_kung'.
+Generating RTLIL representation for module `\_90_alu'.
+Generating RTLIL representation for module `\_90_macc'.
+Generating RTLIL representation for module `\_90_alumacc'.
+Generating RTLIL representation for module `$__div_mod_u'.
+Generating RTLIL representation for module `$__div_mod_trunc'.
+Generating RTLIL representation for module `\_90_div'.
+Generating RTLIL representation for module `\_90_mod'.
+Generating RTLIL representation for module `$__div_mod_floor'.
+Generating RTLIL representation for module `\_90_divfloor'.
+Generating RTLIL representation for module `\_90_modfloor'.
+Generating RTLIL representation for module `\_90_pow'.
+Generating RTLIL representation for module `\_90_pmux'.
+Generating RTLIL representation for module `\_90_demux'.
+Generating RTLIL representation for module `\_90_lut'.
+Generating RTLIL representation for module `$connect'.
+Generating RTLIL representation for module `$input_port'.
+Successfully finished Verilog frontend.
+
+91.2. Continuing TECHMAP pass.
+Using template $paramod$32a7b7b86c07519b7537abc18e96f0331f97914d\_90_alu for cells of type $alu.
+Using extmapper simplemap for cells of type $reduce_bool.
+Using extmapper simplemap for cells of type $adffe.
+Using extmapper simplemap for cells of type $eq.
+Using extmapper simplemap for cells of type $mux.
+Using extmapper simplemap for cells of type $logic_and.
+Using extmapper simplemap for cells of type $logic_not.
+Using extmapper simplemap for cells of type $and.
+Using extmapper simplemap for cells of type $not.
+Using extmapper simplemap for cells of type $or.
+Using template $paramod$75a16668b548c3bac59647e2f0c7dad55b2b94b9\_90_pmux for cells of type $pmux.
+Using extmapper simplemap for cells of type $adff.
+Using extmapper simplemap for cells of type $xor.
+Using template $paramod\_90_fa\WIDTH=32'00000000000000000000000000000100 for cells of type $fa.
+Using template $paramod\_90_lcu_brent_kung\WIDTH=32'00000000000000000000000000000100 for cells of type $lcu.
+Using extmapper simplemap for cells of type $pos.
+Using extmapper simplemap for cells of type $reduce_or.
+No more expansions possible.
+<suppressed ~319 debug messages>
+
+92. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+<suppressed ~106 debug messages>
+
+93. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 389 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Computing hashes of 352 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Computing hashes of 336 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+<suppressed ~159 debug messages>
+Removed a total of 53 cells.
+
+94. Executing OPT_DFF pass (perform DFF optimizations).
+
+95. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 2 unused cells and 176 unused wires.
+<suppressed ~3 debug messages>
+
+96. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+97. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 334 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+98. Executing OPT_DFF pass (perform DFF optimizations).
+
+99. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+100. Executing ABC pass (technology mapping using ABC).
+
+100.1. Extracting gate netlist of module `\standalone_result_serializer' to `<abc-temp-dir>/input.blif'..
+
+100.1.1. Executed ABC.
+Extracted 327 gates and 455 wires to a netlist network with 127 inputs and 17 outputs.
+Running ABC script: <abc-temp-dir>/abc.script
+ABC: UC Berkeley, ABC 1.01 (compiled Apr 16 2026 21:01:18)
+ABC: abc 01> empty
+ABC: abc 01> source <abc-temp-dir>/abc.script
+ABC: + read_blif <abc-temp-dir>/input.blif 
+ABC: + read_library <abc-temp-dir>/stdcells.genlib 
+ABC: + strash 
+ABC: + dretime 
+ABC: + map 
+ABC: + write_blif <abc-temp-dir>/output.blif 
+ABC: 
+ABC: YOSYS_ABC_DONE 
+
+100.1.2. Re-integrating ABC results.
+ABC RESULTS:               AND cells:        3
+ABC RESULTS:            ANDNOT cells:      157
+ABC RESULTS:              NAND cells:       14
+ABC RESULTS:               NOT cells:        2
+ABC RESULTS:                OR cells:      110
+ABC RESULTS:             ORNOT cells:       13
+ABC RESULTS:               XOR cells:        5
+ABC RESULTS:        internal signals:      311
+ABC RESULTS:           input signals:      127
+ABC RESULTS:          output signals:       17
+Removing temp directory.
+Removing global temp directory.
+
+101. Executing OPT pass (performing simple optimizations).
+
+101.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+101.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 311 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+101.3. Executing OPT_DFF pass (perform DFF optimizations).
+
+101.4. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 217 unused wires.
+<suppressed ~1 debug messages>
+
+101.5. Finished fast OPT passes.
+
+102. Executing HIERARCHY pass (managing design hierarchy).
+
+102.1. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+
+102.2. Analyzing design hierarchy..
+Top module:  \standalone_result_serializer
+Removed 0 unused modules.
+
+103. Executing CHECK pass (checking for obvious problems).
+Checking module standalone_result_serializer...
+Found and reported 0 problems.
+
+104. Printing statistics.
+
+=== standalone_result_serializer ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      315 wires
+      439 wire bits
+       23 public wires
+      144 public wire bits
+       21 ports
+      137 port bits
+      311 cells
+      157   $_ANDNOT_
+        3   $_AND_
+        4   $_DFFE_PN0P_
+        3   $_DFF_PN0_
+       14   $_NAND_
+        2   $_NOT_
+       13   $_ORNOT_
+      110   $_OR_
+        5   $_XOR_
+
+105. Executing OPT pass (performing simple optimizations).
+
+105.1. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+105.2. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 311 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+105.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
+Running muxtree optimizer on module \standalone_result_serializer..
+  Creating internal representation of mux trees.
+  No muxes found in this module.
+Removed 0 multiplexer ports.
+
+105.4. Executing OPT_REDUCE pass (consolidate $*mux and $reduce_* inputs).
+  Optimizing cells in module \standalone_result_serializer.
+Performed a total of 0 changes.
+
+105.5. Executing OPT_MERGE pass (detect identical cells).
+Finding identical cells in module `\standalone_result_serializer'.
+Computing hashes of 311 cells of `\standalone_result_serializer'.
+Finding duplicate cells in `\standalone_result_serializer'.
+Removed a total of 0 cells.
+
+105.6. Executing OPT_DFF pass (perform DFF optimizations).
+
+105.7. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+
+105.8. Executing OPT_EXPR pass (perform const folding).
+Optimizing module standalone_result_serializer.
+
+105.9. Finished fast OPT passes. (There is nothing left to do.)
+
+106. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 1 unused wires.
+<suppressed ~1 debug messages>
+{
+   "creator": "Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)",
+   "invocation": "stat -json -liberty /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/tmp/ada625a6726945c18a04131c1d311b1e.lib ",
+   "modules": {
+      "\\standalone_result_serializer": {
+         "num_wires":         314,
+         "num_wire_bits":     436,
+         "num_pub_wires":     22,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         311,
+         "num_submodules":       0,
+         "num_cells_by_type": {
+            "$_ANDNOT_": 157,
+            "$_AND_": 3,
+            "$_DFFE_PN0P_": 4,
+            "$_DFF_PN0_": 3,
+            "$_NAND_": 14,
+            "$_NOT_": 2,
+            "$_ORNOT_": 13,
+            "$_OR_": 110,
+            "$_XOR_": 5
+         }
+      }
+   },
+      "design": {
+         "num_wires":         314,
+         "num_wire_bits":     436,
+         "num_pub_wires":     22,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         311,
+         "num_submodules":       0,
+         "num_cells_by_type": {
+            "$_ANDNOT_": 157,
+            "$_AND_": 3,
+            "$_DFFE_PN0P_": 4,
+            "$_DFF_PN0_": 3,
+            "$_NAND_": 14,
+            "$_NOT_": 2,
+            "$_ORNOT_": 13,
+            "$_OR_": 110,
+            "$_XOR_": 5
+         }
+      }
+}
+
+107. Printing statistics.
+
+=== standalone_result_serializer ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      314 wires
+      436 wire bits
+       22 public wires
+      141 public wire bits
+       21 ports
+      137 port bits
+      311 cells
+      157   $_ANDNOT_
+        3   $_AND_
+        4   $_DFFE_PN0P_
+        3   $_DFF_PN0_
+       14   $_NAND_
+        2   $_NOT_
+       13   $_ORNOT_
+      110   $_OR_
+        5   $_XOR_
+
+   Area for cell type $_ANDNOT_ is unknown!
+   Area for cell type $_AND_ is unknown!
+   Area for cell type $_DFFE_PN0P_ is unknown!
+   Area for cell type $_DFF_PN0_ is unknown!
+   Area for cell type $_NAND_ is unknown!
+   Area for cell type $_NOT_ is unknown!
+   Area for cell type $_ORNOT_ is unknown!
+   Area for cell type $_OR_ is unknown!
+   Area for cell type $_XOR_ is unknown!
+
+108. Executing DFFLIBMAP pass (mapping DFF cells to sequential cells from liberty file).
+  cell gf180mcu_fd_sc_mcu7t5v0__dffnq_1 (noninv, pins=3, area=65.86) is a direct match for cell type $_DFF_N_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffq_1 (noninv, pins=3, area=63.66) is a direct match for cell type $_DFF_P_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffnrnq_1 (noninv, pins=4, area=74.64) is a direct match for cell type $_DFF_NN0_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffnsnq_1 (noninv, pins=4, area=79.03) is a direct match for cell type $_DFF_NN1_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffrnq_1 (noninv, pins=4, area=74.64) is a direct match for cell type $_DFF_PN0_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffsnq_1 (noninv, pins=4, area=79.03) is a direct match for cell type $_DFF_PN1_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffnrsnq_1 (noninv, pins=5, area=94.39) is a direct match for cell type $_DFFSR_NNN_.
+  cell gf180mcu_fd_sc_mcu7t5v0__dffrsnq_1 (noninv, pins=5, area=85.61) is a direct match for cell type $_DFFSR_PNN_.
+  final dff cell mappings:
+    \gf180mcu_fd_sc_mcu7t5v0__dffnq_1 _DFF_N_ (.CLKN( C), .D( D), .Q( Q));
+    \gf180mcu_fd_sc_mcu7t5v0__dffq_1 _DFF_P_ (.CLK( C), .D( D), .Q( Q));
+    \gf180mcu_fd_sc_mcu7t5v0__dffnrnq_1 _DFF_NN0_ (.CLKN( C), .D( D), .Q( Q), .RN( R));
+    \gf180mcu_fd_sc_mcu7t5v0__dffnsnq_1 _DFF_NN1_ (.CLKN( C), .D( D), .Q( Q), .SETN( R));
+    unmapped dff cell: $_DFF_NP0_
+    unmapped dff cell: $_DFF_NP1_
+    \gf180mcu_fd_sc_mcu7t5v0__dffrnq_1 _DFF_PN0_ (.CLK( C), .D( D), .Q( Q), .RN( R));
+    \gf180mcu_fd_sc_mcu7t5v0__dffsnq_1 _DFF_PN1_ (.CLK( C), .D( D), .Q( Q), .SETN( R));
+    unmapped dff cell: $_DFF_PP0_
+    unmapped dff cell: $_DFF_PP1_
+    unmapped dff cell: $_DFFE_NN_
+    unmapped dff cell: $_DFFE_NP_
+    unmapped dff cell: $_DFFE_PN_
+    unmapped dff cell: $_DFFE_PP_
+    \gf180mcu_fd_sc_mcu7t5v0__dffnrsnq_1 _DFFSR_NNN_ (.CLKN( C), .D( D), .Q( Q), .RN( R), .SETN( S));
+    unmapped dff cell: $_DFFSR_NNP_
+    unmapped dff cell: $_DFFSR_NPN_
+    unmapped dff cell: $_DFFSR_NPP_
+    \gf180mcu_fd_sc_mcu7t5v0__dffrsnq_1 _DFFSR_PNN_ (.CLK( C), .D( D), .Q( Q), .RN( R), .SETN( S));
+    unmapped dff cell: $_DFFSR_PNP_
+    unmapped dff cell: $_DFFSR_PPN_
+    unmapped dff cell: $_DFFSR_PPP_
+
+108.1. Executing DFFLEGALIZE pass (convert FFs to types supported by the target).
+Mapping DFF cells in module `\standalone_result_serializer':
+  mapped 7 $_DFF_PN0_ cells to \gf180mcu_fd_sc_mcu7t5v0__dffrnq_1 cells.
+{
+   "creator": "Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)",
+   "invocation": "stat -json -liberty /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/tmp/ada625a6726945c18a04131c1d311b1e.lib ",
+   "modules": {
+      "\\standalone_result_serializer": {
+         "num_wires":         318,
+         "num_wire_bits":     440,
+         "num_pub_wires":     22,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         315,
+         "num_submodules":       0,
+         "area":              522.457600,
+         "sequential_area":    522.457600,
+         "num_cells_by_type": {
+            "$_ANDNOT_": 157,
+            "$_AND_": 3,
+            "$_MUX_": 4,
+            "$_NAND_": 14,
+            "$_NOT_": 2,
+            "$_ORNOT_": 13,
+            "$_OR_": 110,
+            "$_XOR_": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1": 7
+         }
+      }
+   },
+      "design": {
+         "num_wires":         318,
+         "num_wire_bits":     440,
+         "num_pub_wires":     22,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         315,
+         "num_submodules":       0,
+         "area":              522.457600,
+         "sequential_area":    522.457600,
+         "num_cells_by_type": {
+            "$_ANDNOT_": 157,
+            "$_AND_": 3,
+            "$_MUX_": 4,
+            "$_NAND_": 14,
+            "$_NOT_": 2,
+            "$_ORNOT_": 13,
+            "$_OR_": 110,
+            "$_XOR_": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1": 7
+         }
+      }
+}
+
+109. Printing statistics.
+
+=== standalone_result_serializer ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      318        - wires
+      440        - wire bits
+       22        - public wires
+      141        - public wire bits
+       21        - ports
+      137        - port bits
+      315  522.458 cells
+      157        -   $_ANDNOT_
+        3        -   $_AND_
+        4        -   $_MUX_
+       14        -   $_NAND_
+        2        -   $_NOT_
+       13        -   $_ORNOT_
+      110        -   $_OR_
+        5        -   $_XOR_
+        7  522.458   gf180mcu_fd_sc_mcu7t5v0__dffrnq_1
+
+   Area for cell type $_ANDNOT_ is unknown!
+   Area for cell type $_AND_ is unknown!
+   Area for cell type $_MUX_ is unknown!
+   Area for cell type $_NAND_ is unknown!
+   Area for cell type $_NOT_ is unknown!
+   Area for cell type $_ORNOT_ is unknown!
+   Area for cell type $_OR_ is unknown!
+   Area for cell type $_XOR_ is unknown!
+
+   Chip area for module '\standalone_result_serializer': 522.457600
+     of which used for sequential elements: 522.457600 (100.00%)
+
+[INFO] Using generated ABC script '/foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/06-yosys-synthesis/AREA_0.abc'…
+
+110. Executing ABC pass (technology mapping using ABC).
+
+110.1. Extracting gate netlist of module `\standalone_result_serializer' to `/tmp/yosys-abc-eE3jaO/input.blif'..
+
+110.1.1. Executed ABC.
+Extracted 308 gates and 435 wires to a netlist network with 127 inputs and 16 outputs.
+Running ABC script: /tmp/yosys-abc-eE3jaO/abc.script
+ABC: UC Berkeley, ABC 1.01 (compiled Apr 16 2026 21:01:18)
+ABC: abc 01> empty
+ABC: abc 01> source /tmp/yosys-abc-eE3jaO/abc.script
+ABC: + read_blif /tmp/yosys-abc-eE3jaO/input.blif 
+ABC: + read_lib -w /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/tmp/ada625a6726945c18a04131c1d311b1e.lib 
+ABC: Parsing finished successfully.  Parsing time =     0.39 sec
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__antenna" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_2".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_3".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_4".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_8".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_12".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__bufz_16".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnrsnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffnsnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffrsnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__dffsnq_4".
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__endcap" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_8" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_16" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_32" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fill_64" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fillcap_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fillcap_8" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fillcap_16" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fillcap_32" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__fillcap_64" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__filltie" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__hold".
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtn_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtn_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtn_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtp_1" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtp_2" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped cell "gf180mcu_fd_sc_mcu7t5v0__icgtp_4" without logic function.
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_1".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_2".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_3".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_4".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_8".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_12".
+ABC: Scl_LibertyReadGenlib() skipped three-state cell "gf180mcu_fd_sc_mcu7t5v0__invz_16".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latrsnq_4".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latsnq_1".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latsnq_2".
+ABC: Scl_LibertyReadGenlib() skipped sequential cell "gf180mcu_fd_sc_mcu7t5v0__latsnq_4".
+ABC: Library "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00" from "/foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/tmp/ada625a6726945c18a04131c1d311b1e.lib" has 143 cells (72 skipped: 36 seq; 15 tri-state; 21 no func; 0 dont_use; 0 with 2 outputs; 0 with 3+ outputs).  Time =     0.49 sec
+ABC: Memory =   23.83 MB. Time =     0.49 sec
+ABC: Warning: Detected 6 multi-output cells (for example, "gf180mcu_fd_sc_mcu7t5v0__addf_1").
+ABC: + read_constr -v /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/06-yosys-synthesis/synthesis.abc.sdc 
+ABC: Setting driving cell to be "gf180mcu_fd_sc_mcu7t5v0__inv_1/ZN".
+ABC: Setting output load to be 72.910004.
+ABC: + source /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/06-yosys-synthesis/AREA_0.abc 
+ABC: Error: The network is combinational.
+ABC: Cannot find the default PI driving cell (gf180mcu_fd_sc_mcu7t5v0__inv_1/ZN) in the library.
+ABC: WireLoad = "none"  Gates =    114 (  4.4 %)   Cap = 12.4 ff (  1.2 %)   Area =     2243.49 ( 98.2 %)   Delay =  3691.98 ps  ( 34.2 %)               
+ABC: Path  0 --       4 : 0   12 pi                                A =   0.00  Df =   0.0   -0.0 ps  S =   0.0 ps  Cin =  0.0 ff  Cout =  46.9 ff  Cmax =   0.0 ff  G =    0  
+ABC: Path  1 --     147 : 1    6 gf180mcu_fd_sc_mcu7t5v0__clkinv_1 A =   8.78  Df = 270.9  -14.7 ps  S = 443.1 ps  Cin =  4.2 ff  Cout =  24.0 ff  Cmax = 228.4 ff  G =  569  
+ABC: Path  2 --     171 : 4    8 gf180mcu_fd_sc_mcu7t5v0__nor4_1   A =  21.95  Df =1790.5 -839.9 ps  S =2497.0 ps  Cin =  3.8 ff  Cout =  37.9 ff  Cmax =  62.2 ff  G =  991  
+ABC: Path  3 --     224 : 4    1 gf180mcu_fd_sc_mcu7t5v0__aoi22_1  A =  19.76  Df =2036.5 -683.3 ps  S = 742.7 ps  Cin =  4.8 ff  Cout =   3.0 ff  Cmax = 163.3 ff  G =   63  
+ABC: Path  4 --     227 : 4    1 gf180mcu_fd_sc_mcu7t5v0__and4_1   A =  24.15  Df =2508.1 -655.7 ps  S = 188.2 ps  Cin =  3.0 ff  Cout =   3.9 ff  Cmax = 238.3 ff  G =  133  
+ABC: Path  5 --     228 : 4    1 gf180mcu_fd_sc_mcu7t5v0__nand4_1  A =  19.76  Df =3692.0 -650.9 ps  S =2000.8 ps  Cin =  4.0 ff  Cout =  72.9 ff  Cmax = 143.5 ff  G = 1826  
+ABC: Start-point = pi3 (\byte_index [2]).  End-point = po9 (\dout_o [5]).
+ABC: netlist                       : i/o =  127/   16  lat =    0  nd =   114  edge =    416  area =2243.65  delay = 5.00  lev = 5
+ABC: + write_blif /tmp/yosys-abc-eE3jaO/output.blif 
+ABC:                                                                                
+ABC: YOSYS_ABC_DONE 
+
+110.1.2. Re-integrating ABC results.
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__and2_1 cells:        2
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__and4_1 cells:        9
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__aoi211_1 cells:        2
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__aoi21_1 cells:        3
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__aoi222_1 cells:        7
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__aoi22_1 cells:       48
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__clkinv_1 cells:        5
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nand2_1 cells:        6
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nand3_1 cells:        2
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nand4_1 cells:        7
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nor2_1 cells:        4
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nor3_1 cells:        6
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__nor4_1 cells:       10
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__oai211_1 cells:        1
+ABC RESULTS:   gf180mcu_fd_sc_mcu7t5v0__xor2_1 cells:        2
+ABC RESULTS:        internal signals:      292
+ABC RESULTS:           input signals:      127
+ABC RESULTS:          output signals:       16
+Removing temp directory.
+Removing global temp directory.
+
+111. Executing SETUNDEF pass (replace undef values with defined constants).
+
+112. Executing HILOMAP pass (mapping to constant drivers).
+
+113. Executing SPLITNETS pass (splitting up multi-bit signals).
+
+114. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \standalone_result_serializer..
+Removed 0 unused cells and 435 unused wires.
+<suppressed ~1 debug messages>
+
+115. Executing INSBUF pass (insert buffer cells for connected wires).
+Add standalone_result_serializer/$auto$insbuf.cc:97:execute$1315: \busy_o -> \dout_valid_o
+
+116. Executing CHECK pass (checking for obvious problems).
+Checking module standalone_result_serializer...
+Found and reported 0 problems.
+{
+   "creator": "Yosys 0.64 (git sha1 6d2c445ae, g++ 13.3.0-6ubuntu2~24.04.1 -fPIC -O3)",
+   "invocation": "stat -json -liberty /foss/designs/butterfold/butterfold_proto/pd_flow/standalone_result_serializer/runs/RUN_2026-08-19_06-11-14/tmp/ada625a6726945c18a04131c1d311b1e.lib ",
+   "modules": {
+      "\\standalone_result_serializer": {
+         "num_wires":         130,
+         "num_wire_bits":     246,
+         "num_pub_wires":     25,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         122,
+         "num_submodules":       0,
+         "area":              2779.123200,
+         "sequential_area":    522.457600,
+         "num_cells_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 9,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi222_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 48,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 2
+         }
+      }
+   },
+      "design": {
+         "num_wires":         130,
+         "num_wire_bits":     246,
+         "num_pub_wires":     25,
+         "num_pub_wire_bits": 141,
+         "num_ports":         21,
+         "num_port_bits":     137,
+         "num_memories":      0,
+         "num_memory_bits":   0,
+         "num_processes":     0,
+         "num_cells":         122,
+         "num_submodules":       0,
+         "area":              2779.123200,
+         "sequential_area":    522.457600,
+         "num_cells_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 9,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi222_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 48,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 2
+         }
+      }
+}
+
+117. Printing statistics.
+
+=== standalone_result_serializer ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      130        - wires
+      246        - wire bits
+       25        - public wires
+      141        - public wire bits
+       21        - ports
+      137        - port bits
+      122 2.78E+03 cells
+        2   35.123   gf180mcu_fd_sc_mcu7t5v0__and2_1
+        9  217.325   gf180mcu_fd_sc_mcu7t5v0__and4_1
+        2   43.904   gf180mcu_fd_sc_mcu7t5v0__aoi211_1
+        3   52.685   gf180mcu_fd_sc_mcu7t5v0__aoi21_1
+        7   215.13   gf180mcu_fd_sc_mcu7t5v0__aoi222_1
+       48  948.326   gf180mcu_fd_sc_mcu7t5v0__aoi22_1
+        1   13.171   gf180mcu_fd_sc_mcu7t5v0__buf_1
+        5   43.904   gf180mcu_fd_sc_mcu7t5v0__clkinv_1
+        7  522.458   gf180mcu_fd_sc_mcu7t5v0__dffrnq_1
+        6   65.856   gf180mcu_fd_sc_mcu7t5v0__nand2_1
+        2   30.733   gf180mcu_fd_sc_mcu7t5v0__nand3_1
+        7  138.298   gf180mcu_fd_sc_mcu7t5v0__nand4_1
+        4   52.685   gf180mcu_fd_sc_mcu7t5v0__nor2_1
+        6   105.37   gf180mcu_fd_sc_mcu7t5v0__nor3_1
+       10   219.52   gf180mcu_fd_sc_mcu7t5v0__nor4_1
+        1   21.952   gf180mcu_fd_sc_mcu7t5v0__oai211_1
+        2   52.685   gf180mcu_fd_sc_mcu7t5v0__xor2_1
+
+   Chip area for module '\standalone_result_serializer': 2779.123200
+     of which used for sequential elements: 522.457600 (18.80%)
+
+118. Executing Verilog backend.
+Dumping module `\standalone_result_serializer'.
+
+119. Executing JSON backend.

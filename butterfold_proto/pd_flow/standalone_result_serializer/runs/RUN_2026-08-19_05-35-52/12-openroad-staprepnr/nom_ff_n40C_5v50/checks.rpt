@@ -1,0 +1,353 @@
+
+===========================================================================
+report_checks -unconstrained
+===========================================================================
+======================= nom_ff_n40C_5v50 Corner ===================================
+
+Startpoint: rst_n (input port clocked by clk)
+Endpoint: _219_ (recovery check against rising-edge clock clk)
+Path Group: asynchronous
+Path Type: max
+
+Fanout         Cap        Slew       Delay        Time   Description
+---------------------------------------------------------------------------------------------
+                      0.150000    0.000000    0.000000   clock clk (rise edge)
+                                  0.000000    0.000000   clock network delay (ideal)
+                                  3.200000    3.200000 ^ input external delay
+     7    0.051247    0.165017    0.085373    3.285373 ^ rst_n (in)
+                                                         rst_n (net)
+                      0.165017    0.000000    3.285373 ^ _219_/RN (gf180mcu_fd_sc_mcu7t5v0__dffrnq_1)
+                                              3.285373   data arrival time
+
+                      0.150000   16.000000   16.000000   clock clk (rise edge)
+                                  0.000000   16.000000   clock network delay (ideal)
+                                 -0.250000   15.750001   clock uncertainty
+                                  0.000000   15.750001   clock reconvergence pessimism
+                                             15.750001 ^ _219_/CLK (gf180mcu_fd_sc_mcu7t5v0__dffrnq_1)
+                                  0.136665   15.886666   library recovery time
+                                             15.886666   data required time
+---------------------------------------------------------------------------------------------
+                                             15.886666   data required time
+                                             -3.285373   data arrival time
+---------------------------------------------------------------------------------------------
+                                             12.601293   slack (MET)
+
+
+Startpoint: result_radix_i[1] (input port clocked by clk)
+Endpoint: result_ready_o (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout         Cap        Slew       Delay        Time   Description
+---------------------------------------------------------------------------------------------
+                      0.150000    0.000000    0.000000   clock clk (rise edge)
+                                  0.000000    0.000000   clock network delay (ideal)
+                                  3.200000    3.200000 ^ input external delay
+     2    0.007335    0.043046    0.012977    3.212977 ^ result_radix_i[1] (in)
+                                                         result_radix_i[1] (net)
+                      0.043046    0.000000    3.212977 ^ _111_/A4 (gf180mcu_fd_sc_mcu7t5v0__and4_1)
+     1    0.004756    0.131644    0.295881    3.508859 ^ _111_/Z (gf180mcu_fd_sc_mcu7t5v0__and4_1)
+                                                         _013_ (net)
+                      0.131644    0.000000    3.508859 ^ _113_/A2 (gf180mcu_fd_sc_mcu7t5v0__oai211_1)
+     4    0.017701    0.366913    0.211142    3.720001 v _113_/ZN (gf180mcu_fd_sc_mcu7t5v0__oai211_1)
+                                                         _015_ (net)
+                      0.366913    0.000000    3.720001 v _114_/A2 (gf180mcu_fd_sc_mcu7t5v0__nor2_1)
+     4    0.013129    0.335151    0.261937    3.981938 ^ _114_/ZN (gf180mcu_fd_sc_mcu7t5v0__nor2_1)
+                                                         _002_ (net)
+                      0.335151    0.000000    3.981938 ^ _117_/A2 (gf180mcu_fd_sc_mcu7t5v0__and2_1)
+     1    0.050000    0.585587    0.480584    4.462521 ^ _117_/Z (gf180mcu_fd_sc_mcu7t5v0__and2_1)
+                                                         result_ready_o (net)
+                      0.585587    0.000000    4.462521 ^ result_ready_o (out)
+                                              4.462521   data arrival time
+
+                      0.150000   16.000000   16.000000   clock clk (rise edge)
+                                  0.000000   16.000000   clock network delay (ideal)
+                                 -0.250000   15.750001   clock uncertainty
+                                  0.000000   15.750001   clock reconvergence pessimism
+                                 -3.200000   12.550000   output external delay
+                                             12.550000   data required time
+---------------------------------------------------------------------------------------------
+                                             12.550000   data required time
+                                             -4.462521   data arrival time
+---------------------------------------------------------------------------------------------
+                                              8.087480   slack (MET)
+
+
+
+
+===========================================================================
+report_checks --slack_max -0.01
+============================================================================
+======================= nom_ff_n40C_5v50 Corner ===================================
+
+No paths found.
+
+
+===========================================================================
+ report_check_types -max_slew -max_cap -max_fanout -violators
+============================================================================
+======================= nom_ff_n40C_5v50 Corner ===================================
+
+
+
+===========================================================================
+report_parasitic_annotation -report_unannotated
+============================================================================
+Found 246 unannotated drivers.
+ X0_i_i[0]
+ X0_i_i[10]
+ X0_i_i[11]
+ X0_i_i[12]
+ X0_i_i[13]
+ X0_i_i[14]
+ X0_i_i[15]
+ X0_i_i[1]
+ X0_i_i[2]
+ X0_i_i[3]
+ X0_i_i[4]
+ X0_i_i[5]
+ X0_i_i[6]
+ X0_i_i[7]
+ X0_i_i[8]
+ X0_i_i[9]
+ X0_q_i[0]
+ X0_q_i[10]
+ X0_q_i[11]
+ X0_q_i[12]
+ X0_q_i[13]
+ X0_q_i[14]
+ X0_q_i[15]
+ X0_q_i[1]
+ X0_q_i[2]
+ X0_q_i[3]
+ X0_q_i[4]
+ X0_q_i[5]
+ X0_q_i[6]
+ X0_q_i[7]
+ X0_q_i[8]
+ X0_q_i[9]
+ X1_i_i[0]
+ X1_i_i[10]
+ X1_i_i[11]
+ X1_i_i[12]
+ X1_i_i[13]
+ X1_i_i[14]
+ X1_i_i[15]
+ X1_i_i[1]
+ X1_i_i[2]
+ X1_i_i[3]
+ X1_i_i[4]
+ X1_i_i[5]
+ X1_i_i[6]
+ X1_i_i[7]
+ X1_i_i[8]
+ X1_i_i[9]
+ X1_q_i[0]
+ X1_q_i[10]
+ X1_q_i[11]
+ X1_q_i[12]
+ X1_q_i[13]
+ X1_q_i[14]
+ X1_q_i[15]
+ X1_q_i[1]
+ X1_q_i[2]
+ X1_q_i[3]
+ X1_q_i[4]
+ X1_q_i[5]
+ X1_q_i[6]
+ X1_q_i[7]
+ X1_q_i[8]
+ X1_q_i[9]
+ X2_i_i[0]
+ X2_i_i[10]
+ X2_i_i[11]
+ X2_i_i[12]
+ X2_i_i[13]
+ X2_i_i[14]
+ X2_i_i[15]
+ X2_i_i[1]
+ X2_i_i[2]
+ X2_i_i[3]
+ X2_i_i[4]
+ X2_i_i[5]
+ X2_i_i[6]
+ X2_i_i[7]
+ X2_i_i[8]
+ X2_i_i[9]
+ X2_q_i[0]
+ X2_q_i[10]
+ X2_q_i[11]
+ X2_q_i[12]
+ X2_q_i[13]
+ X2_q_i[14]
+ X2_q_i[15]
+ X2_q_i[1]
+ X2_q_i[2]
+ X2_q_i[3]
+ X2_q_i[4]
+ X2_q_i[5]
+ X2_q_i[6]
+ X2_q_i[7]
+ X2_q_i[8]
+ X2_q_i[9]
+ clk
+ enable_i
+ result_addr0_i[0]
+ result_addr0_i[1]
+ result_addr0_i[2]
+ result_addr0_i[3]
+ result_addr0_i[4]
+ result_addr0_i[5]
+ result_addr0_i[6]
+ result_addr1_i[0]
+ result_addr1_i[1]
+ result_addr1_i[2]
+ result_addr1_i[3]
+ result_addr1_i[4]
+ result_addr1_i[5]
+ result_addr1_i[6]
+ result_addr2_i[0]
+ result_addr2_i[1]
+ result_addr2_i[2]
+ result_addr2_i[3]
+ result_addr2_i[4]
+ result_addr2_i[5]
+ result_addr2_i[6]
+ result_last_i
+ result_radix_i[0]
+ result_radix_i[1]
+ result_valid_i
+ rst_n
+ _105_/ZN
+ _106_/ZN
+ _107_/ZN
+ _108_/ZN
+ _109_/ZN
+ _110_/ZN
+ _111_/Z
+ _112_/Z
+ _113_/ZN
+ _114_/ZN
+ _115_/ZN
+ _116_/ZN
+ _117_/Z
+ _118_/Z
+ _119_/ZN
+ _120_/ZN
+ _121_/ZN
+ _122_/ZN
+ _123_/ZN
+ _124_/ZN
+ _125_/ZN
+ _126_/ZN
+ _127_/ZN
+ _128_/ZN
+ _129_/ZN
+ _130_/ZN
+ _131_/ZN
+ _132_/ZN
+ _133_/ZN
+ _134_/ZN
+ _135_/ZN
+ _136_/ZN
+ _137_/ZN
+ _138_/ZN
+ _139_/ZN
+ _140_/ZN
+ _141_/ZN
+ _142_/ZN
+ _143_/Z
+ _144_/ZN
+ _145_/ZN
+ _146_/ZN
+ _147_/ZN
+ _148_/ZN
+ _149_/ZN
+ _150_/ZN
+ _151_/ZN
+ _152_/Z
+ _153_/ZN
+ _154_/ZN
+ _155_/ZN
+ _156_/ZN
+ _157_/ZN
+ _158_/ZN
+ _159_/ZN
+ _160_/ZN
+ _161_/Z
+ _162_/ZN
+ _163_/ZN
+ _164_/ZN
+ _165_/ZN
+ _166_/ZN
+ _167_/ZN
+ _168_/ZN
+ _169_/ZN
+ _170_/Z
+ _171_/ZN
+ _172_/ZN
+ _173_/ZN
+ _174_/ZN
+ _175_/ZN
+ _176_/ZN
+ _177_/ZN
+ _178_/ZN
+ _179_/Z
+ _180_/ZN
+ _181_/ZN
+ _182_/ZN
+ _183_/ZN
+ _184_/ZN
+ _185_/ZN
+ _186_/ZN
+ _187_/ZN
+ _188_/Z
+ _189_/ZN
+ _190_/ZN
+ _191_/ZN
+ _192_/ZN
+ _193_/ZN
+ _194_/ZN
+ _195_/ZN
+ _196_/ZN
+ _197_/Z
+ _198_/ZN
+ _199_/ZN
+ _200_/ZN
+ _201_/ZN
+ _202_/ZN
+ _203_/ZN
+ _204_/Z
+ _205_/ZN
+ _206_/ZN
+ _207_/ZN
+ _208_/ZN
+ _209_/ZN
+ _210_/ZN
+ _211_/ZN
+ _212_/ZN
+ _213_/ZN
+ _214_/ZN
+ _215_/ZN
+ _216_/ZN
+ _217_/Z
+ _218_/ZN
+ _219_/Q
+ _220_/Q
+ _221_/Q
+ _222_/Q
+ _223_/Q
+ _224_/Q
+ _225_/Q
+ _226_/Z
+Found 0 partially unannotated drivers.
+
+===========================================================================
+max slew violation count 0
+max fanout violation count 0
+max cap violation count 0
+============================================================================
+
+===========================================================================
+check_setup -verbose -unconstrained_endpoints -multiple_clock -no_clock -no_input_delay -loops -generated_clocks
+===========================================================================
