@@ -1558,24 +1558,24 @@ module transform_scheduler_core #(
             case (1'b1)
                 dft12_phase_onehot[D12_PHASE_RADIX3]: begin
                     // Store B[k1,n2] at address 4*k1+n2.
-                    dft12_ram_i[{2'd0, dft12_group}] <= routed_X0_i;
-                    dft12_ram_q[{2'd0, dft12_group}] <= routed_X0_q;
-                    dft12_ram_i[4'd4 + dft12_group] <= routed_X1_i;
-                    dft12_ram_q[4'd4 + dft12_group] <= routed_X1_q;
-                    dft12_ram_i[4'd8 + dft12_group] <= routed_X2_i;
-                    dft12_ram_q[4'd8 + dft12_group] <= routed_X2_q;
+                    dft12_ram_i[{2'd0, dft12_group}] <= bf_X0_i;
+                    dft12_ram_q[{2'd0, dft12_group}] <= bf_X0_q;
+                    dft12_ram_i[4'd4 + dft12_group] <= bf_X1_i;
+                    dft12_ram_q[4'd4 + dft12_group] <= bf_X1_q;
+                    dft12_ram_i[4'd8 + dft12_group] <= bf_X2_i;
+                    dft12_ram_q[4'd8 + dft12_group] <= bf_X2_q;
                 end
                 dft12_phase_onehot[D12_PHASE_FFT4_EVEN]: begin
-                    dft12_ram_i[dft12_base] <= routed_X0_i;
-                    dft12_ram_q[dft12_base] <= routed_X0_q;
-                    dft12_ram_i[dft12_base + 4'd2] <= routed_X1_i;
-                    dft12_ram_q[dft12_base + 4'd2] <= routed_X1_q;
+                    dft12_ram_i[dft12_base] <= bf_X0_i;
+                    dft12_ram_q[dft12_base] <= bf_X0_q;
+                    dft12_ram_i[dft12_base + 4'd2] <= bf_X1_i;
+                    dft12_ram_q[dft12_base + 4'd2] <= bf_X1_q;
                 end
                 dft12_phase_onehot[D12_PHASE_FFT4_ODD]: begin
-                    dft12_ram_i[dft12_base + 4'd1] <= routed_X0_i;
-                    dft12_ram_q[dft12_base + 4'd1] <= routed_X0_q;
-                    dft12_ram_i[dft12_base + 4'd3] <= routed_X1_i;
-                    dft12_ram_q[dft12_base + 4'd3] <= routed_X1_q;
+                    dft12_ram_i[dft12_base + 4'd1] <= bf_X0_i;
+                    dft12_ram_q[dft12_base + 4'd1] <= bf_X0_q;
+                    dft12_ram_i[dft12_base + 4'd3] <= bf_X1_i;
+                    dft12_ram_q[dft12_base + 4'd3] <= bf_X1_q;
                 end
                 default: begin
                     // Standalone DFT12 sends these downstream. DFT-s-OFDM TX
@@ -1583,31 +1583,31 @@ module transform_scheduler_core #(
                     // values whose natural addresses are still live inputs.
                     if (dft12_tx_active) begin
                         if (dft12_out_addr0 == 4'd6) begin
-                            tx_dft12_hold_i[0] <= routed_X0_i;
-                            tx_dft12_hold_q[0] <= routed_X0_q;
+                            tx_dft12_hold_i[0] <= bf_X0_i;
+                            tx_dft12_hold_q[0] <= bf_X0_q;
                         end else if (dft12_out_addr0 == 4'd9) begin
-                            tx_dft12_hold_i[1] <= routed_X0_i;
-                            tx_dft12_hold_q[1] <= routed_X0_q;
+                            tx_dft12_hold_i[1] <= bf_X0_i;
+                            tx_dft12_hold_q[1] <= bf_X0_q;
                         end else if (dft12_out_addr0 == 4'd10) begin
-                            tx_dft12_hold_i[2] <= routed_X0_i;
-                            tx_dft12_hold_q[2] <= routed_X0_q;
+                            tx_dft12_hold_i[2] <= bf_X0_i;
+                            tx_dft12_hold_q[2] <= bf_X0_q;
                         end else begin
-                            dft12_ram_i[dft12_out_addr0] <= routed_X0_i;
-                            dft12_ram_q[dft12_out_addr0] <= routed_X0_q;
+                            dft12_ram_i[dft12_out_addr0] <= bf_X0_i;
+                            dft12_ram_q[dft12_out_addr0] <= bf_X0_q;
                         end
 
                         if (dft12_out_addr1 == 4'd6) begin
-                            tx_dft12_hold_i[0] <= routed_X1_i;
-                            tx_dft12_hold_q[0] <= routed_X1_q;
+                            tx_dft12_hold_i[0] <= bf_X1_i;
+                            tx_dft12_hold_q[0] <= bf_X1_q;
                         end else if (dft12_out_addr1 == 4'd9) begin
-                            tx_dft12_hold_i[1] <= routed_X1_i;
-                            tx_dft12_hold_q[1] <= routed_X1_q;
+                            tx_dft12_hold_i[1] <= bf_X1_i;
+                            tx_dft12_hold_q[1] <= bf_X1_q;
                         end else if (dft12_out_addr1 == 4'd10) begin
-                            tx_dft12_hold_i[2] <= routed_X1_i;
-                            tx_dft12_hold_q[2] <= routed_X1_q;
+                            tx_dft12_hold_i[2] <= bf_X1_i;
+                            tx_dft12_hold_q[2] <= bf_X1_q;
                         end else begin
-                            dft12_ram_i[dft12_out_addr1] <= routed_X1_i;
-                            dft12_ram_q[dft12_out_addr1] <= routed_X1_q;
+                            dft12_ram_i[dft12_out_addr1] <= bf_X1_i;
+                            dft12_ram_q[dft12_out_addr1] <= bf_X1_q;
                         end
                     end
                 end
