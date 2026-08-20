@@ -805,6 +805,7 @@ module transform_scheduler_core #(
     logic bf_out_valid;
     logic bf_out_ready;
     logic bf_result_fire;
+    logic dft12_writeback_fire;
 
     logic small_issue_active;
     logic fft128_issue_active;
@@ -1164,6 +1165,11 @@ module transform_scheduler_core #(
                 : (result_ready_i && !result_meta_empty));
 
     assign bf_result_fire = bf_out_valid && bf_out_ready;
+    assign dft12_writeback_fire =
+        dft12_active &&
+        (dft12_state == D12_WAIT_RESULT) &&
+        bf_out_valid &&
+        (!dft12_final_operation || dft12_tx_active);
     assign small_result_fire =
         !fft128_active && !dft12_active && bf_result_fire;
 
@@ -1550,11 +1556,7 @@ module transform_scheduler_core #(
         end else if (dft12_input_write) begin
             dft12_ram_i[rx_dft12_index] <= rx_dft12_i;
             dft12_ram_q[rx_dft12_index] <= sign_extend_q17(din);
-        end else if (
-            dft12_active &&
-            (dft12_state == D12_WAIT_RESULT) &&
-            bf_result_fire
-        ) begin
+        end else if (dft12_writeback_fire) begin
             case (1'b1)
                 dft12_phase_onehot[D12_PHASE_RADIX3]: begin
                     // Store B[k1,n2] at address 4*k1+n2.
