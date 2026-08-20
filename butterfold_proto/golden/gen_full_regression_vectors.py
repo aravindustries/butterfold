@@ -24,20 +24,20 @@ EXPECTED_LINE_COUNTS = {
     "fft3_expected.hex": 8,
     "dft12_inputs.hex": 8 * 12,
     "dft12_expected.hex": 8 * 12,
-    "fft128_inputs.hex": 5 * 128,
-    "fft128_expected.hex": 5 * 128,
-    "ifft128_inputs.hex": 5 * 128,
-    "ifft128_expected.hex": 5 * 128,
-    "fft128_twiddle_re.hex": 64,
-    "fft128_twiddle_im.hex": 64,
-    "ofdm_rx_normal_cp_inputs.hex": 4 * (9 + 128),
-    "ofdm_rx_extended_cp_inputs.hex": 4 * (10 + 128),
-    "ofdm_rx_normal_cp_expected.hex": 4 * 128,
-    "ofdm_rx_extended_cp_expected.hex": 4 * 128,
+    "fft64_inputs.hex": 5 * 64,
+    "fft64_expected.hex": 5 * 64,
+    "ifft64_inputs.hex": 5 * 64,
+    "ifft64_expected.hex": 5 * 64,
+    "fft64_twiddle_re.hex": 32,
+    "fft64_twiddle_im.hex": 32,
+    "ofdm_rx_normal_cp_inputs.hex": 4 * (4 + 64),
+    "ofdm_rx_extended_cp_inputs.hex": 4 * (5 + 64),
+    "ofdm_rx_normal_cp_expected.hex": 4 * 64,
+    "ofdm_rx_extended_cp_expected.hex": 4 * 64,
     "ofdm_tx_normal_cp_inputs.hex": 5 * 12,
     "ofdm_tx_extended_cp_inputs.hex": 5 * 12,
-    "ofdm_tx_normal_cp_expected.hex": 5 * (9 + 128),
-    "ofdm_tx_extended_cp_expected.hex": 5 * (10 + 128),
+    "ofdm_tx_normal_cp_expected.hex": 5 * (4 + 64),
+    "ofdm_tx_extended_cp_expected.hex": 5 * (5 + 64),
 }
 
 
@@ -47,8 +47,12 @@ def count_nonempty_lines(path: Path) -> int:
 
 
 def validate_tx_cp(path: Path, cp_length: int, num_tests: int) -> None:
-    samples = [line.strip().lower() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    samples_per_test = 128 + cp_length
+    samples = [
+        line.strip().lower()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    samples_per_test = 64 + cp_length
     expected_total = num_tests * samples_per_test
     if len(samples) != expected_total:
         raise RuntimeError(
@@ -92,8 +96,8 @@ def main() -> None:
     if errors:
         raise RuntimeError("Vector validation failed:\n  " + "\n  ".join(errors))
 
-    validate_tx_cp(VECTOR_DIR / "ofdm_tx_normal_cp_expected.hex", 9, 5)
-    validate_tx_cp(VECTOR_DIR / "ofdm_tx_extended_cp_expected.hex", 10, 5)
+    validate_tx_cp(VECTOR_DIR / "ofdm_tx_normal_cp_expected.hex", 4, 5)
+    validate_tx_cp(VECTOR_DIR / "ofdm_tx_extended_cp_expected.hex", 5, 5)
 
     print("\nAll full-regression vector files passed count and TX CP-copy checks.")
 

@@ -5,18 +5,18 @@ import math
 
 import numpy as np
 
-N = 128
+N = 64
 FRAC_BITS = 7
 SCALE = 1 << FRAC_BITS
 
 NUM_TWO_POINT_TESTS = 8
-NUM_FFT128_TESTS = 5
-NUM_IFFT128_TESTS = 5
+NUM_FFT64_TESTS = 5
+NUM_IFFT64_TESTS = 5
 SEED = 20260805
 
 CMD_FFT2 = 0x40
-CMD_FFT128 = 0x41
-CMD_IFFT128 = 0x42
+CMD_FFT64 = 0x41
+CMD_IFFT64 = 0x42
 CMD_IFFT2 = 0x43
 
 VECTOR_DIR = Path("vectors")
@@ -39,10 +39,10 @@ def q17(value: np.ndarray | float) -> np.ndarray:
     return np.clip(scaled, -128, 127).astype(np.int16)
 
 
-def bit_reverse7(value: int) -> int:
+def bit_reverse6(value: int) -> int:
     result = 0
-    for bit in range(7):
-        result |= ((value >> bit) & 1) << (6 - bit)
+    for bit in range(6):
+        result |= ((value >> bit) & 1) << (5 - bit)
     return result
 
 
@@ -56,8 +56,8 @@ def generate_twiddles() -> tuple[np.ndarray, np.ndarray]:
         twiddle_im[k] = max(-128, min(127, round(math.sin(angle) * SCALE)))
 
     with (
-        (VECTOR_DIR / "fft128_twiddle_re.hex").open("w", encoding="utf-8") as re_file,
-        (VECTOR_DIR / "fft128_twiddle_im.hex").open("w", encoding="utf-8") as im_file,
+        (VECTOR_DIR / "fft64_twiddle_re.hex").open("w", encoding="utf-8") as re_file,
+        (VECTOR_DIR / "fft64_twiddle_im.hex").open("w", encoding="utf-8") as im_file,
     ):
         for re, im in zip(twiddle_re, twiddle_im, strict=True):
             re_file.write(hex_signed(int(re), 8) + "\n")
@@ -127,7 +127,7 @@ def two_point_model(
     return result
 
 
-def transform128_model(
+def transform64_model(
     input_i: np.ndarray,
     input_q: np.ndarray,
     twiddle_re_rom: np.ndarray,
@@ -138,11 +138,11 @@ def transform128_model(
     ram_q = np.zeros(N, dtype=np.int64)
 
     for sample_index in range(N):
-        address = bit_reverse7(sample_index)
+        address = bit_reverse6(sample_index)
         ram_i[address] = wrap_signed(int(input_i[sample_index]), 16)
         ram_q[address] = wrap_signed(int(input_q[sample_index]), 16)
 
-    for stage in range(7):
+    for stage in range(6):
         half_size = 1 << stage
         group_size = 2 << stage
 
@@ -150,7 +150,7 @@ def transform128_model(
             for j in range(half_size):
                 addr0 = group_base + j
                 addr1 = addr0 + half_size
-                twiddle_index = j << (6 - stage)
+                twiddle_index = j << (5 - stage)
 
                 x0_i = int(ram_i[addr0])
                 x0_q = int(ram_q[addr0])
@@ -189,8 +189,8 @@ def transform128_model(
                 ram_q[addr1] = X1_q
 
     if inverse:
-        ram_i = np.asarray([wrap_signed(int(value) >> 7, 16) for value in ram_i])
-        ram_q = np.asarray([wrap_signed(int(value) >> 7, 16) for value in ram_q])
+        ram_i = np.asarray([wrap_signed(int(value) >> 6, 16) for value in ram_i])
+        ram_q = np.asarray([wrap_signed(int(value) >> 6, 16) for value in ram_q])
 
     return ram_i.astype(np.int16), ram_q.astype(np.int16)
 
@@ -211,7 +211,7 @@ def make_two_point_tests(rng: np.random.Generator):
     return tests
 
 
-def make_fft128_tests(rng: np.random.Generator):
+def make_fft64_tests(rng: np.random.Generator):
     tests: list[tuple[np.ndarray, np.ndarray]] = []
 
     impulse_i = np.zeros(N, dtype=np.int16)
@@ -227,7 +227,7 @@ def make_fft128_tests(rng: np.random.Generator):
     tone = 0.5 * np.exp(1j * 2.0 * math.pi * 7 * n / N)
     tests.append((q17(tone.real), q17(tone.imag)))
 
-    while len(tests) < NUM_FFT128_TESTS:
+    while len(tests) < NUM_FFT64_TESTS:
         tests.append((
             q17(rng.uniform(-1.0, 1.0, size=N)),
             q17(rng.uniform(-1.0, 1.0, size=N)),
@@ -236,7 +236,7 @@ def make_fft128_tests(rng: np.random.Generator):
     return tests
 
 
-def make_ifft128_tests(rng: np.random.Generator):
+def make_ifft64_tests(rng: np.random.Generator):
     tests: list[tuple[np.ndarray, np.ndarray]] = []
 
     constant_i = np.full(N, 64, dtype=np.int16)
@@ -253,7 +253,7 @@ def make_ifft128_tests(rng: np.random.Generator):
     one_bin_q[7] = 32
     tests.append((one_bin_i, one_bin_q))
 
-    while len(tests) < NUM_IFFT128_TESTS:
+    while len(tests) < NUM_IFFT64_TESTS:
         tests.append((
             q17(rng.uniform(-1.0, 1.0, size=N)),
             q17(rng.uniform(-1.0, 1.0, size=N)),
@@ -298,7 +298,7 @@ def write_block_vectors(prefix: str, tests, tw_re, tw_im, inverse: bool) -> None
         numpy_file.write("test,index,reference_real,reference_imag,rtl_real,rtl_imag\n")
 
         for test_index, (input_i, input_q) in enumerate(tests):
-            output_i, output_q = transform128_model(
+            output_i, output_q = transform64_model(
                 input_i,
                 input_q,
                 tw_re,
@@ -350,16 +350,16 @@ def main() -> None:
     twiddle_re, twiddle_im = generate_twiddles()
 
     two_point_tests = make_two_point_tests(rng)
-    fft128_tests = make_fft128_tests(rng)
-    ifft128_tests = make_ifft128_tests(rng)
+    fft64_tests = make_fft64_tests(rng)
+    ifft64_tests = make_ifft64_tests(rng)
 
     write_two_point_vectors(two_point_tests)
-    write_block_vectors("fft128", fft128_tests, twiddle_re, twiddle_im, inverse=False)
-    write_block_vectors("ifft128", ifft128_tests, twiddle_re, twiddle_im, inverse=True)
+    write_block_vectors("fft64", fft64_tests, twiddle_re, twiddle_im, inverse=False)
+    write_block_vectors("ifft64", ifft64_tests, twiddle_re, twiddle_im, inverse=True)
 
     print(f"Generated {NUM_TWO_POINT_TESTS} mixed FFT2/IFFT2 tests")
-    print(f"Generated {NUM_FFT128_TESTS} FFT128 tests")
-    print(f"Generated {NUM_IFFT128_TESTS} IFFT128 tests")
+    print(f"Generated {NUM_FFT64_TESTS} FFT64 tests")
+    print(f"Generated {NUM_IFFT64_TESTS} IFFT64 tests")
 
 
 if __name__ == "__main__":

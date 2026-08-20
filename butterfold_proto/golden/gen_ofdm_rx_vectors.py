@@ -6,13 +6,13 @@ import csv
 
 import numpy as np
 
-N = 128
+N = 64
 FRAC_BITS = 7
 SCALE = 1 << FRAC_BITS
 NUM_TESTS = 4
 SEED = 20260806
-NORMAL_CP = 9
-EXTENDED_CP = 10
+NORMAL_CP = 4
+EXTENDED_CP = 5
 
 VECTOR_DIR = Path("vectors")
 
@@ -29,10 +29,10 @@ def hex_signed(value: int, bits: int) -> str:
     return f"{value & ((1 << bits) - 1):0{digits}x}"
 
 
-def bit_reverse7(value: int) -> int:
+def bit_reverse6(value: int) -> int:
     result = 0
-    for bit in range(7):
-        result |= ((value >> bit) & 1) << (6 - bit)
+    for bit in range(6):
+        result |= ((value >> bit) & 1) << (5 - bit)
     return result
 
 
@@ -46,8 +46,8 @@ def generate_twiddles() -> tuple[np.ndarray, np.ndarray]:
         twiddle_im[k] = max(-128, min(127, round(math.sin(angle) * SCALE)))
 
     with (
-        (VECTOR_DIR / "fft128_twiddle_re.hex").open("w", encoding="utf-8") as re_file,
-        (VECTOR_DIR / "fft128_twiddle_im.hex").open("w", encoding="utf-8") as im_file,
+        (VECTOR_DIR / "fft64_twiddle_re.hex").open("w", encoding="utf-8") as re_file,
+        (VECTOR_DIR / "fft64_twiddle_im.hex").open("w", encoding="utf-8") as im_file,
     ):
         for re_value, im_value in zip(twiddle_re, twiddle_im, strict=True):
             re_file.write(hex_signed(int(re_value), 8) + "\n")
@@ -104,7 +104,7 @@ def radix2_butterfly(
     )
 
 
-def fft128_fixed(
+def fft64_fixed(
     input_i: np.ndarray,
     input_q: np.ndarray,
     twiddle_re_rom: np.ndarray,
@@ -114,11 +114,11 @@ def fft128_fixed(
     ram_q = np.zeros(N, dtype=np.int64)
 
     for sample_index in range(N):
-        address = bit_reverse7(sample_index)
+        address = bit_reverse6(sample_index)
         ram_i[address] = wrap_signed(int(input_i[sample_index]), 16)
         ram_q[address] = wrap_signed(int(input_q[sample_index]), 16)
 
-    for stage in range(7):
+    for stage in range(6):
         half_size = 1 << stage
         group_size = 2 << stage
 
@@ -126,7 +126,7 @@ def fft128_fixed(
             for j in range(half_size):
                 addr0 = group_base + j
                 addr1 = addr0 + half_size
-                twiddle_index = j << (6 - stage)
+                twiddle_index = j << (5 - stage)
 
                 x0_i = int(ram_i[addr0])
                 x0_q = int(ram_q[addr0])
@@ -231,7 +231,7 @@ def write_mode(
                     hex_signed(int(i_code), 8) + hex_signed(int(q_code), 8) + "\n"
                 )
 
-            fft_i, fft_q = fft128_fixed(
+            fft_i, fft_q = fft64_fixed(
                 useful_i,
                 useful_q,
                 twiddle_re,
