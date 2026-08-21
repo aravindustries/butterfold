@@ -406,11 +406,9 @@ module transform_scheduler_core #(
     assign tx_sample_ready = 1'b1;
     assign tx_input_write = tx_sample_valid && tx_sample_ready;
 
-    // Clearing the FFT scratch does not consume the shared butterfly and can
-    // overlap the register-based DFT12. The 64-cycle clear is longer than
-    // DFT12, so the mapper cannot reach its data-dependent mapping phase
-    // before all twelve DFT results have been produced.
-    assign tx_mapper_start = dft12_start && tx_dft12_block_ready;
+    // Start mapping only after the TX DFT12 result block is complete.  The
+    // final RAM/hold writes commit on this edge, before mapping consumes them.
+    assign tx_mapper_start = dft12_done && dft12_tx_active;
 
     //==========================================================================
     // Small-transform transaction FIFO
