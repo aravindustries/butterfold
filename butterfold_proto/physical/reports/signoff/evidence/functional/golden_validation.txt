@@ -1,0 +1,53 @@
+ButterFold Golden64 validation
+===============================
+
+Scope
+-----
+Updated from the user-provided golden-model sources only:
+- gen_all_mode_vectors.py
+- gen_fft128_twiddles.py -> gen_fft64_twiddles.py
+- gen_fft128_vectors.py -> gen_fft64_vectors.py
+- gen_ifft128_vectors.py -> gen_ifft64_vectors.py
+- gen_ofdm_rx_vectors.py
+- gen_ofdm_tx_vectors.py
+
+Intentional mathematical changes
+--------------------------------
+- Large transform N: 128 -> 64
+- Radix-2 stages: 7 -> 6
+- Butterflies/stage implied by schedule: 64 -> 32
+- Total butterflies: 448 -> 192
+- Bit reversal: 7 bits -> 6 bits
+- Twiddle index stride exponent: (6-stage) -> (5-stage)
+- IFFT final normalization: >>7 -> >>6
+- OFDM CP convention: 9/10 -> 4/5 samples
+- OFDM TX subcarrier mapping preserved exactly at bins 1..12
+- DFT12 fixed-point model left unchanged
+
+Independent checks performed
+----------------------------
+PASS: all six Python scripts execute successfully.
+PASS: W64 Q1.7 twiddles are bit-for-bit identical to W128[0,2,4,...,62].
+PASS: FFT64 impulse [64,0,...] -> all 64 output bins equal 64+j0.
+PASS: IFFT64 constant spectrum 64+j0 -> sample 0 = 64+j0 and all other samples zero.
+PASS: gen_ifft64_vectors NumPy comparison RMS complex error = 0.004863, max = 0.010813.
+PASS: gen_fft64_vectors executes and produces 50 tests.
+PASS: gen_all_mode_vectors executes for FFT2/IFFT2, FFT64 and IFFT64.
+PASS: OFDM RX generator executes with 4/5 CP.
+PASS: OFDM TX generator executes with 4/5 CP and bins 1..12.
+PASS: DFT12 function block in gen_ofdm_tx_vectors.py is text-identical to the supplied 128-point source.
+
+Not included in the supplied pasted source
+------------------------------------------
+The terminal listing showed these files, but their contents were not present in the paste:
+- gen_full_regression_vectors.py (the cat command used the misspelled gen_full_regression_vactors.py)
+- gen_realtime_vectors.py
+
+They were intentionally NOT invented or modified. Review/update them separately once supplied.
+
+Integration note
+----------------
+The new standalone vector/model filenames use fft64/ifft64 names. Existing RTL/testbenches
+that still open fft128/ifft128 filenames will need a separate verification-infrastructure
+update after the RTL redesign is complete. Do not alias 64-point vectors under 128-point
+names unless that is a deliberate repository convention.
