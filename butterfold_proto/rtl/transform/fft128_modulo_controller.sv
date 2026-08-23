@@ -30,6 +30,9 @@ module fft128_modulo_controller (
     output logic [6:0] diag_addr0_o, diag_addr1_o,
     output logic diag_last_o
 );
+    localparam logic [7:0] FFT_N = 8'd64;
+    localparam logic [2:0] FFT_FINAL_STAGE = 3'd5;
+    localparam integer IFFT_NORMALIZE_SHIFT = 6;
     localparam logic signed [7:0] UNITY_PROXY_RE = -8'sd128;
     localparam logic signed [7:0] UNITY_PROXY_IM = 8'sd0;
 
@@ -88,7 +91,7 @@ module fft128_modulo_controller (
     assign fetch_addr1 = fetch_addr0 + fetch_half_size;
     assign fetch_twiddle_index = fetch_j << (6-fetch_stage);
     assign fetch_last_in_stage =
-        (fetch_group + fetch_group_size >= 8'd128) &&
+        (fetch_group + fetch_group_size >= FFT_N) &&
         (fetch_j == fetch_half_size-1'b1);
 
     assign result_half_size = 7'd1 << result_stage;
@@ -96,9 +99,10 @@ module fft128_modulo_controller (
     assign result_addr0 = result_group + result_j;
     assign result_addr1 = result_addr0 + result_half_size;
     assign result_last_in_stage =
-        (result_group + result_group_size >= 8'd128) &&
+        (result_group + result_group_size >= FFT_N) &&
         (result_j == result_half_size-1'b1);
-    assign result_last_transform = result_last_in_stage && result_stage==3'd6;
+    assign result_last_transform =
+        result_last_in_stage && result_stage == FFT_FINAL_STAGE;
 
     fft128_twiddle_rom u_twiddle(.addr_i(fetch_twiddle_index),.re_o(rom_re),.im_o(rom_im));
 
@@ -164,7 +168,7 @@ module fft128_modulo_controller (
         begin
             if (fetch_j == fetch_half_size-1'b1) begin
                 fetch_j <= 6'd0;
-                if (fetch_group + fetch_group_size >= 8'd128)
+                if (fetch_group + fetch_group_size >= FFT_N)
                     fetch_group <= 7'd0;
                 else fetch_group <= fetch_group + fetch_group_size[6:0];
             end else fetch_j <= fetch_j + 1'b1;
@@ -174,7 +178,7 @@ module fft128_modulo_controller (
         begin
             if (result_j == result_half_size-1'b1) begin
                 result_j <= 6'd0;
-                if (result_group + result_group_size >= 8'd128)
+                if (result_group + result_group_size >= FFT_N)
                     result_group <= 7'd0;
                 else result_group <= result_group + result_group_size[6:0];
             end else result_j <= result_j + 1'b1;
@@ -226,14 +230,15 @@ module fft128_modulo_controller (
                         $display("MOD PERF result-stage-last stage=%0d time=%0t",result_stage,$time);
 `endif
                     pending_valid <= 1'b1; pending_writes_done <= 1'b0;
-                    pending_X0_i <= (inverse_reg && result_stage==3'd6) ? ($signed(X0_i_i)>>>7) : X0_i_i;
-                    pending_X0_q <= (inverse_reg && result_stage==3'd6) ? ($signed(X0_q_i)>>>7) : X0_q_i;
-                    pending_X1_i <= (inverse_reg && result_stage==3'd6) ? ($signed(X1_i_i)>>>7) : X1_i_i;
-                    pending_X1_q <= (inverse_reg && result_stage==3'd6) ? ($signed(X1_q_i)>>>7) : X1_q_i;
+                    pending_X0_i <= (inverse_reg && result_stage == FFT_FINAL_STAGE) ? ($signed(X0_i_i) >>> IFFT_NORMALIZE_SHIFT) : X0_i_i;
+                    pending_X0_q <= (inverse_reg && result_stage == FFT_FINAL_STAGE) ? ($signed(X0_q_i) >>> IFFT_NORMALIZE_SHIFT) : X0_q_i;
+                    pending_X1_i <= (inverse_reg && result_stage == FFT_FINAL_STAGE) ? ($signed(X1_i_i) >>> IFFT_NORMALIZE_SHIFT) : X1_i_i;
+                    pending_X1_q <= (inverse_reg && result_stage == FFT_FINAL_STAGE) ? ($signed(X1_q_i) >>> IFFT_NORMALIZE_SHIFT) : X1_q_i;
                     pending_addr0 <= result_addr0; pending_addr1 <= result_addr1;
                     pending_stage_last <= result_last_in_stage;
                     pending_transform_last <= result_last_transform;
-                    pending_diag <= !ofdm_reg && (result_stage==3'd6);
+                    pending_diag <=
+                        !ofdm_reg && (result_stage == FFT_FINAL_STAGE);
                     // Results are strictly ordered.  Advance the result
                     // context at capture, including directly into the next
                     // stage.  The preceding stage's last result remains
@@ -283,7 +288,7 @@ module fft128_modulo_controller (
                             // earlier in S.  Prefetch it while the final S
                             // result is computed/written; only the final
                             // transform stage must drain.
-                            if (fetch_stage == 3'd6) begin
+                            if (fetch_stage == FFT_FINAL_STAGE) begin
                                 state <= M_DRAIN;
                             end else begin
                                 fetch_stage <= fetch_stage + 1'b1;

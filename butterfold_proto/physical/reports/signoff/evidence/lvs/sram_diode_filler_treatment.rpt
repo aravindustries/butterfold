@@ -1,0 +1,51 @@
+SRAM / ANTENNA DIODE / FILLER LVS TREATMENT
+==========================================
+
+SRAM
+----
+Count in ECO netlist: 2 x gf180mcu_fd_ip_sram__sram256x8m8wm1
+  u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram
+  u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram
+
+Official PDK views:
+  spice: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/spice/gf180mcu_fd_ip_sram__sram256x8m8wm1.spice
+  cdl:   /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/cdl/gf180mcu_fd_ip_sram__sram256x8m8wm1.cdl
+  lef:   /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram256x8m8wm1.lef
+  maglef:/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/maglef/gf180mcu_fd_ip_sram__sram256x8m8wm1.mag
+
+The official SRAM spice/CDL is a FULL transistor netlist (comment FDC=16461), not a pin stub.
+
+Supported GF180/LibreLane digital LVS treatment: BLACKBOX / LEF abstract at the macro boundary.
+Do not flatten the SRAM hard macro against the 16k-device spice (not the PDK digital LVS methodology).
+
+Layout: MAGIC_EXT_ABSTRACT_CELLS = gf180mcu_fd_ip_sram__sram256x8m8wm1
+        (LibreLane extract_spice.tcl: load cell; property LEFview true)
+        SRAM LEF is read after GDS so LEFview has pins.
+Source: ECO powered Verilog instantiates the SRAM; SRAM transistor spice is NOT read,
+        so the source SRAM is a pin-accurate black box matching the layout abstract.
+Pin equivalence: Verilog/LEF pins CLK, CEN, GWEN, WEN[7:0], A[7:0], D[7:0], Q[7:0], VDD, VSS.
+Require: SRAM instance count = 2.
+
+Why valid: OpenPDKs ships maglef + LEF abstracts for this IP; LibreLane MAGIC_EXT_ABSTRACT_CELLS
+is the supported hard-macro extract path. Full LVS of stdcells does not require flattening foundry SRAM.
+
+ANTENNA DIODES
+--------------
+ECO netlist contains 14 instances ANTENNA_1 .. ANTENNA_14 of gf180mcu_fd_sc_mcu9t5v0__antenna.
+Official SPICE/CDL: 2 diodes
+  D0/d0  diode_nd2ps_06v0
+  D1/d1  diode_pd2nw_06v0
+LibreLane DIODE_CELL = gf180mcu_fd_sc_mcu9t5v0__antenna/I
+gf180mcuD_setup.tcl: does NOT ignore antenna; property parallel enable.
+Layout GDS preflight extracted the antenna cell to those 2 diodes.
+They remain in the comparison (not deleted, not faked).
+
+FILLER / ENDCAP / FILLTIE
+-------------------------
+Official SPICE/CDL: fill_*, filltie, endcap have 0 devices (physical-only cells).
+gf180mcuD_setup.tcl ignore class:
+  gf180mcu_fd_sc_[^_]+__endcap
+  gf180mcu_fd_sc_[^_]+__fill_[[:digit:]]+
+  gf180mcu_fd_sc_[^_]+__filltie
+fillcap_* have MOSFETs (e.g. fillcap_8 has 4) and are compared, not ignored.
+GDS cells are not deleted.

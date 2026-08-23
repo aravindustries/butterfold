@@ -8,7 +8,7 @@ STAGE ?= route
 	physical-signoff-setup physical-signoff-hold physical-signoff-io \
 	physical-signoff-summary padframe-build padframe-smoke padframe-floorplan \
 	padframe-place padframe-cts padframe-route padframe-signoff padframe-summary \
-	pad-boundary-repair candidate-gds
+	pad-boundary-repair candidate-gds postroute-setup-eco
 
 .PHONY: padframe-electrical
 
@@ -107,6 +107,12 @@ lvs:
 
 lvs-diagnostic:
 	$(PYTHON) audit_lvs_pins.py
+
+# Deterministic post-route extracted-aware ECO on the tracked 38.4 MHz
+# interval-10 production ODB. Does not rerun synthesis/P&R by default.
+# ECO_ROUTE=1 enables the optional fresh GRT+DRT pass.
+postroute-setup-eco:
+	$(OPENROAD) -no_init -exit scripts/postroute_setup_close.tcl
 
 clean:
 	rm -rf results

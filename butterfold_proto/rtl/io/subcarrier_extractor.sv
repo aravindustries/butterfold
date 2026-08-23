@@ -3,15 +3,14 @@
 
 // Stream-side one-RB extractor for the OFDM_RX path.
 //
-// The transform scheduler emits all 128 FFT bins as an interleaved byte stream:
-//   bin0.I, bin0.Q, bin1.I, bin1.Q, ... bin127.I, bin127.Q
+// The transform scheduler emits all 64 FFT bins as an interleaved byte stream.
 // This block forwards only SC_COUNT consecutive bins beginning at SC_START_BIN.
 // There is intentionally no output backpressure; the downstream scheduler
 // captures every selected byte when selected_valid_o is asserted.
 module subcarrier_extractor #(
     parameter integer SC_START_BIN = 1,
     parameter integer SC_COUNT     = 12,
-    parameter integer INPUT_BIN_COUNT = 128
+    parameter integer INPUT_BIN_COUNT = 64
 ) (
     input  logic clk,
     input  logic rst_n,

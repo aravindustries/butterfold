@@ -1,0 +1,108 @@
+OFFICIAL GF180 STANDARD-CELL SOURCE MODEL PREFLIGHT
+==================================================
+CELL_SPICE_MODELS: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/spice/gf180mcu_fd_sc_mcu9t5v0.spice
+  subcircuits: 229
+CELL_CDLS:         /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/cdl/gf180mcu_fd_sc_mcu9t5v0.cdl
+  subcircuits: 229
+
+Note: OpenPDKs stdcell SPICE instantiates MOSFETs as X ... nfet_05v0/pfet_05v0
+      (subcircuit-style MOSFET calls). Official CDL uses primitive M ... nfet_05v0/pfet_05v0.
+      Both are foundry transistor definitions. CDL matches Magic ext2spice lvs M-device syntax.
+      Fill/endcap/filltie have 0 devices (physical-only); gf180mcuD_setup.tcl ignores those classes.
+
+cell                                        spice_X  spice_M  spice_D    cdl_M    cdl_D models
+----------------------------------------------------------------------------------------------
+gf180mcu_fd_sc_mcu9t5v0__inv_1                    2        0        0        2        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__and2_1                   6        0        0        6        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__nand2_1                  4        0        0        4        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__nor2_1                   4        0        0        4        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__aoi21_1                  6        0        0        6        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__oai21_1                  6        0        0        6        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__dffrnq_1                28        0        0       28        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__buf_1                    4        0        0        4        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__clkbuf_1                 4        0        0        4        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+gf180mcu_fd_sc_mcu9t5v0__antenna                  0        0        2        0        2 
+gf180mcu_fd_sc_mcu9t5v0__fill_1                   0        0        0        0        0 
+gf180mcu_fd_sc_mcu9t5v0__fill_8                   0        0        0        0        0 
+gf180mcu_fd_sc_mcu9t5v0__filltie                  0        0        0        0        0 
+gf180mcu_fd_sc_mcu9t5v0__endcap                   0        0        0        0        0 
+gf180mcu_fd_sc_mcu9t5v0__fillcap_8                4        0        0        4        0 cdl:nfet_05v0,cdl:pfet_05v0,spice:nfet_05v0,spice:pfet_05v0
+
+REPRESENTATIVE SPICE BODIES (X MOSFET form)
+-------------------------------------------
+.subckt gf180mcu_fd_sc_mcu9t5v0__inv_1 I ZN VDD VNW VPW VSS
+  X_i_0 ZN I VSS VPW nfet_05v0 W=1.320000U L=0.600000U
+  X_i_1 ZN I VDD VNW pfet_05v0 W=1.830000U L=0.500000U
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__and2_1 A1 A2 Z VDD VNW VPW VSS
+  X_i_2 net_0 A1 Z_neg VPW nfet_05v0 W=0.660000U L=0.600000U
+  X_i_3 VSS A2 net_0 VPW nfet_05v0 W=0.660000U L=0.600000U
+  X_i_0 Z Z_neg VSS VPW nfet_05v0 W=1.320000U L=0.600000U
+  X_i_4 Z_neg A1 VDD VNW pfet_05v0 W=0.820000U L=0.500000U
+  X_i_5 VDD A2 Z_neg VNW pfet_05v0 W=0.820000U L=0.500000U
+  X_i_1 Z Z_neg VDD VNW pfet_05v0 W=1.830000U L=0.500000U
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__antenna I VDD VNW VPW VSS
+  D0 VPW I diode_nd2ps_06v0 AREA=0.2034p PJ=1.85u M=1
+  D1 I VNW diode_pd2nw_06v0 AREA=0.2034p PJ=1.85u M=1
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__fill_1 VDD VNW VPW VSS
+.ends
+
+REPRESENTATIVE CDL BODIES (M MOSFET form)
+-----------------------------------------
+.subckt gf180mcu_fd_sc_mcu9t5v0__inv_1 I ZN VDD VNW VPW VSS
+  M_i_0 ZN I VSS VPW nfet_05v0 W=1.320000U L=0.600000U
+  M_i_1 ZN I VDD VNW pfet_05v0 W=1.830000U L=0.500000U
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__and2_1 A1 A2 Z VDD VNW VPW VSS
+  M_i_2 net_0 A1 Z_neg VPW nfet_05v0 W=0.660000U L=0.600000U
+  M_i_3 VSS A2 net_0 VPW nfet_05v0 W=0.660000U L=0.600000U
+  M_i_0 Z Z_neg VSS VPW nfet_05v0 W=1.320000U L=0.600000U
+  M_i_4 Z_neg A1 VDD VNW pfet_05v0 W=0.820000U L=0.500000U
+  M_i_5 VDD A2 Z_neg VNW pfet_05v0 W=0.820000U L=0.500000U
+  M_i_1 Z Z_neg VDD VNW pfet_05v0 W=1.830000U L=0.500000U
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__antenna I VDD VNW VPW VSS
+  d0 VPW I diode_nd2ps_06v0 0.2034p 1.85u $m=1
+  d1 I VNW diode_pd2nw_06v0 0.2034p 1.85u $m=1
+.ends
+
+.subckt gf180mcu_fd_sc_mcu9t5v0__fill_1 VDD VNW VPW VSS
+.ends
+
+SRAM OFFICIAL TREATMENT
+-----------------------
+SRAM spice: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/spice/gf180mcu_fd_ip_sram__sram256x8m8wm1.spice (280140 bytes)
+SRAM cdl:   /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/cdl/gf180mcu_fd_ip_sram__sram256x8m8wm1.cdl (326173 bytes)
+Top subckt pins: 1478
+Top spice MOSFET-like instance lines: 1283 (comment FDC=16461)
+This is a full transistor SRAM netlist, NOT a pin stub.
+Official digital LVS methodology: black-box the hard macro at its pin boundary
+(MAGIC_EXT_ABSTRACT_CELLS / LEFview on layout; do not flatten vs this 16k-device netlist).
+gf180mcuD_setup.tcl does not ignore SRAM; pin-equivalent blackbox is the supported compare.
+
+ANTENNA DIODE
+-------------
+Cell gf180mcu_fd_sc_mcu9t5v0__antenna: 2 diodes (diode_nd2ps_06v0 + diode_pd2nw_06v0) in SPICE and CDL.
+gf180mcuD_setup.tcl does NOT ignore antenna; it enables property parallel on that class.
+LibreLane DIODE_CELL = gf180mcu_fd_sc_mcu9t5v0__antenna/I
+
+FILLER / ENDCAP / FILLTIE
+-------------------------
+fill_*, filltie, endcap: 0 devices in official SPICE/CDL (physical-only).
+gf180mcuD_setup.tcl: ignore class for fill_[[:digit:]]+, filltie, endcap.
+fillcap_* have MOSFETs and are compared (parallel enable), not ignored.
+
+FULL-LVS SOURCE CHOICE
+----------------------
+PASS: representative logic cells have NONZERO transistor definitions in CDL (M nfet_05v0/pfet_05v0)
+and equivalent X-MOSFET definitions in CELL_SPICE_MODELS.
+Full LVS source will use official CELL_CDLS (M primitives, matches Magic ext2spice lvs)
+plus ECO powered Verilog. SRAM will be black-boxed (not the 16k-device spice).
+Official Netgen setup: /foss/pdks/gf180mcuD/libs.tech/netgen/gf180mcuD_setup.tcl

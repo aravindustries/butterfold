@@ -67,7 +67,7 @@ module reset_recovery_tb;
         apply_reset(); check_fft2();
 
         // Reset during FFT compute after a complete zero input block.
-        send(8'h41); repeat(256) send(8'h00);
+        send(8'h41); repeat(128) send(8'h00);
         wait(dut.u_transform_scheduler_core.mod_active);
         apply_reset(); check_fft2();
 

@@ -1,0 +1,20 @@
+Native tool: KLayout 0.30.8 LayoutVsSchematic
+Input lvsdb: physical/results/final_signoff/klayout_lvs/butterfold_top.lvsdb
+Layout GDS top cell: butterfold_top
+Schematic CDL .SUBCKT: butterfold_top (SPICE reader in-memory: BUTTERFOLD_TOP)
+
+status       layout                                             schematic                                          lay_dev sch_dev lay_sub sch_sub lay_pin sch_pin
+Skipped      butterfold_top                                     BUTTERFOLD_TOP                                          28       0   43464   43464       0      23
+NoMatch      gf180mcu_fd_ip_sram__sram256x8m8wm1                GF180MCU_FD_IP_SRAM__SRAM256X8M8WM1                  18305       0       0       0      37      37
+Match        gf180mcu_fd_sc_mcu9t5v0__antenna                   GF180MCU_FD_SC_MCU9T5V0__ANTENNA                         0       0       0       0       6       5
+Match        gf180mcu_fd_sc_mcu9t5v0__endcap                    GF180MCU_FD_SC_MCU9T5V0__ENDCAP                          0       0       0       0       3       4
+Match        gf180mcu_fd_sc_mcu9t5v0__fill_1                    GF180MCU_FD_SC_MCU9T5V0__FILL_1                          0       0       0       0       5       4
+Match        gf180mcu_fd_sc_mcu9t5v0__fill_2                    GF180MCU_FD_SC_MCU9T5V0__FILL_2                          0       0       0       0       5       4
+Match        gf180mcu_fd_sc_mcu9t5v0__filltie                   GF180MCU_FD_SC_MCU9T5V0__FILLTIE                         0       0       0       0       3       2
+
+Pair status counts: {'Skipped': 1, 'NoMatch': 108, 'Match': 5}
+Interpretation:
+- Align paired all 114 circuits case-insensitively (butterfold_top <-> BUTTERFOLD_TOP).
+- Top-level compare status=Skipped because child standard-cell circuits are NoMatch.
+- OpenROAD CDL standard-cell subcircuits have 0 devices; KLayout extracted MOSFETs from GDS.
+- Empty filler/antenna/endcap cells Match. This is not a missing top-level compare due to case alone.

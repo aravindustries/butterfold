@@ -1,0 +1,120 @@
+LAYOUT DEVICE EXTRACTION PREFLIGHT
+================================
+Tool: Magic 8.3.636  MAGIC_EXT_USE_GDS=1  MAGTYPE=mag
+GDS: physical/results/final_signoff/butterfold_top.pre_dummy.gds
+SHA-256: 5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6
+Command: magic -dnull -noconsole -rcfile $PDKPATH/libs.tech/magic/gf180mcuD.magicrc wrapper.tcl
+Log proves GDS-II Release 6.0 read of butterfold_top + SRAM + stdcells (not LEF abstract).
+and2_1.ext contains 'device msubckt nfet_05v0/pfet_05v0' (NOT the Magic 'abstract' keyword).
+
+cell                                          X/M FET  diode empty?
+gf180mcu_fd_sc_mcu9t5v0__and2_1                     6      0 DEVICES
+  --- spice ---
+  .subckt gf180mcu_fd_sc_mcu9t5v0__and2_1 A1 A2 Z VDD VNW VPW VSS
+  X0 VDD A2 a_36_201# VNW pfet_05v0 ad=0.5054p pd=2.57u as=0.2132p ps=1.34u w=0.82u l=0.5u
+  X1 a_244_201# A1 a_36_201# VPW nfet_05v0 ad=0.1056p pd=0.98u as=0.2904p ps=2.2u w=0.66u l=0.6u
+  X2 Z a_36_201# VSS VPW nfet_05v0 ad=0.5808p pd=3.52u as=0.3894p ps=2.06u w=1.32u l=0.6u
+  X3 Z a_36_201# VDD VNW pfet_05v0 ad=0.8052p pd=4.54u as=0.5054p ps=2.57u w=1.83u l=0.5u
+  X4 VSS A2 a_244_201# VPW nfet_05v0 ad=0.3894p pd=2.06u as=0.1056p ps=0.98u w=0.66u l=0.6u
+  X5 a_36_201# A1 VDD VNW pfet_05v0 ad=0.2132p pd=1.34u as=0.3608p ps=2.52u w=0.82u l=0.5u
+  .ends
+gf180mcu_fd_sc_mcu9t5v0__antenna                    0      2 DEVICES
+  --- spice ---
+  .subckt gf180mcu_fd_sc_mcu9t5v0__antenna I VDD VNW VPW VSS
+  D0 I VNW diode_pd2nw_06v0 pj=1.85u area=0.2034p
+  D1 VPW I diode_nd2ps_06v0 pj=1.85u area=0.2034p
+  .ends
+gf180mcu_fd_sc_mcu9t5v0__aoi21_1                    6      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__buf_1                      4      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__clkbuf_1                   4      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__dffrnq_1                  28      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__fill_1                     0      0 EMPTY
+gf180mcu_fd_sc_mcu9t5v0__fillcap_8                  4      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__inv_1                      2      0 DEVICES
+  --- spice ---
+  .subckt gf180mcu_fd_sc_mcu9t5v0__inv_1 I ZN VDD VNW VPW VSS
+  X0 ZN I VDD VNW pfet_05v0 ad=0.8052p pd=4.54u as=0.8052p ps=4.54u w=1.83u l=0.5u
+  X1 ZN I VSS VPW nfet_05v0 ad=0.5808p pd=3.52u as=0.5808p ps=3.52u w=1.32u l=0.6u
+  .ends
+gf180mcu_fd_sc_mcu9t5v0__nand2_1                    4      0 DEVICES
+  --- spice ---
+  .subckt gf180mcu_fd_sc_mcu9t5v0__nand2_1 A1 A2 ZN VDD VNW VPW VSS
+  X0 ZN A2 VDD VNW pfet_05v0 ad=0.4277p pd=2.165u as=0.7238p ps=4.17u w=1.645u l=0.5u
+  X1 VDD A1 ZN VNW pfet_05v0 ad=0.7238p pd=4.17u as=0.4277p ps=2.165u w=1.645u l=0.5u
+  X2 ZN A1 a_245_69# VPW nfet_05v0 ad=0.5808p pd=3.52u as=0.2112p ps=1.64u w=1.32u l=0.6u
+  X3 a_245_69# A2 VSS VPW nfet_05v0 ad=0.2112p pd=1.64u as=0.5808p ps=3.52u w=1.32u l=0.6u
+  .ends
+gf180mcu_fd_sc_mcu9t5v0__nor2_1                     4      0 DEVICES
+gf180mcu_fd_sc_mcu9t5v0__oai21_1                    6      0 DEVICES
+
+CELL-LEVEL NETGEN (official gf180mcuD_setup.tcl, no -blackbox)
+vs CELL_SPICE_MODELS:
+---------------------------------------------------------------------------------------
+Cell pin lists are equivalent.
+Device classes nfet_05v0 and nfet_05v0 are equivalent.
+
+Subcircuit summary:
+Circuit 1: gf180mcu_fd_sc_mcu9t5v0__and2_1 |Circuit 2: gf180mcu_fd_sc_mcu9t5v0__and2_1 
+-------------------------------------------|-------------------------------------------
+pfet_05v0 (3)                              |pfet_05v0 (3)                              
+nfet_05v0 (3)                              |nfet_05v0 (3)                              
+Number of devices: 6                       |Number of devices: 6                       
+Number of nets: 9                          |Number of nets: 9                          
+---------------------------------------------------------------------------------------
+Netlists match uniquely.
+
+Subcircuit pins:
+Circuit 1: gf180mcu_fd_sc_mcu9t5v0__and2_1 |Circuit 2: gf180mcu_fd_sc_mcu9t5v0__and2_1 
+-------------------------------------------|-------------------------------------------
+A1                                         |A1                                         
+VSS                                        |VSS                                        
+A2                                         |A2                                         
+Z                                          |Z                                          
+VPW                                        |VPW                                        
+VDD                                        |VDD                                        
+VNW                                        |VNW                                        
+---------------------------------------------------------------------------------------
+Cell pin lists are equivalent.
+Device classes gf180mcu_fd_sc_mcu9t5v0__and2_1 and gf180mcu_fd_sc_mcu9t5v0__and2_1 are equivalent.
+
+Final result: Circuits match uniquely.
+.
+
+vs CELL_CDLS:
+  proxybulk = 1                            |  bulk = 3                                 
+                                           |                                           
+Instance: pfet_05v0:3                      |Instance: pfet_05v0:_i_4                   
+  (1,3) = (3,2)                            |  proxy1 = 1                               
+  2 = 5                                    |  proxy2 = 1                               
+  4 = 3                                    |  proxy3 = 1                               
+  proxydrain = 1                           |  proxy4 = 1                               
+  proxygate = 1                            |  (drain,source) = (5,3)                   
+  proxysource = 1                          |  gate = 2                                 
+  proxybulk = 1                            |  bulk = 3                                 
+---------------------------------------------------------------------------------------
+Netlists do not match.
+Port matching may fail to disambiguate symmetries.
+
+Subcircuit pins:
+Circuit 1: gf180mcu_fd_sc_mcu9t5v0__and2_1 |Circuit 2: gf180mcu_fd_sc_mcu9t5v0__and2_1 
+-------------------------------------------|-------------------------------------------
+VSS                                        |Z **Mismatch**                             
+Z                                          |A2 **Mismatch**                            
+A1                                         |VSS **Mismatch**                           
+A2                                         |(no pin, node is net_0)                    
+VPW                                        |VNW **Mismatch**                           
+VNW                                        |VDD **Mismatch**                           
+VDD                                        |VPW **Mismatch**                           
+(no pin, node is A2)                       |A1                                         
+---------------------------------------------------------------------------------------
+Cell pin lists for gf180mcu_fd_sc_mcu9t5v0__and2_1 and gf180mcu_fd_sc_mcu9t5v0__and2_1 altered to match.
+Device classes gf180mcu_fd_sc_mcu9t5v0__and2_1 and gf180mcu_fd_sc_mcu9t5v0__and2_1 are equivalent.
+
+Final result: Top level cell failed pin matching.
+
+SOURCE CHOICE FOR FULL LVS: CELL_SPICE_MODELS
+(Magic ext2spice lvs emits X nfet_05v0/pfet_05v0, same as official .spice.
+ and2_1 uniquely matched 6 nfet/pfet vs CELL_SPICE_MODELS.
+ CELL_CDLS failed top-level pin matching at this cell; not used for full LVS.)
+
+PREFLIGHT RESULT: PASS — GDS geometry extracted to real MOSFET/diode primitives.

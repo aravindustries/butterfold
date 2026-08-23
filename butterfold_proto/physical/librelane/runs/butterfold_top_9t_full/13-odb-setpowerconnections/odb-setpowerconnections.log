@@ -1,0 +1,34 @@
+[WARNING ORD-0039] .openroad ignored with -python
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/power_utils.py", line 397, in <module>
+    cli()
+  File "/usr/local/lib/python3.12/dist-packages/click/core.py", line 1442, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/click/core.py", line 1363, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/click/core.py", line 1830, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/click/core.py", line 1226, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/reader.py", line 221, in wrapper
+    function(**kwargs)
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/power_utils.py", line 282, in set_power_connections
+    macro_instances = design.extract_instances(design.design_name)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/power_utils.py", line 156, in extract_instances
+    power_pins, ground_pins = self.extract_pg_pins(
+                              ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/power_utils.py", line 123, in extract_pg_pins
+    connected_to_v = self.get_verilog_net_name_by_bit(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/librelane/scripts/odbpy/power_utils.py", line 59, in get_verilog_net_name_by_bit
+    return self.verilog_net_names_by_bit_by_module[top_module][target_bit]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+KeyError: '1'

@@ -1,0 +1,43 @@
+EXISTING NETGEN LVS METHODOLOGY AUDIT
+====================================
+Date: 2026-08-23
+Conclusion: NOT full device-level LVS. Hierarchical pin-equivalence / black-box stdcell+SRAM LVS only.
+
+LAYOUT SIDE
+-----------
+MAGIC_EXT_USE_GDS = 0  (from /headless/aravindustries-repos/butterfold/butterfold_proto/physical/results/final_signoff/magic_ext/_env.tcl)
+Extraction tool: Magic 8.3.636 via LibreLane scripts/magic/extract_spice.tcl
+Input: DEF+LEF, not GDS
+  CURRENT_DEF = /headless/aravindustries-repos/butterfold/butterfold_proto/physical/results/final_signoff/butterfold_top_filled.def
+LEF views used: techlef + stdcell LEF + SRAM LEF
+Standard cells: ABSTRACTED. Each .ext contains the Magic 'abstract' keyword and ports only.
+  and2_1.ext has 'abstract' line: True
+  and2_1.ext fet/device lines: 0
+Extracted layout SPICE comments say 'Black-box entry subcircuit for ... abstract view'
+Extracted layout SPICE MOSFET primitives (M*): 0
+Extracted layout SPICE diode primitives (D*): 0
+Extracted layout SPICE subcircuit instances (X*): 43464
+Extracted layout SPICE .subckt count: 114
+SRAMs: abstracted from LEF (not transistor-extracted).
+
+SOURCE SIDE
+-----------
+Format: powered Verilog (butterfold_top.final.pnl.v) plus PDK SPICE read into the same circuit.
+Files read (existing lvs_script.lvs):
+  1. CELL_SPICE_MODELS = gf180mcu_fd_sc_mcu9t5v0.spice
+  2. SRAM spice = gf180mcu_fd_ip_sram__sram256x8m8wm1.spice
+  3. ECO powered netlist = butterfold_top.final.pnl.v
+Netgen command: lvs ... gf180mcuD_setup.tcl ... -blackbox -json
+LibreLane Netgen.LVS always appends -blackbox.
+
+RESULT CLASS
+------------
+Circuits match uniquely at 11629 devices / 11638 nets.
+Those 'devices' are black-box standard-cell / SRAM / antenna instances, not MOSFETs.
+and2_1 layout subcircuit is empty (.subckt pins .ends).
+This does NOT qualify as FULL device-level LVS.
+
+AUTHORITATIVE TEAM GDS (for the required full LVS)
+-------------------------------------------------
+pre_dummy.gds SHA-256: 5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6
+Do not use dummy-filled GDS e02fb870... for team signoff.

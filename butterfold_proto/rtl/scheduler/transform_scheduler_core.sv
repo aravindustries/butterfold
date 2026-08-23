@@ -11,11 +11,11 @@ module transform_scheduler_core #(
     // Input byte stream.
     // FFT2/IFFT2: command, x0_i, x0_q, x1_i, x1_q
     // FFT3:       command, x0_i, x0_q, x1_i, x1_q, x2_i, x2_q
-    // FFT128:     command, x[0].i, x[0].q, ... x[127].i, x[127].q
-    // IFFT128:    command, X[0].i, X[0].q, ... X[127].i, X[127].q
+    // FFT64:      command, x[0].i, x[0].q, ... x[63].i, x[63].q
+    // IFFT64:     command, X[0].i, X[0].q, ... X[63].i, X[63].q
     // DFT12:      command, x[0].i, x[0].q, ... x[11].i, x[11].q
-    // OFDM_RX:    command, 9/10-sample normal CP, then 128 useful TDIQ samples.
-    // DFTS_TX:    command, then 12 frequency-domain complex samples; output uses 9/10-sample normal CP.
+    // OFDM_RX:    command, 4/5-sample reduced-grid CP, then 64 useful samples.
+    // DFTS_TX:    command, 12 frequency samples; output uses a 4/5-sample CP.
     input  logic [7:0] din,
     input  logic       din_valid_i,
     output logic       din_ready_o,
@@ -54,6 +54,10 @@ module transform_scheduler_core #(
     output logic        debug_ready_o,
     output logic [15:0] debug_rdata_o,
     output logic        debug_rvalid_o
+`ifdef USE_POWER_PINS
+    , inout wire VDD
+    , inout wire VSS
+`endif
 );
 
     //==========================================================================
@@ -61,8 +65,8 @@ module transform_scheduler_core #(
     //==========================================================================
 
     localparam logic [7:0] CMD_FFT2    = 8'h40;
-    localparam logic [7:0] CMD_FFT128  = 8'h41;
-    localparam logic [7:0] CMD_IFFT128 = 8'h42;
+    localparam logic [7:0] CMD_FFT64   = 8'h41;
+    localparam logic [7:0] CMD_IFFT64  = 8'h42;
     localparam logic [7:0] CMD_IFFT2   = 8'h43;
     localparam logic [7:0] CMD_FFT3    = 8'h44;
     localparam logic [7:0] CMD_DFT12              = 8'h45;
@@ -71,8 +75,11 @@ module transform_scheduler_core #(
     localparam logic [7:0] CMD_OFDM_TX_SHORT_NORMAL_CP    = 8'h48;
     localparam logic [7:0] CMD_OFDM_TX_LONG_NORMAL_CP  = 8'h49;
 
-    localparam logic [3:0] OFDM_SHORT_NORMAL_CP_LENGTH   = 4'd9;
-    localparam logic [3:0] OFDM_LONG_NORMAL_CP_LENGTH = 4'd10;
+    localparam logic [3:0] OFDM_SHORT_NORMAL_CP_LENGTH = 4'd4;
+    localparam logic [3:0] OFDM_LONG_NORMAL_CP_LENGTH  = 4'd5;
+    localparam logic [7:0] FFT_N = 8'd64;
+    localparam logic [2:0] FFT_FINAL_STAGE = 3'd5;
+    localparam integer IFFT_NORMALIZE_SHIFT = 6;
 
     localparam logic [1:0] UOP_RADIX2 = 2'b01;
     localparam logic [1:0] UOP_RADIX3 = 2'b10;
@@ -145,13 +152,13 @@ module transform_scheduler_core #(
         end
     endfunction
 
-    function automatic logic [6:0] bit_reverse7 (
+    function automatic logic [6:0] bit_reverse6 (
         input logic [6:0] value
     );
         begin
-            bit_reverse7 = {
-                value[0], value[1], value[2], value[3],
-                value[4], value[5], value[6]
+            bit_reverse6 = {
+                1'b0, value[0], value[1], value[2],
+                value[3], value[4], value[5]
             };
         end
     endfunction
@@ -399,11 +406,9 @@ module transform_scheduler_core #(
     assign tx_sample_ready = 1'b1;
     assign tx_input_write = tx_sample_valid && tx_sample_ready;
 
-    // Clearing the FFT scratch does not consume the shared butterfly and can
-    // overlap the register-based DFT12.  The 128-cycle clear is longer than
-    // DFT12, so the mapper cannot reach its data-dependent mapping phase
-    // before all twelve DFT results have been produced.
-    assign tx_mapper_start = dft12_start && tx_dft12_block_ready;
+    // Start mapping only after the TX DFT12 result block is complete.  The
+    // final RAM/hold writes commit on this edge, before mapping consumes them.
+    assign tx_mapper_start = dft12_done && dft12_tx_active;
 
     //==========================================================================
     // Small-transform transaction FIFO
@@ -470,7 +475,7 @@ module transform_scheduler_core #(
     //==========================================================================
     // FFT128/IFFT128 scratch RAM
     //
-    // Natural-order input sample n is stored at bit_reverse7(n). The iterative
+    // Natural-order input sample n is stored at bit_reverse6(n). The iterative
     // radix-2 DIT stages then produce natural-order output bins.
     //==========================================================================
 
@@ -580,12 +585,12 @@ module transform_scheduler_core #(
         fft128_next_j << (6 - fft128_next_stage);
 
     assign fft128_final_stage =
-        (fft128_stage == 3'd6);
+        (fft128_stage == FFT_FINAL_STAGE);
 
     assign fft128_last_butterfly =
         fft128_final_stage &&
         (fft128_group_base == 7'd0) &&
-        (fft128_j == 6'd63);
+        (fft128_j == 6'd31);
 
     always @* begin
         fft128_next_stage = fft128_stage;
@@ -593,7 +598,7 @@ module transform_scheduler_core #(
         fft128_next_j = fft128_j + 1'b1;
         if (fft128_j == fft128_half_size - 1'b1) begin
             fft128_next_j = 6'd0;
-            if (fft128_group_base + fft128_group_size >= 8'd128) begin
+            if (fft128_group_base + fft128_group_size >= FFT_N) begin
                 fft128_next_group_base = 7'd0;
                 fft128_next_stage = fft128_stage + 1'b1;
             end else begin
@@ -647,6 +652,9 @@ module transform_scheduler_core #(
                       (tx_output_busy ? 16'd0 : debug_wdata_i)),
         .half_ready_o(mod_half_ready),
         .half_rdata_o(mod_half_rdata), .half_rvalid_o(mod_half_rvalid)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
     );
 
     assign debug_ready_o = debug_mode_i && !mod_active && !tx_output_busy &&
@@ -798,6 +806,7 @@ module transform_scheduler_core #(
     logic bf_out_valid;
     logic bf_out_ready;
     logic bf_result_fire;
+    logic dft12_writeback_fire;
 
     logic small_issue_active;
     logic fft128_issue_active;
@@ -1080,25 +1089,25 @@ module transform_scheduler_core #(
 
     assign routed_X0_i =
         (fft128_active && fft128_inverse_active && fft128_final_stage)
-            ? ($signed(bf_X0_i) >>> 7)
+            ? ($signed(bf_X0_i) >>> IFFT_NORMALIZE_SHIFT)
             : ((!fft128_active && !dft12_active && small_result_inverse)
                 ? ($signed(bf_X0_i) >>> 1)
                 : bf_X0_i);
     assign routed_X0_q =
         (fft128_active && fft128_inverse_active && fft128_final_stage)
-            ? ($signed(bf_X0_q) >>> 7)
+            ? ($signed(bf_X0_q) >>> IFFT_NORMALIZE_SHIFT)
             : ((!fft128_active && !dft12_active && small_result_inverse)
                 ? ($signed(bf_X0_q) >>> 1)
                 : bf_X0_q);
     assign routed_X1_i =
         (fft128_active && fft128_inverse_active && fft128_final_stage)
-            ? ($signed(bf_X1_i) >>> 7)
+            ? ($signed(bf_X1_i) >>> IFFT_NORMALIZE_SHIFT)
             : ((!fft128_active && !dft12_active && small_result_inverse)
                 ? ($signed(bf_X1_i) >>> 1)
                 : bf_X1_i);
     assign routed_X1_q =
         (fft128_active && fft128_inverse_active && fft128_final_stage)
-            ? ($signed(bf_X1_q) >>> 7)
+            ? ($signed(bf_X1_q) >>> IFFT_NORMALIZE_SHIFT)
             : ((!fft128_active && !dft12_active && small_result_inverse)
                 ? ($signed(bf_X1_q) >>> 1)
                 : bf_X1_q);
@@ -1157,6 +1166,11 @@ module transform_scheduler_core #(
                 : (result_ready_i && !result_meta_empty));
 
     assign bf_result_fire = bf_out_valid && bf_out_ready;
+    assign dft12_writeback_fire =
+        dft12_active &&
+        (dft12_state == D12_WAIT_RESULT) &&
+        bf_out_valid &&
+        (!dft12_final_operation || dft12_tx_active);
     assign small_result_fire =
         !fft128_active && !dft12_active && bf_result_fire;
 
@@ -1196,7 +1210,7 @@ module transform_scheduler_core #(
         end else if (ofdm_input_write) begin
             fft_mem_req   = fft_mem_ready;
             fft_mem_write = 1'b1;
-            fft_mem_addr  = bit_reverse7(ofdm_sample_index);
+            fft_mem_addr  = bit_reverse6(ofdm_sample_index);
             fft_mem_wdata = {ofdm_sample_q, ofdm_sample_i};
         end else if (tx_mapper_write_valid) begin
             fft_mem_req   = fft_mem_ready;
@@ -1206,7 +1220,7 @@ module transform_scheduler_core #(
         end else if (fft128_input_write) begin
             fft_mem_req   = fft_mem_ready;
             fft_mem_write = 1'b1;
-            fft_mem_addr  = bit_reverse7(rx_fft128_index);
+            fft_mem_addr  = bit_reverse6(rx_fft128_index);
             fft_mem_wdata = {sign_extend_q17(din), rx_fft128_i};
         end
     end
@@ -1226,7 +1240,7 @@ module transform_scheduler_core #(
                     case (din)
                         CMD_FFT2, CMD_IFFT2, CMD_FFT3:
                             rx_next_state = RX_SMALL_X0_I;
-                        CMD_FFT128, CMD_IFFT128:
+                        CMD_FFT64, CMD_IFFT64:
                             rx_next_state = RX_FFT128_I;
                         CMD_DFT12:
                             rx_next_state = RX_DFT12_I;
@@ -1283,7 +1297,7 @@ module transform_scheduler_core #(
             RX_FFT128_Q: begin
                 din_ready_o = fft_mem_ready;
                 if (din_fire) begin
-                    if (rx_fft128_index == 7'd127)
+                    if (rx_fft128_index == 7'd63)
                         rx_next_state = RX_FFT128_BLOCKED;
                     else
                         rx_next_state = RX_FFT128_I;
@@ -1393,10 +1407,10 @@ module transform_scheduler_core #(
                     rx_small_radix3 <= (din == CMD_FFT3);
                 end
 
-                if ((din == CMD_FFT128) || (din == CMD_IFFT128)) begin
+                if ((din == CMD_FFT64) || (din == CMD_IFFT64)) begin
                     rx_fft128_index <= 7'd0;
                     fft128_block_ready <= 1'b0;
-                    fft128_block_inverse <= (din == CMD_IFFT128);
+                    fft128_block_inverse <= (din == CMD_IFFT64);
                 end
 
                 if (din == CMD_DFT12) begin
@@ -1441,7 +1455,7 @@ module transform_scheduler_core #(
                 rx_dft12_i <= sign_extend_q17(din);
 
             if (fft128_input_write) begin
-                if (rx_fft128_index == 7'd127) begin
+                if (rx_fft128_index == 7'd63) begin
                     fft128_block_ready <= 1'b1;
                 end else begin
                     rx_fft128_index <= rx_fft128_index + 1'b1;
@@ -1543,32 +1557,28 @@ module transform_scheduler_core #(
         end else if (dft12_input_write) begin
             dft12_ram_i[rx_dft12_index] <= rx_dft12_i;
             dft12_ram_q[rx_dft12_index] <= sign_extend_q17(din);
-        end else if (
-            dft12_active &&
-            (dft12_state == D12_WAIT_RESULT) &&
-            bf_result_fire
-        ) begin
+        end else if (dft12_writeback_fire) begin
             case (1'b1)
                 dft12_phase_onehot[D12_PHASE_RADIX3]: begin
                     // Store B[k1,n2] at address 4*k1+n2.
-                    dft12_ram_i[{2'd0, dft12_group}] <= routed_X0_i;
-                    dft12_ram_q[{2'd0, dft12_group}] <= routed_X0_q;
-                    dft12_ram_i[4'd4 + dft12_group] <= routed_X1_i;
-                    dft12_ram_q[4'd4 + dft12_group] <= routed_X1_q;
-                    dft12_ram_i[4'd8 + dft12_group] <= routed_X2_i;
-                    dft12_ram_q[4'd8 + dft12_group] <= routed_X2_q;
+                    dft12_ram_i[{2'd0, dft12_group}] <= bf_X0_i;
+                    dft12_ram_q[{2'd0, dft12_group}] <= bf_X0_q;
+                    dft12_ram_i[4'd4 + dft12_group] <= bf_X1_i;
+                    dft12_ram_q[4'd4 + dft12_group] <= bf_X1_q;
+                    dft12_ram_i[4'd8 + dft12_group] <= bf_X2_i;
+                    dft12_ram_q[4'd8 + dft12_group] <= bf_X2_q;
                 end
                 dft12_phase_onehot[D12_PHASE_FFT4_EVEN]: begin
-                    dft12_ram_i[dft12_base] <= routed_X0_i;
-                    dft12_ram_q[dft12_base] <= routed_X0_q;
-                    dft12_ram_i[dft12_base + 4'd2] <= routed_X1_i;
-                    dft12_ram_q[dft12_base + 4'd2] <= routed_X1_q;
+                    dft12_ram_i[dft12_base] <= bf_X0_i;
+                    dft12_ram_q[dft12_base] <= bf_X0_q;
+                    dft12_ram_i[dft12_base + 4'd2] <= bf_X1_i;
+                    dft12_ram_q[dft12_base + 4'd2] <= bf_X1_q;
                 end
                 dft12_phase_onehot[D12_PHASE_FFT4_ODD]: begin
-                    dft12_ram_i[dft12_base + 4'd1] <= routed_X0_i;
-                    dft12_ram_q[dft12_base + 4'd1] <= routed_X0_q;
-                    dft12_ram_i[dft12_base + 4'd3] <= routed_X1_i;
-                    dft12_ram_q[dft12_base + 4'd3] <= routed_X1_q;
+                    dft12_ram_i[dft12_base + 4'd1] <= bf_X0_i;
+                    dft12_ram_q[dft12_base + 4'd1] <= bf_X0_q;
+                    dft12_ram_i[dft12_base + 4'd3] <= bf_X1_i;
+                    dft12_ram_q[dft12_base + 4'd3] <= bf_X1_q;
                 end
                 default: begin
                     // Standalone DFT12 sends these downstream. DFT-s-OFDM TX
@@ -1576,31 +1586,31 @@ module transform_scheduler_core #(
                     // values whose natural addresses are still live inputs.
                     if (dft12_tx_active) begin
                         if (dft12_out_addr0 == 4'd6) begin
-                            tx_dft12_hold_i[0] <= routed_X0_i;
-                            tx_dft12_hold_q[0] <= routed_X0_q;
+                            tx_dft12_hold_i[0] <= bf_X0_i;
+                            tx_dft12_hold_q[0] <= bf_X0_q;
                         end else if (dft12_out_addr0 == 4'd9) begin
-                            tx_dft12_hold_i[1] <= routed_X0_i;
-                            tx_dft12_hold_q[1] <= routed_X0_q;
+                            tx_dft12_hold_i[1] <= bf_X0_i;
+                            tx_dft12_hold_q[1] <= bf_X0_q;
                         end else if (dft12_out_addr0 == 4'd10) begin
-                            tx_dft12_hold_i[2] <= routed_X0_i;
-                            tx_dft12_hold_q[2] <= routed_X0_q;
+                            tx_dft12_hold_i[2] <= bf_X0_i;
+                            tx_dft12_hold_q[2] <= bf_X0_q;
                         end else begin
-                            dft12_ram_i[dft12_out_addr0] <= routed_X0_i;
-                            dft12_ram_q[dft12_out_addr0] <= routed_X0_q;
+                            dft12_ram_i[dft12_out_addr0] <= bf_X0_i;
+                            dft12_ram_q[dft12_out_addr0] <= bf_X0_q;
                         end
 
                         if (dft12_out_addr1 == 4'd6) begin
-                            tx_dft12_hold_i[0] <= routed_X1_i;
-                            tx_dft12_hold_q[0] <= routed_X1_q;
+                            tx_dft12_hold_i[0] <= bf_X1_i;
+                            tx_dft12_hold_q[0] <= bf_X1_q;
                         end else if (dft12_out_addr1 == 4'd9) begin
-                            tx_dft12_hold_i[1] <= routed_X1_i;
-                            tx_dft12_hold_q[1] <= routed_X1_q;
+                            tx_dft12_hold_i[1] <= bf_X1_i;
+                            tx_dft12_hold_q[1] <= bf_X1_q;
                         end else if (dft12_out_addr1 == 4'd10) begin
-                            tx_dft12_hold_i[2] <= routed_X1_i;
-                            tx_dft12_hold_q[2] <= routed_X1_q;
+                            tx_dft12_hold_i[2] <= bf_X1_i;
+                            tx_dft12_hold_q[2] <= bf_X1_q;
                         end else begin
-                            dft12_ram_i[dft12_out_addr1] <= routed_X1_i;
-                            dft12_ram_q[dft12_out_addr1] <= routed_X1_q;
+                            dft12_ram_i[dft12_out_addr1] <= bf_X1_i;
+                            dft12_ram_q[dft12_out_addr1] <= bf_X1_q;
                         end
                     end
                 end
@@ -1972,7 +1982,7 @@ module transform_scheduler_core #(
                                 fft128_j <= 6'd0;
                                 if (
                                     fft128_group_base +
-                                    fft128_group_size >= 8'd128
+                                    fft128_group_size >= FFT_N
                                 ) begin
                                     fft128_group_base <= 7'd0;
                                     fft128_stage <= fft128_stage + 1'b1;
@@ -2020,7 +2030,7 @@ module transform_scheduler_core #(
                                     fft128_j <= 6'd0;
                                     if (
                                         fft128_group_base +
-                                        fft128_group_size >= 8'd128
+                                        fft128_group_size >= FFT_N
                                     ) begin
                                         fft128_group_base <= 7'd0;
                                         fft128_stage <= fft128_stage + 1'b1;
@@ -2088,8 +2098,8 @@ module transform_scheduler_core #(
         .done_o         (ofdm_capture_done)
     );
 
-    // Production RX needs natural bins 1..12 only.  Standalone FFT128 uses
-    // the independent result serializer and retains its complete 128-bin
+    // Production RX needs natural bins 1..12 only. Standalone FFT64 uses
+    // the independent result serializer and retains its complete 64-bin
     // diagnostic stream.
     fdiq_output_adapter_sram #(
         .START_SAMPLE(7'd1),

@@ -1,9 +1,9 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// Builds a 128-bin bit-reversed IFFT input grid from 12 natural-order DFT
+// Builds a 64-bin bit-reversed IFFT input grid from 12 natural-order DFT
 // outputs. The first implementation maps D[0:11] to natural bins 1:12,
-// leaving DC bin zero unused. It first clears all 128 physical RAM locations,
+// leaving DC bin zero unused. It first clears all 64 used RAM locations,
 // then performs the 12 nonzero writes.
 module subcarrier_mapper #(
     parameter logic [6:0] SC_START_BIN = 7'd1
@@ -31,13 +31,13 @@ module subcarrier_mapper #(
     logic [6:0] clear_index;
     logic [3:0] map_index;
 
-    function automatic logic [6:0] bit_reverse7 (
+    function automatic logic [6:0] bit_reverse6 (
         input logic [6:0] value
     );
         begin
-            bit_reverse7 = {
-                value[0], value[1], value[2], value[3],
-                value[4], value[5], value[6]
+            bit_reverse6 = {
+                1'b0, value[0], value[1], value[2],
+                value[3], value[4], value[5]
             };
         end
     endfunction
@@ -51,7 +51,7 @@ module subcarrier_mapper #(
             write_i_o = 16'sd0;
             write_q_o = 16'sd0;
         end else begin
-            write_addr_o = bit_reverse7(SC_START_BIN + map_index);
+            write_addr_o = bit_reverse6(SC_START_BIN + map_index);
             write_i_o = source_i_i;
             write_q_o = source_q_i;
         end
@@ -74,7 +74,7 @@ module subcarrier_mapper #(
                 busy_o      <= 1'b1;
             end else if (busy_o && write_ready_i) begin
                 if (clear_phase) begin
-                    if (clear_index == 7'd127) begin
+                    if (clear_index == 7'd63) begin
                         clear_phase <= 1'b0;
                         map_index <= 4'd0;
                     end else begin

@@ -39,10 +39,10 @@ module tdiq_output_cp_insert_sram #(
             done_o<=0; dout_valid_o<=0;
             if (pace_count != 0) pace_count <= pace_count-1'b1;
             if (start_i && !busy_o) begin
-                request_sample <= 8'd128-{4'd0,cp_length_i};
+                request_sample <= 8'd64-{4'd0,cp_length_i};
                 request_q <= 0;
-                requests_left <= ({5'd0,cp_length_i}+9'd128)<<1;
-                responses_left <= ({5'd0,cp_length_i}+9'd128)<<1;
+                requests_left <= ({5'd0,cp_length_i}+9'd64)<<1;
+                responses_left <= ({5'd0,cp_length_i}+9'd64)<<1;
                 pace_count <= 0;
                 busy_o <= 1;
             end else if (busy_o) begin
@@ -52,7 +52,7 @@ module tdiq_output_cp_insert_sram #(
                     if (!request_q) request_q<=1;
                     else begin
                         request_q<=0;
-                        request_sample <= request_sample==8'd127 ? 8'd0 : request_sample+1'b1;
+                        request_sample <= request_sample==8'd63 ? 8'd0 : request_sample+1'b1;
                     end
                 end
                 if (mem_rvalid_i) begin
