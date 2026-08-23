@@ -10,7 +10,7 @@ ButterFold GF180MCU core, LibreLane 3.0.2 / OpenROAD. Production clock
 | `*.md` in this directory | Human interpretation of one check |
 | [`evidence/`](evidence/) | **Native tool output** copied into git |
 | `physical/results/` | Heavy local artifacts (ODB/SPEF/GDS); gitignored |
-| `gds/butterfold_top.gds` at repo root | Canonical tracked tapeout GDS — **not updated**; density DRC still FAIL |
+| `gds/butterfold_top.gds` at repo root | Canonical tracked tapeout GDS — **not updated** |
 
 Navigate: [11_signoff_summary.md](11_signoff_summary.md) → per-check `.md` → `evidence/`.
 
@@ -32,6 +32,7 @@ require `/tmp`, ignored `physical/results/`, or the original workstation.
 | [10_final_artifacts.md](10_final_artifacts.md) | artifact manifest |
 | [11_signoff_summary.md](11_signoff_summary.md) | dashboard |
 
-**Not ready for tapeout review:** official OpenPDKs `fill_all.rb` dummy-metal
-fill still leaves M2.4/M3.4/M4.4/M5.4/MT.3 failing. Canonical GDS was not
-promoted.
+**Not ready for tapeout review:** KLayout LVS FAIL; interval-10 functional
+evidence incomplete; foundry min-metal M2–MT is integrator-fill pending.
+Max/clear density (DCF.1d) and MSLOT PASS on the pre-fill GDS. Canonical GDS
+was not promoted.

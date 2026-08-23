@@ -21,18 +21,22 @@ Tools, PDK identity, freeze vs ECO artifacts.
 | Clock | 38.4 MHz / 26.041667 ns |
 | TX pacing | `TX_BYTE_INTERVAL=10` |
 
-Installed PDK is a ciel checkout of that open_pdks revision. Official dummy
-fill lives at:
+Installed PDK is a ciel checkout of that open_pdks revision.
+
+Chipathon density: team GDS must pass **minimum-clear / maximum-metal**.
+Official `density.drc` maximum is **DCF.1d COMP ≤ 70%** only (no M2–MT max).
+Minimum-metal M2.4–MT.3 is **integrator fill pending**.
+
+Official dummy fill (not used for signoff after that guidance):
 
 `libs.tech/klayout/tech/drc/filler_generation/fill_all.rb`
 
-LibreLane `KLAYOUT_FILLER_SCRIPT` is **unset** in the production
-`resolved.json`, so Classic skips `KLayout.Filler`. The script itself **is**
-present in this PDK revision. Signoff invoked it with the same KLayout
-command LibreLane `KLayout.Filler` uses (`-rd input=` / `-rd output=`).
+LibreLane `KLAYOUT_FILLER_SCRIPT` is **unset** in production `resolved.json`.
+A prior fill experiment is preserved and was not promoted.
 
-`mslot.drc` in this revision still crashes on `via_below.sized` when `contact`
-is nil in split-table mode. Same file in the ciel copy (identical).
+`mslot.drc` **crashes** in split-table mode (`TABLE_NAME=mslot`, `contact` nil).
+The same official `mslot.drc` **PASSES** with `table_name=main` (contact/vias
+loaded): 0 items on Metal1–Metal5.
 
 ## Starting freeze
 
@@ -54,7 +58,8 @@ Freeze timing (historical): setup +0.177954 ns, hold +0.111583 ns.
 | Netlist | `78ea4d7cbce894815ae771b5425baef810c593dfef2ab519adbd92747fd91cda` |
 | CDL | `415ad8aac2bd7345250a56d979aa9b2fc3b771664528a5b549e44643fb19c9cf` |
 
-Canonical `gds/butterfold_top.gds` was **not** overwritten (density still FAIL).
+Canonical `gds/butterfold_top.gds` was **not** overwritten (KLayout LVS FAIL;
+min-metal still ERROR in `density.drc`).
 
 ## Evidence
 
