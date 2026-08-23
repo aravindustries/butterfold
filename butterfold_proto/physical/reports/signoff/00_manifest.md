@@ -58,8 +58,10 @@ Freeze timing (historical): setup +0.177954 ns, hold +0.111583 ns.
 | Netlist | `78ea4d7cbce894815ae771b5425baef810c593dfef2ab519adbd92747fd91cda` |
 | CDL | `415ad8aac2bd7345250a56d979aa9b2fc3b771664528a5b549e44643fb19c9cf` |
 
-Canonical `gds/butterfold_top.gds` was **not** overwritten (KLayout LVS FAIL;
-min-metal still ERROR in `density.drc`).
+Canonical `gds/butterfold_top.gds` **promoted** to the pre-fill team GDS
+SHA `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6`.
+KLayout vs OpenROAD CDL remains a documented non-record FAIL.
+Min-metal M2–MT remains **integrator fill pending** (not waived).
 
 ## Evidence
 

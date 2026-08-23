@@ -10,7 +10,7 @@ ButterFold GF180MCU core, LibreLane 3.0.2 / OpenROAD. Production clock
 | `*.md` in this directory | Human interpretation of one check |
 | [`evidence/`](evidence/) | **Native tool output** copied into git |
 | `physical/results/` | Heavy local artifacts (ODB/SPEF/GDS); gitignored |
-| `gds/butterfold_top.gds` at repo root | Canonical tracked tapeout GDS — **not updated** |
+| `gds/butterfold_top.gds` at repo root | Canonical tracked **team** GDS (pre-fill SHA `5a99213a…`) |
 
 Navigate: [11_signoff_summary.md](11_signoff_summary.md) → per-check `.md` → `evidence/`.
 
@@ -32,7 +32,11 @@ require `/tmp`, ignored `physical/results/`, or the original workstation.
 | [10_final_artifacts.md](10_final_artifacts.md) | artifact manifest |
 | [11_signoff_summary.md](11_signoff_summary.md) | dashboard |
 
-**Not ready for tapeout review:** KLayout LVS FAIL; interval-10 functional
-evidence incomplete; foundry min-metal M2–MT is integrator-fill pending.
-Max/clear density (DCF.1d) and MSLOT PASS on the pre-fill GDS. Canonical GDS
-was not promoted.
+**BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE.**
+
+Minimum-clear density: **PASS** (DCF.1d COMP 36.18% ≤ 70%).
+Minimum-metal density: **INTEGRATOR FILL PENDING** (not manufacturing-closed).
+
+Full device-level Netgen LVS PASS. Interval-10 foundry-SRAM functional PASS.
+Canonical `gds/butterfold_top.gds` is the pre-fill team GDS `5a99213a…`.
+Do not claim post-integration manufacturing signoff.
