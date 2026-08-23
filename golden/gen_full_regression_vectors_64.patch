@@ -1,0 +1,36 @@
+--- gen_full_regression_vectors.py (128-point baseline)
++++ gen_full_regression_vectors.py (64-point tapeout)
+@@
+-    "fft128_inputs.hex": 5 * 128,
+-    "fft128_expected.hex": 5 * 128,
+-    "ifft128_inputs.hex": 5 * 128,
+-    "ifft128_expected.hex": 5 * 128,
+-    "fft128_twiddle_re.hex": 64,
+-    "fft128_twiddle_im.hex": 64,
+-    "ofdm_rx_normal_cp_inputs.hex": 4 * (9 + 128),
+-    "ofdm_rx_extended_cp_inputs.hex": 4 * (10 + 128),
+-    "ofdm_rx_normal_cp_expected.hex": 4 * 128,
+-    "ofdm_rx_extended_cp_expected.hex": 4 * 128,
++    "fft64_inputs.hex": 5 * 64,
++    "fft64_expected.hex": 5 * 64,
++    "ifft64_inputs.hex": 5 * 64,
++    "ifft64_expected.hex": 5 * 64,
++    "fft64_twiddle_re.hex": 32,
++    "fft64_twiddle_im.hex": 32,
++    "ofdm_rx_normal_cp_inputs.hex": 4 * (4 + 64),
++    "ofdm_rx_extended_cp_inputs.hex": 4 * (5 + 64),
++    "ofdm_rx_normal_cp_expected.hex": 4 * 64,
++    "ofdm_rx_extended_cp_expected.hex": 4 * 64,
+@@
+-    "ofdm_tx_normal_cp_expected.hex": 5 * (9 + 128),
+-    "ofdm_tx_extended_cp_expected.hex": 5 * (10 + 128),
++    "ofdm_tx_normal_cp_expected.hex": 5 * (4 + 64),
++    "ofdm_tx_extended_cp_expected.hex": 5 * (5 + 64),
+@@
+-    samples_per_test = 128 + cp_length
++    samples_per_test = 64 + cp_length
+@@
+-    validate_tx_cp(VECTOR_DIR / "ofdm_tx_normal_cp_expected.hex", 9, 5)
+-    validate_tx_cp(VECTOR_DIR / "ofdm_tx_extended_cp_expected.hex", 10, 5)
++    validate_tx_cp(VECTOR_DIR / "ofdm_tx_normal_cp_expected.hex", 4, 5)
++    validate_tx_cp(VECTOR_DIR / "ofdm_tx_extended_cp_expected.hex", 5, 5)
