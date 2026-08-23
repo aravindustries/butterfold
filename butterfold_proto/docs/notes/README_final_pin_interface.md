@@ -5,12 +5,18 @@ physical top level. `butterfold_top.sv` exposes only the frozen digital signal
 interface:
 
 ```text
-Inputs:  rst_n, clk, din[7:0], din_valid_i
+Inputs:  rst_n, clk, din[7:0], din_valid_i, dout_ready_i
 Outputs: din_ready_o, dout[7:0], dout_valid_o
+Power:   VDD, VSS
+Total:   24 logical pins
 ```
 
-The VDD pad is added by the physical padframe flow rather than modeled as a
-functional RTL signal. No additional logical pins are required.
+The previous 22-pin interface (no `dout_ready_i`, VSS not exposed) is obsolete.
+
+A byte is transferred on `dout` only when `dout_valid_o && dout_ready_i`.
+While `dout_valid_o && !dout_ready_i`, `dout` and `dout_valid_o` are held.
+
+VDD and VSS are explicit top-level power pins under `USE_POWER_PINS`.
 
 ## Commands
 
@@ -76,8 +82,9 @@ not use the diagnostic address-record format.
 * DFT-s-OFDM TX `0x48`: 9-sample CP + 128 useful samples = 274 bytes.
 * DFT-s-OFDM TX `0x49`: 10-sample CP + 128 useful samples = 276 bytes.
 
-There is no `dout_ready` pin. Every byte with `dout_valid_o=1` is assumed to be
-accepted by the downstream device.
+Output bytes use a conventional ready/valid handshake. A byte is consumed only
+when `dout_valid_o && dout_ready_i`. Always-ready (`dout_ready_i=1`) preserves
+the previous production cadence, including `TX_BYTE_INTERVAL=10` for TX.
 
 ## Regression
 

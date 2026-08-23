@@ -35,12 +35,15 @@ The current scope is a one-RB, 15-kHz-SCS lower-PHY proof of concept.
 
 THE TOP-LEVEL CHIP INTERFACE MUST NOT CHANGE.
 
+The authoritative 24-pin production interface is:
+
 Inputs:
 
 * rst_n
 * clk
 * din[7:0]
 * din_valid_i
+* dout_ready_i
 
 Outputs:
 
@@ -51,13 +54,20 @@ Outputs:
 Power:
 
 * VDD
+* VSS
 
-Total physical pin target: 22.
+Total physical pin target: 24.
+
+The previous 22-pin configuration (no `dout_ready_i`, VSS not exposed as a
+logical pin) is obsolete and must not be treated as the production interface.
+
+A byte is transferred on `dout` only when `dout_valid_o && dout_ready_i`.
+While `dout_valid_o && !dout_ready_i`, `dout` and `dout_valid_o` must be held.
 
 Do not add debug pins, mode pins, result-ready pins, SRAM pins, TDD pins, configuration pins, or any other chip-level signals.
 
 All commands and data must pass through din/din_valid_i/din_ready_o.
-All returned data must pass through dout/dout_valid_o.
+All returned data must pass through dout/dout_valid_o/dout_ready_i.
 
 Standalone transform diagnostics must also use the existing byte-stream output.
 

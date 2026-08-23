@@ -39,9 +39,10 @@ module transform_scheduler_core #(
     input  logic result_ready_i,
 
     // Byte-stream output used by OFDM_RX (FDIQ) and DFT-s-OFDM TX (TDIQ).
-    // The receiver is assumed always ready whenever dout_valid_o is asserted.
+    // External handshake: a byte is consumed only on dout_valid_o && dout_ready_i.
     output logic [7:0] dout,
     output logic       dout_valid_o,
+    input  logic       dout_ready_i,
 
     // Idle-only post-silicon access to the physical 256x16 scratch port.
     // The top-level command engine holds debug_mode_i for the complete
@@ -2115,6 +2116,7 @@ module transform_scheduler_core #(
         .mem_rvalid_i (fft_mem_rvalid),
         .dout          (ofdm_rx_dout),
         .dout_valid_o  (ofdm_rx_dout_valid),
+        .dout_ready_i  (dout_ready_i && !tx_dout_valid),
         .busy_o        (ofdm_output_busy),
         .done_o        (ofdm_output_done)
     );
@@ -2179,6 +2181,7 @@ module transform_scheduler_core #(
         .mem_rvalid_i (mod_half_rvalid),
         .dout          (tx_dout),
         .dout_valid_o  (tx_dout_valid),
+        .dout_ready_i  (dout_ready_i),
         .busy_o        (tx_output_busy),
         .done_o        (tx_output_done)
     );

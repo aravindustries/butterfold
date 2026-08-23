@@ -25,8 +25,10 @@ COMMON_RTL = \
 	rtl/scheduler/transform_scheduler_core.sv \
 	rtl/top/butterfold_top.sv
 
-.PHONY: vectors wrapper reset-recovery behavioral foundry foundry-functional foundry-info \
-	characterize stress-fast stress-paced scheduled-fast scheduled-paced padframe-smoke synth-sta clean
+.PHONY: vectors wrapper reset-recovery behavioral behavioral-interval10 \
+	foundry foundry-functional foundry-functional-interval10 foundry-info \
+	powerpins-compile characterize stress-fast stress-paced \
+	scheduled-fast scheduled-paced padframe-smoke synth-sta clean
 
 vectors:
 	cd golden && $(PYTHON) gen_full_regression_vectors.py
@@ -59,6 +61,20 @@ behavioral: vectors
 	$(IVERILOG) -g2012 -Wall -s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_sram.out \
 		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
 	$(VVP) $(SIM_BUILD)/sim_butterfold_sram.out
+
+# Production TX pacing with dout_ready_i held high.
+behavioral-interval10: vectors
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -DTEST_TX_BYTE_INTERVAL=10 -s butterfold_top_tb \
+		-o $(SIM_BUILD)/sim_butterfold_sram_interval10.out \
+		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_sram_interval10.out
+
+# Compile-only check that VDD/VSS ports elaborate under the physical convention.
+powerpins-compile:
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -tnull -DUSE_POWER_PINS -s butterfold_top_tb \
+		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL)
 
 characterize: vectors
 	mkdir -p $(SIM_BUILD)
@@ -109,6 +125,14 @@ foundry-functional: vectors
 		-s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_foundry_sram.out \
 		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
 	$(VVP) $(SIM_BUILD)/sim_butterfold_foundry_sram.out
+
+foundry-functional-interval10: vectors
+	mkdir -p $(SIM_BUILD)
+	@test -f "$(SRAM256_MODEL)" || (echo "Missing SRAM256 model: $(SRAM256_MODEL)"; exit 1)
+	$(IVERILOG) -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM -DTEST_TX_BYTE_INTERVAL=10 \
+		-s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_foundry_sram_interval10.out \
+		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
+	$(VVP) $(SIM_BUILD)/sim_butterfold_foundry_sram_interval10.out
 
 foundry-info:
 	@echo "PDKPATH          = $(PDKPATH)"

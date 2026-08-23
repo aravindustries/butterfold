@@ -5,6 +5,7 @@ module reset_recovery_tb;
     logic clk=0, rst_n=0;
     logic [7:0] din=0;
     logic din_valid_i=0;
+    logic dout_ready_i=1'b1;
     wire din_ready_o;
     wire [7:0] dout;
     wire dout_valid_o;
@@ -17,7 +18,7 @@ module reset_recovery_tb;
 
     task automatic apply_reset;
         begin
-            @(negedge clk); din_valid_i=0; din=0; rst_n=0;
+            @(negedge clk); din_valid_i=0; din=0; dout_ready_i=1'b1; rst_n=0;
             repeat(3) @(posedge clk);
             @(negedge clk); rst_n=1; repeat(3) @(posedge clk);
             if (dout_valid_o) begin $display("RESET unexpected output"); errors=errors+1; end
@@ -38,7 +39,7 @@ module reset_recovery_tb;
         begin
             send(8'h40); send(8'h40); send(8'he0); send(8'h20); send(8'h10);
             for(k=0;k<10;k=k+1) begin
-                do @(posedge clk); while(!dout_valid_o);
+                do @(posedge clk); while(!(dout_valid_o && dout_ready_i));
                 if(dout!==expected[k]) begin
                     $display("RESET FFT2 mismatch byte %0d got=%02x exp=%02x",k,dout,expected[k]);
                     errors=errors+1;

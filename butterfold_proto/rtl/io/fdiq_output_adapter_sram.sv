@@ -3,6 +3,7 @@
 
 // SRAM-aware FDIQ output adapter. Requests one 32-bit complex word,
 // waits for the synchronous read response, then emits I and Q bytes.
+// Each byte is held until dout_valid_o && dout_ready_i.
 module fdiq_output_adapter_sram #(
     parameter logic [6:0] START_SAMPLE = 7'd0,
     parameter logic [7:0] SAMPLE_COUNT = 8'd64
@@ -19,6 +20,7 @@ module fdiq_output_adapter_sram #(
 
     output logic [7:0] dout,
     output logic       dout_valid_o,
+    input  logic       dout_ready_i,
     output logic busy_o,
     output logic done_o
 );
@@ -26,6 +28,7 @@ module fdiq_output_adapter_sram #(
     state_t state;
     logic [6:0] sample_index;
     logic signed [15:0] sample_i_reg, sample_q_reg;
+    wire dout_fire = dout_valid_o && dout_ready_i;
 
     function automatic logic [7:0] saturate_q17_to_byte(input logic signed [15:0] value);
         begin
@@ -62,8 +65,8 @@ module fdiq_output_adapter_sram #(
                     sample_q_reg <= $signed(mem_rdata_i[31:16]);
                     state <= OUT_I;
                 end
-                OUT_I: state <= OUT_Q;
-                OUT_Q: begin
+                OUT_I: if (dout_fire) state <= OUT_Q;
+                OUT_Q: if (dout_fire) begin
                     if (sample_index == START_SAMPLE + SAMPLE_COUNT - 1'b1) begin
                         state <= IDLE;
                         done_o <= 1'b1;

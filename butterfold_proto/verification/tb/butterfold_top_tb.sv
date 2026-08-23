@@ -10,7 +10,9 @@ module butterfold_top_tb;
     localparam integer SC_START_BIN = 1;
     localparam integer NUM_EXTRACTED_SC = 12;
     localparam integer MAX_WAIT = 200000;
-`ifdef BUTTERFOLD_WAVE_PACED
+`ifdef TEST_TX_BYTE_INTERVAL
+    localparam integer TEST_TX_BYTE_INTERVAL = `TEST_TX_BYTE_INTERVAL;
+`elsif BUTTERFOLD_WAVE_PACED
     localparam integer TEST_TX_BYTE_INTERVAL = 16;
 `else
     localparam integer TEST_TX_BYTE_INTERVAL = 1;
@@ -44,8 +46,19 @@ module butterfold_top_tb;
     logic [7:0] din;
     logic din_valid_i;
     logic din_ready_o;
+    logic dout_ready_i;
     logic [7:0] dout;
     logic dout_valid_o;
+`ifdef USE_POWER_PINS
+    wire VDD;
+    wire VSS;
+    assign VDD = 1'b1;
+    assign VSS = 1'b0;
+`endif
+
+    logic prev_dout_valid;
+    logic prev_dout_ready;
+    logic [7:0] prev_dout;
 
     // Independent vectors generated under golden/vectors/.
     logic [7:0]  two_point_commands [0:7];
@@ -186,7 +199,7 @@ module butterfold_top_tb;
         if (dut.external_fire)
             $display("PERF DIN t=%0t state=%0d data=%02h", $time,
                 dut.ext_state, din);
-        if (dout_valid_o)
+        if (dout_valid_o && dout_ready_i)
             $display("PERF DOUT t=%0t data=%02h", $time, dout);
     end
 `endif
@@ -199,13 +212,35 @@ module butterfold_top_tb;
         .clk          (clk),
         .din          (din),
         .din_valid_i  (din_valid_i),
+        .dout_ready_i (dout_ready_i),
         .din_ready_o  (din_ready_o),
         .dout         (dout),
         .dout_valid_o (dout_valid_o)
+`ifdef USE_POWER_PINS
+        , .VDD(VDD), .VSS(VSS)
+`endif
     );
 
     always #5 clk = ~clk;
     always @(posedge clk) cycle_count <= cycle_count + 1;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            prev_dout_valid <= 1'b0;
+            prev_dout_ready <= 1'b1;
+            prev_dout <= 8'h00;
+        end else begin
+            if (prev_dout_valid && !prev_dout_ready) begin
+                if (!dout_valid_o || (dout !== prev_dout)) begin
+                    $display("HOLD mismatch: valid dropped or dout changed while !ready");
+                    errors = errors + 1;
+                end
+            end
+            prev_dout_valid <= dout_valid_o;
+            prev_dout_ready <= dout_ready_i;
+            prev_dout <= dout;
+        end
+    end
 
     task automatic send_byte(input logic [7:0] value);
         integer wait_count;
@@ -240,7 +275,7 @@ module butterfold_top_tb;
             received = 1'b0;
             while (!received) begin
                 @(posedge clk);
-                if (dout_valid_o) begin
+                if (dout_valid_o && dout_ready_i) begin
                     value = dout;
                     received = 1'b1;
                 end else begin
@@ -502,6 +537,7 @@ module butterfold_top_tb;
 
     task automatic run_tx(input logic [7:0] command, input logic long_cp);
         integer out_samples, k;
+        integer last_accept, gap, min_gap, max_gap, bad_gap;
         logic [7:0] b;
         logic [15:0] e;
         begin
@@ -516,12 +552,345 @@ module butterfold_top_tb;
                     send_byte(tx_short_inputs[k][7:0]);
                 end
             end
+            last_accept = -1;
+            min_gap = 32'h7fff_ffff;
+            max_gap = 0;
+            bad_gap = 0;
             for (k=0;k<out_samples;k=k+1) begin
                 e = long_cp ? tx_long_expected[k] : tx_short_expected[k];
                 recv_byte(b); if (b!==e[15:8]) begin $display("TX %02h I byte mismatch %0d",command,k); errors=errors+1; end
+                if (last_accept >= 0) begin
+                    gap = cycle_count - last_accept;
+                    if (gap < min_gap) min_gap = gap;
+                    if (gap > max_gap) max_gap = gap;
+                    if (dout_ready_i && (TEST_TX_BYTE_INTERVAL > 1) &&
+                        (gap != TEST_TX_BYTE_INTERVAL))
+                        bad_gap = bad_gap + 1;
+                end
+                last_accept = cycle_count;
                 recv_byte(b); if (b!==e[7:0])  begin $display("TX %02h Q byte mismatch %0d",command,k); errors=errors+1; end
+                if (last_accept >= 0) begin
+                    gap = cycle_count - last_accept;
+                    if (gap < min_gap) min_gap = gap;
+                    if (gap > max_gap) max_gap = gap;
+                    if (dout_ready_i && (TEST_TX_BYTE_INTERVAL > 1) &&
+                        (gap != TEST_TX_BYTE_INTERVAL))
+                        bad_gap = bad_gap + 1;
+                end
+                last_accept = cycle_count;
+            end
+            if (TEST_TX_BYTE_INTERVAL > 1) begin
+                $display("TX %02h cadence min=%0d max=%0d bad=%0d expected=%0d",
+                    command, min_gap, max_gap, bad_gap, TEST_TX_BYTE_INTERVAL);
+                if (bad_gap != 0) begin
+                    $display("TX %02h cadence mismatch", command);
+                    errors = errors + 1;
+                end
             end
             $display("PASS interface exercise: OFDM_TX 0x%02h",command);
+        end
+    endtask
+
+    integer stall_seed;
+
+    task automatic set_ready(input logic value);
+        begin
+            @(negedge clk);
+            dout_ready_i <= value;
+        end
+    endtask
+
+    task automatic wait_valid_held(input integer hold_cycles);
+        integer n;
+        logic [7:0] held;
+        begin
+            n = 0;
+            while (!dout_valid_o) begin
+                @(posedge clk);
+                n = n + 1;
+                if (n > MAX_WAIT) $fatal(1, "timeout waiting for valid hold");
+            end
+            held = dout;
+            repeat (hold_cycles) begin
+                @(posedge clk);
+                if (!dout_valid_o || dout !== held) begin
+                    $display("stall hold failed valid=%0d dout=%02h held=%02h",
+                        dout_valid_o, dout, held);
+                    errors = errors + 1;
+                end
+            end
+        end
+    endtask
+
+    function automatic logic [7:0] tx_short_exp_byte(input integer idx);
+        logic [15:0] word;
+        begin
+            word = tx_short_expected[idx >> 1];
+            tx_short_exp_byte = idx[0] ? word[7:0] : word[15:8];
+        end
+    endfunction
+
+    task automatic recv_n_tx_short(input integer n, inout integer idx);
+        integer i;
+        logic [7:0] b;
+        begin
+            for (i = 0; i < n; i = i + 1) begin
+                recv_byte(b);
+                if (b !== tx_short_exp_byte(idx)) begin
+                    $display("backpressure mismatch idx=%0d exp=%02h got=%02h",
+                        idx, tx_short_exp_byte(idx), b);
+                    errors = errors + 1;
+                end
+                idx = idx + 1;
+            end
+        end
+    endtask
+
+    task automatic send_tx_short_inputs;
+        integer k;
+        begin
+            send_byte(CMD_TX_SHORT);
+            for (k = 0; k < 12; k = k + 1) begin
+                send_byte(tx_short_inputs[k][15:8]);
+                send_byte(tx_short_inputs[k][7:0]);
+            end
+        end
+    endtask
+
+    task automatic run_echo_magic_always_ready;
+        logic [7:0] b;
+        begin
+            send_byte(CMD_ECHO); send_byte(8'h3c); recv_byte(b);
+            if (b !== 8'h3c) begin $display("ECHO stall-path mismatch"); errors=errors+1; end
+            send_byte(CMD_MAGIC);
+            recv_byte(b); if (b!==8'h42) errors=errors+1;
+            recv_byte(b); if (b!==8'h46) errors=errors+1;
+            recv_byte(b); if (b!==8'h4c) errors=errors+1;
+            recv_byte(b); if (b!==8'h44) errors=errors+1;
+        end
+    endtask
+
+    task automatic test_first_byte_stall;
+        integer nbyte, idx;
+        begin
+            $display("BP TEST A first-byte stall");
+            dout_ready_i = 1'b1;
+            nbyte = 2*(SHORT_CP+N);
+            set_ready(1'b0);
+            send_tx_short_inputs();
+            wait_valid_held(20);
+            set_ready(1'b1);
+            idx = 0;
+            recv_n_tx_short(nbyte, idx);
+            $display("PASS BP TEST A");
+        end
+    endtask
+
+    task automatic test_middle_stall;
+        integer nbyte, idx;
+        begin
+            $display("BP TEST B middle stall");
+            dout_ready_i = 1'b1;
+            nbyte = 2*(SHORT_CP+N);
+            send_tx_short_inputs();
+            idx = 0;
+            recv_n_tx_short(8, idx);
+            set_ready(1'b0);
+            wait_valid_held(15);
+            set_ready(1'b1);
+            recv_n_tx_short(nbyte-8, idx);
+            $display("PASS BP TEST B");
+        end
+    endtask
+
+    task automatic test_last_byte_stall;
+        integer nbyte, idx;
+        begin
+            $display("BP TEST C last-byte stall");
+            dout_ready_i = 1'b1;
+            nbyte = 2*(SHORT_CP+N);
+            send_tx_short_inputs();
+            idx = 0;
+            recv_n_tx_short(nbyte-1, idx);
+            set_ready(1'b0);
+            wait_valid_held(12);
+            if (dut.top_state == 0) begin
+                $display("last-byte stall released engine early");
+                errors = errors + 1;
+            end
+            set_ready(1'b1);
+            recv_n_tx_short(1, idx);
+            $display("PASS BP TEST C");
+        end
+    endtask
+
+    task automatic test_alternating_ready;
+        integer nbyte, idx;
+        logic [7:0] b;
+        begin
+            $display("BP TEST D alternating ready");
+            nbyte = 2*(SHORT_CP+N);
+            dout_ready_i = 1'b1;
+            send_tx_short_inputs();
+            idx = 0;
+            while (idx < nbyte) begin
+                set_ready(1'b0);
+                @(posedge clk);
+                set_ready(1'b1);
+                recv_byte(b);
+                if (b !== tx_short_exp_byte(idx)) begin
+                    $display("alt mismatch idx=%0d", idx);
+                    errors = errors + 1;
+                end
+                idx = idx + 1;
+            end
+            $display("PASS BP TEST D");
+        end
+    endtask
+
+    task automatic test_random_ready(input integer seed, input integer command,
+                                     input integer nbyte_force);
+        integer idx, nbyte, k, r, wait_count;
+        logic [7:0] b;
+        logic [6:0] addr;
+        logic signed [15:0] vi, vq;
+        begin
+            $display("BP TEST E random seed=%0d cmd=%02h", seed, command);
+            stall_seed = seed;
+            dout_ready_i = 1'b1;
+            if (command == CMD_TX_SHORT) begin
+                nbyte = 2*(SHORT_CP+N);
+                send_tx_short_inputs();
+                idx = 0;
+                while (idx < nbyte) begin
+                    stall_seed = stall_seed * 1103515245 + 12345;
+                    if (stall_seed[2]) begin
+                        set_ready(1'b0);
+                        repeat (1 + stall_seed[4:3]) @(posedge clk);
+                        set_ready(1'b1);
+                    end
+                    recv_byte(b);
+                    if (b !== tx_short_exp_byte(idx)) begin
+                        $display("rand TX mismatch idx=%0d got=%02h", idx, b);
+                        errors = errors + 1;
+                    end
+                    idx = idx + 1;
+                end
+            end else if (command == CMD_FFT2) begin
+                send_byte(CMD_FFT2);
+                send_byte(two_point_inputs[0][31:24]);
+                send_byte(two_point_inputs[0][23:16]);
+                send_byte(two_point_inputs[0][15:8]);
+                send_byte(two_point_inputs[0][7:0]);
+                for (k = 0; k < 10; k = k + 1) begin
+                    stall_seed = stall_seed * 1103515245 + 12345;
+                    if (stall_seed[1]) begin
+                        set_ready(1'b0);
+                        repeat (2 + stall_seed[3:2]) @(posedge clk);
+                        set_ready(1'b1);
+                    end
+                    recv_byte(b);
+                end
+            end else if (command == CMD_DFT12) begin
+                send_byte(CMD_DFT12);
+                for (k=0;k<12;k=k+1) begin
+                    send_byte(dft12_inputs[k][15:8]);
+                    send_byte(dft12_inputs[k][7:0]);
+                end
+                clear_actual();
+                for (k=0;k<12;k=k+1) begin
+                    stall_seed = stall_seed * 1103515245 + 12345;
+                    if (stall_seed[0]) begin
+                        set_ready(1'b0);
+                        repeat (1 + stall_seed[5:4]) @(posedge clk);
+                        set_ready(1'b1);
+                    end
+                    recv_complex_record(addr, vi, vq);
+                    actual_i[addr]=vi; actual_q[addr]=vq; seen[addr]=1'b1;
+                end
+                for (k=0;k<12;k=k+1) begin
+                    if (!seen[k] ||
+                        actual_i[k]!==$signed(dft12_expected[k][31:16]) ||
+                        actual_q[k]!==$signed(dft12_expected[k][15:0])) begin
+                        $display("rand DFT12 mismatch bin %0d", k);
+                        errors = errors + 1;
+                    end
+                end
+            end
+            dout_ready_i = 1'b1;
+            $display("PASS BP TEST E seed=%0d cmd=%02h", seed, command);
+        end
+    endtask
+
+    task automatic test_long_stall;
+        integer nbyte, idx;
+        logic blocked;
+        begin
+            $display("BP TEST F long stall");
+            dout_ready_i = 1'b1;
+            nbyte = 2*(SHORT_CP+N);
+            send_tx_short_inputs();
+            idx = 0;
+            recv_n_tx_short(4, idx);
+            set_ready(1'b0);
+            wait_valid_held(200);
+            blocked = din_ready_o;
+            @(negedge clk); din <= CMD_ECHO; din_valid_i <= 1'b1;
+            @(posedge clk);
+            if (din_ready_o && din_valid_i) begin
+                $display("new command accepted while TX output stalled");
+                errors = errors + 1;
+            end
+            @(negedge clk); din_valid_i <= 1'b0; din <= 8'h00;
+            set_ready(1'b1);
+            recv_n_tx_short(nbyte-4, idx);
+            $display("PASS BP TEST F (din_ready during stall was %0d)", blocked);
+        end
+    endtask
+
+    task automatic test_reset_during_stall;
+        logic [7:0] b;
+        begin
+            $display("BP TEST G reset during stall");
+            set_ready(1'b0);
+            send_byte(CMD_MAGIC);
+            wait_valid_held(8);
+            @(negedge clk); rst_n <= 1'b0; din_valid_i <= 1'b0;
+            repeat (3) @(posedge clk);
+            if (dout_valid_o) begin
+                $display("reset did not clear dout_valid_o");
+                errors = errors + 1;
+            end
+            @(negedge clk); rst_n <= 1'b1; dout_ready_i <= 1'b1;
+            repeat (4) @(posedge clk);
+            if (dout_valid_o) begin
+                $display("stale dout_valid after reset");
+                errors = errors + 1;
+            end
+            send_byte(CMD_ECHO); send_byte(8'h11); recv_byte(b);
+            if (b !== 8'h11) begin
+                $display("post-reset ECHO mismatch");
+                errors = errors + 1;
+            end
+            $display("PASS BP TEST G");
+        end
+    endtask
+
+    task automatic run_backpressure_suite;
+        begin
+            dout_ready_i = 1'b1;
+            test_first_byte_stall();
+            test_middle_stall();
+            test_last_byte_stall();
+            test_alternating_ready();
+            test_random_ready(1, CMD_TX_SHORT, 0);
+            test_random_ready(99, CMD_FFT2, 0);
+            test_random_ready(7, CMD_DFT12, 0);
+            test_random_ready(12345, CMD_TX_SHORT, 0);
+            test_long_stall();
+            test_reset_during_stall();
+            dout_ready_i = 1'b1;
+            $display("PASS backpressure suite");
         end
     endtask
 
@@ -652,7 +1021,7 @@ module butterfold_top_tb;
 `endif
 
     initial begin
-        clk=1'b0; rst_n=1'b0; din=8'h00; din_valid_i=1'b0;
+        clk=1'b0; rst_n=1'b0; din=8'h00; din_valid_i=1'b0; dout_ready_i=1'b1;
         errors=0; cycle_count=0;
 
         $readmemh("golden/vectors/two_point_commands.hex", two_point_commands);
@@ -681,7 +1050,7 @@ module butterfold_top_tb;
 
         $display("============================================================");
         $display("ButterFold FINAL-PIN regression");
-        $display("Only din/din_valid/din_ready and dout/dout_valid are used.");
+        $display("din ready/valid plus dout ready/valid (24-pin interface).");
         $display("============================================================");
 
         run_debug_protocol();
@@ -749,6 +1118,7 @@ module butterfold_top_tb;
         run_rx(CMD_RX_LONG,1'b1);
         run_tx(CMD_TX_SHORT,1'b0);
         run_tx(CMD_TX_LONG,1'b1);
+        run_backpressure_suite();
 `endif
 
         $display("============================================================");

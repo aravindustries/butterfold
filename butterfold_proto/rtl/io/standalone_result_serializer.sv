@@ -5,8 +5,9 @@
 // Standalone result serializer
 //
 // Converts the transform core's parallel diagnostic result transaction into the
-// final 8-bit dout stream.  No external backpressure exists, so once a result
-// transaction is accepted the bytes are emitted on consecutive clocks.
+// final 8-bit dout stream.  External dout_ready_i backpressure holds the
+// current byte until handshake.  The producer result slot stays claimed for
+// the whole record.
 //
 // Serialization format: one 5-byte record per complex output, in transaction
 // order X0, X1, then X2 when result_radix_i == 3:
@@ -49,6 +50,7 @@ module standalone_result_serializer (
 
     output logic [7:0] dout_o,
     output logic       dout_valid_o,
+    input  logic       dout_ready_i,
     output logic       busy_o,
     output logic       transaction_done_o,
     output logic       job_done_o
@@ -58,13 +60,13 @@ module standalone_result_serializer (
     wire [3:0] final_byte_index =
         (result_radix_i == 2'd3) ? 4'd14 : 4'd9;
 
-    wire result_fire = result_valid_i && result_ready_o;
+    wire dout_fire = dout_valid_o && dout_ready_i;
 
     // The producer already owns a stable elastic result slot. Keep it
     // backpressured throughout serialization and release it with the final
-    // byte instead of copying the complete transaction here.
+    // accepted byte instead of copying the complete transaction here.
     assign result_ready_o = enable_i && busy_o &&
-        (byte_index == final_byte_index);
+        (byte_index == final_byte_index) && dout_fire;
     assign dout_valid_o   = busy_o;
 
     always @* begin
@@ -104,7 +106,7 @@ module standalone_result_serializer (
             if (!busy_o && enable_i && result_valid_i) begin
                 byte_index <= 4'd0;
                 busy_o <= 1'b1;
-            end else if (busy_o) begin
+            end else if (busy_o && dout_fire) begin
                 if (byte_index == final_byte_index) begin
                     busy_o <= 1'b0;
                     byte_index <= 4'd0;

@@ -14,6 +14,7 @@ module butterfold_top #(
     input  logic       clk,
     input  logic [7:0] din,
     input  logic       din_valid_i,
+    input  logic       dout_ready_i,
     output logic       din_ready_o,
     output logic [7:0] dout,
     output logic       dout_valid_o
@@ -120,6 +121,8 @@ module butterfold_top #(
     logic core_ofdm_active, drain_active;
     logic core_rx_selected_complete, core_rx_complete, core_tx_complete;
 
+    wire dout_fire = dout_valid_o && dout_ready_i;
+
     assign external_fire = din_valid_i && din_ready_o;
     assign feeder_start = external_fire && (top_state == TOP_IDLE) && is_ofdm(din);
     assign job_head_command = active_command;
@@ -170,6 +173,7 @@ module butterfold_top #(
         .result_last_o(core_last), .result_valid_o(core_result_valid),
         .result_ready_i(core_result_ready),
         .dout(core_dout), .dout_valid_o(core_dout_valid),
+        .dout_ready_i(dout_ready_i && !serializer_valid),
         .debug_mode_i(debug_mode), .debug_req_i(debug_req),
         .debug_write_i(debug_write), .debug_addr_i(debug_addr),
         .debug_wdata_i(debug_wdata), .debug_ready_o(debug_ready),
@@ -188,7 +192,8 @@ module butterfold_top #(
         .result_addr2_i(core_addr2), .result_radix_i(core_radix),
         .result_last_i(core_last), .result_valid_i(core_result_valid),
         .result_ready_o(serializer_ready), .dout_o(serializer_dout),
-        .dout_valid_o(serializer_valid), .busy_o(serializer_busy),
+        .dout_valid_o(serializer_valid), .dout_ready_i(dout_ready_i),
+        .busy_o(serializer_busy),
         .transaction_done_o(serializer_done), .job_done_o(serializer_job_done)
     );
 
@@ -276,7 +281,8 @@ module butterfold_top #(
                       standalone_active <= 1'b0;
                       top_state <= TOP_IDLE;
                   end
-                  if (ofdm_active && core_dout_valid) begin
+                  if (ofdm_active && core_dout_valid && dout_ready_i &&
+                      !serializer_valid) begin
                       output_left <= output_left - 1'b1;
                       if (output_left == 9'd1) begin
                           ofdm_active <= 1'b0;
@@ -293,8 +299,8 @@ module butterfold_top #(
                   echo_data <= din;
                   top_state <= TOP_ECHO_OUTPUT;
               end
-              TOP_ECHO_OUTPUT: top_state <= TOP_IDLE;
-              TOP_MAGIC_OUTPUT: begin
+              TOP_ECHO_OUTPUT: if (dout_fire) top_state <= TOP_IDLE;
+              TOP_MAGIC_OUTPUT: if (dout_fire) begin
                   if (magic_index == 3'd3) top_state <= TOP_IDLE;
                   else magic_index <= magic_index + 1'b1;
               end
@@ -307,8 +313,8 @@ module butterfold_top #(
                   debug_read_latch <= debug_rdata;
                   top_state <= TOP_SRAM_READ_HI;
               end
-              TOP_SRAM_READ_HI: top_state <= TOP_SRAM_READ_LO;
-              TOP_SRAM_READ_LO: top_state <= TOP_IDLE;
+              TOP_SRAM_READ_HI: if (dout_fire) top_state <= TOP_SRAM_READ_LO;
+              TOP_SRAM_READ_LO: if (dout_fire) top_state <= TOP_IDLE;
               TOP_SRAM_WRITE_ADDR: if (external_fire) begin
                   debug_addr <= din;
                   top_state <= TOP_SRAM_WRITE_HI;
@@ -322,7 +328,7 @@ module butterfold_top #(
                   top_state <= TOP_SRAM_WRITE_REQ;
               end
               TOP_SRAM_WRITE_REQ: if (debug_ready) top_state <= TOP_SRAM_WRITE_ACK;
-              TOP_SRAM_WRITE_ACK: top_state <= TOP_IDLE;
+              TOP_SRAM_WRITE_ACK: if (dout_fire) top_state <= TOP_IDLE;
               default: top_state <= TOP_IDLE;
             endcase
         end
