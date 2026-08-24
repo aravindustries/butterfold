@@ -135,9 +135,6 @@ Result: **Circuits match uniquely** (11,629 devices, 11,638 nets).
 Representative stdcell compares: `and2_1` 3 PFET + 3 NFET; `inv_1` 1+1;
 `nand2_1` 2+2; `dffrnq_1` 14+14.
 
-KLayout LVS against OpenROAD CDL **zero-device stubs** still fails and is
-**not** the LVS of record.
-
 Report: [`07_lvs.md`](butterfold_proto/physical/reports/signoff/07_lvs.md)  
 Evidence: [`full_netgen_lvs_summary.rpt`](butterfold_proto/physical/reports/signoff/evidence/lvs/full_netgen_lvs_summary.rpt),
 [`full_netgen_lvs.rpt`](butterfold_proto/physical/reports/signoff/evidence/lvs/full_netgen_lvs.rpt)
