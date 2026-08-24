@@ -1,0 +1,24 @@
+OpenROAD 26Q2-254-g61932e897 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+openroad> read_db physical/results/padframe/route/floorplan.odb
+openroad> place_io_fill -row IO_NORTH gf180mcu_fd_io__fill10 gf180mcu_fd_io__fill5 gf180mcu_fd_io__fill1 gf180mcu_fd_io__fillnc
+Signal 11 received
+Stack trace:
+ 0# 0x00005C30F9181EE6 in openroad
+ 1# 0x00007A0F22C4F330 in /lib/x86_64-linux-gnu/libc.so.6
+ 2# odb::dbInst::setOrient(odb::dbOrientType) in openroad
+ 3# pad::PadPlacer::placeInstance(int, odb::dbInst*, odb::dbOrientType const&, bool, bool, bool) const in openroad
+ 4# pad::ICeWall::placeFiller(std::vector<odb::dbMaster*, std::allocator<odb::dbMaster*> > const&, odb::dbRow*, std::vector<odb::dbMaster*, std::allocator<odb::dbMaster*> > const&) in openroad
+ 5# 0x00005C30F9251C0B in openroad
+ 6# TclNRRunCallbacks in /lib/x86_64-linux-gnu/libtcl8.6.so
+ 7# 0x00007A0F268B66BC in /lib/x86_64-linux-gnu/libtcl8.6.so
+ 8# Tcl_EvalEx in /lib/x86_64-linux-gnu/libtcl8.6.so
+ 9# Tcl_Eval in /lib/x86_64-linux-gnu/libtcl8.6.so
+10# 0x00005C30FB9453AB in openroad
+11# Tcl_MainEx in /lib/x86_64-linux-gnu/libtcl8.6.so
+12# main in openroad
+13# 0x00007A0F22C341CA in /lib/x86_64-linux-gnu/libc.so.6
+14# __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
+15# _start in openroad
