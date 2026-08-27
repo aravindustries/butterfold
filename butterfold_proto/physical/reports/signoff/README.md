@@ -10,7 +10,7 @@ ButterFold GF180MCU core, LibreLane 3.0.2 / OpenROAD. Production clock
 | `*.md` in this directory | Human interpretation of one check |
 | [`evidence/`](evidence/) | **Native tool output** copied into git |
 | `physical/results/` | Heavy local artifacts (ODB/SPEF/GDS); gitignored |
-| `gds/butterfold_top.gds` at repo root | Canonical tracked **team** GDS (pre-fill SHA `5a99213a…`) |
+| `gds/butterfold_top.gds` at repo root | Canonical tracked **team** GDS (SHA `6d66a476…`) |
 
 Navigate: [11_signoff_summary.md](11_signoff_summary.md) → per-check `.md` → `evidence/`.
 
@@ -32,11 +32,13 @@ require `/tmp`, ignored `physical/results/`, or the original workstation.
 | [10_final_artifacts.md](10_final_artifacts.md) | artifact manifest |
 | [11_signoff_summary.md](11_signoff_summary.md) | dashboard |
 
-**BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE.**
+**BUTTERFOLD NORTH/WEST PIN-PLACEMENT SIGNOFF COMPLETE.**
 
-Minimum-clear density: **PASS** (DCF.1d COMP 36.18% ≤ 70%).
+Physical terminals **23**: NORTH 12, WEST 11, EAST 0, SOUTH 0.
+RTL/functionality unchanged. Existing `VDD`/`VSS` ports unchanged.
+
+Minimum-clear density: **PASS** (DCF.1d COMP 34.39% ≤ 70%).
 Minimum-metal density: **INTEGRATOR FILL PENDING** (not manufacturing-closed).
-
-Full device-level Netgen LVS PASS. Interval-10 foundry-SRAM functional PASS.
-Canonical `gds/butterfold_top.gds` is the pre-fill team GDS `5a99213a…`.
+CO.6a: **0**. Full device-level Netgen LVS: **Circuits match uniquely**.
+Canonical `gds/butterfold_top.gds` SHA `6d66a476…`.
 Do not claim post-integration manufacturing signoff.

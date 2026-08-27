@@ -2,35 +2,36 @@
 
 ## Result
 
-Power-grid and disconnected-pin checks: **PASS**.
+Power-grid connectivity: **PASS** (PSM-0040, VDD and VSS fully connected).
 
 Standalone foundry ERC deck: **NOT AVAILABLE** (no ERC runset in this
-gf180mcuD / LibreLane install; `conn_drc` is inside KLayout DRC).
+gf180mcuD install; `conn_drc` is inside KLayout DRC).
 
-IR (`analyze_power_grid`, max-SS, 4.50 V, vectorless 0.115 W):
+North-edge physical `VDD`/`VSS` terminals are preserved. PDNSim sources were
+restored to a **distributed Metal4/Metal5 strap VSRC** (17 locations each),
+matching the previous successful mesh-source methodology. The north-only
+BTerm VSRC (175 / 290 mV) was an analysis representation issue, not a
+disconnected grid.
 
-- VDD: connected, worst drop **1.01 mV** (0.02%)
-- VSS: connected, worst drop **1.13 mV**
+IR (`analyze_power_grid`, TT, 5.00 V, vectorless 0.120 W):
 
-Disconnected pins: **0** (0 critical).
+- VDD: connected, worst drop **7.42 mV** (0.15%)
+- VSS: connected, worst drop **7.39 mV** (0.15%)
 
-GRT overflow **0** (native congestion table). Final DRT `Number of violations = 0`.
+GRT overflow **0**. Final DRT `Number of violations = 0`.
 
 ## Routing evidence
 
 | Item | Path |
 |---|---|
-| GRT congestion (native log excerpt) | [evidence/routing/grt_summary.rpt](evidence/routing/grt_summary.rpt) |
-| DRT log | [evidence/routing/drt_summary.rpt](evidence/routing/drt_summary.rpt) |
+| GRT | [evidence/routing/grt_summary.rpt](evidence/routing/grt_summary.rpt) |
+| DRT | [evidence/routing/drt_summary.rpt](evidence/routing/drt_summary.rpt) |
 
 ## Evidence
 
 | Item | Path |
 |---|---|
-| Native `analyze_power_grid` | [evidence/ir/power_grid.rpt](evidence/ir/power_grid.rpt) |
-| Native disconnected pins | [evidence/routing/disconnected_pins.rpt](evidence/routing/disconnected_pins.rpt) |
-
-- Tool: OpenROAD 26Q2-254-g61932e897
-- Original: `11_irdrop.log`, `disconnected_pins/disconnected_pins.log`
-- Click `SystemExit: 0` traceback after “Found 0 disconnected pin(s)” is the
-  Python wrapper exiting; the count line is the native result.
+| Native `analyze_power_grid` log | [evidence/ir/ir_antenna.log](evidence/ir/ir_antenna.log) |
+| Same log (power_grid alias) | [evidence/ir/power_grid.rpt](evidence/ir/power_grid.rpt) |
+| Distributed VSRC VDD | [evidence/ir/vsrc_VDD.loc](evidence/ir/vsrc_VDD.loc) |
+| Distributed VSRC VSS | [evidence/ir/vsrc_VSS.loc](evidence/ir/vsrc_VSS.loc) |

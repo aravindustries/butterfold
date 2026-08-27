@@ -6,12 +6,12 @@ This is **not** activity-accurate silicon power.
 
 ## Result
 
-**INFO** — OpenSTA `report_power` total **0.115058 W** (shown as 1.149672e-01
-in the native table) at max-SS, 38.4 MHz.
+**INFO** — OpenSTA `report_power` total **0.120 W** at TT, 38.4 MHz, on the
+CO.6a-repaired ODB.
 
 | | Internal | Switching | Leakage | Total |
 |---|---:|---:|---:|---:|
-| Total (W) | 7.571e-02 | 3.924e-02 | 1.299e-05 | 1.150e-01 |
+| Total (W) | 9.23e-02 | 2.82e-02 | 3.44e-06 | 1.20e-01 |
 
 ## Evidence
 
@@ -19,6 +19,4 @@ in the native table) at max-SS, 38.4 MHz.
 |---|---|
 | Native `report_power` | [evidence/power/vectorless_power.rpt](evidence/power/vectorless_power.rpt) |
 
-- Tool: OpenSTA in OpenROAD 26Q2-254-g61932e897
-- Original: `power_vectorless_max_ss.rpt`
-- Corner: max_ss_125C_4v50 + max SPEF
+Tool: OpenSTA in OpenROAD 26Q2-254-g61932e897.

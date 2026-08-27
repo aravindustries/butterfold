@@ -2,24 +2,25 @@
 
 ## Result
 
-**PASS** on the ECO routed topology (ODB).
+**PASS** on the CO.6a-repaired routed topology and on the streamed GDS.
 
-OpenROAD: 0 nets / 0 pins. Diodes **14**. KLayout antenna table: 0 items
-on the pre-dummy GDS.
+| Check | Result |
+|---|---|
+| OpenROAD `check_antennas` | 0 nets / 0 pins |
+| Physical diode cells | **35** |
+| KLayout `antenna.drc` | 0 items |
 
-Dummy-metal fill is GDS-only (datatype 4) and is not connected to signal
-nets. Foundry density on the dummy-filled GDS still fails coverage; antenna
-table was 0 on pre-dummy. Full KLayout antenna was not re-run as a multi-hour
-full DRC after dummy fill because density already fails (hard stop).
+Diode cells were not removed to force LVS counts. Netgen reduces 35→31
+equivalent antenna devices on **both** sides after official
+`property parallel`.
 
 ## Evidence
 
 | Item | Path |
 |---|---|
-| OpenROAD `check_antennas` / diode lines from final DRT | [evidence/antenna/openroad_check_antennas.rpt](evidence/antenna/openroad_check_antennas.rpt) |
-| KLayout antenna lyrdb | [evidence/antenna/klayout_antenna.rpt](evidence/antenna/klayout_antenna.rpt) |
-| Diode count from OpenROAD inventory | [evidence/antenna/diode_inventory.rpt](evidence/antenna/diode_inventory.rpt) |
+| OpenROAD `check_antennas` | [evidence/antenna/openroad_check_antennas.rpt](evidence/antenna/openroad_check_antennas.rpt) |
+| Diode inventory | [evidence/antenna/diode_inventory.rpt](evidence/antenna/diode_inventory.rpt) |
+| KLayout antenna lyrdb | [evidence/antenna/klayout_antenna.lyrdb](evidence/antenna/klayout_antenna.lyrdb) |
 
-- Tool: OpenROAD 26Q2-254-g61932e897 `check_antennas`; KLayout 0.30.8 `antenna.drc`
-- Original: `09_drt3.log` (`ANT-0002`/`ANT-0001` Found 0; `FINAL_ANTENNA DIODE 14`), `klayout_drc/butterfold_top_antenna.lyrdb`
-- Input ODB SHA `ca78b97b…`; pre-dummy GDS SHA `5a99213a…`
+- Tool: OpenROAD 26Q2 `check_antennas`; KLayout 0.30.8 `antenna.drc`
+- Input GDS SHA `6d66a476…`

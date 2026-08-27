@@ -1,0 +1,56 @@
+CO.6a BEFORE repair — filled Magic GDS
+GDS: physical/results/nw_pins_eco/magic_gds/butterfold_top.magic.gds
+SHA-256: cd6a1dfc51892b1b0b4a3ff3fa3ff28454a6f4bcbb41619f5ddb0cb1e85af9e3
+Rule: CO.6a Metal1 (<0.34um) end-of-line overlap of contact = 0.06um
+Authoritative deck: GF180 KLayout main.drc, run_mode=flat, variant D 5LM 11K
+lyrdb: evidence/drc/co6a_before_6markers.lyrdb (copy of nw_pins_eco/drc_full/butterfold_top_main.lyrdb)
+Count: 6 items (all CO.6a). No other non-fill main-deck violations.
+
+All six markers are the same failure class:
+- 0.005 um (5 nm) X-separation edge-pair, 0.06 um tall
+- contact 0.22 x 0.22 um
+- Metal1 left-of-contact overlap = 0.005 um (need 0.060 um EOL)
+- VIA1 = 0 at the marker (not a routing via)
+- geometry is inside gf180mcu_fd_sc_mcu9t5v0__aoi221_2
+- every failing instance is MX / Magic m0 (row-flip)
+- 4 R0 aoi221_2 instances on the same GDS do not violate
+
+Foundry vs streamed aoi221_2 Metal1/contact polygons: identical.
+Isolated foundry aoi221_2 as top cell: CO.6a = 0
+Flattened MX instance of the same cell: CO.6a = 1
+Flattened R0 instance: CO.6a = 0
+aoi221_1 MX: CO.6a = 0
+aoi221_4 MX: CO.6a = 0
+
+Previous uniquely-matching GDS SHA 5a99213a also contains one MX aoi221_2
+that fails the same isolated flatten check; full-chip DRC passed there
+because neighboring/PDN Metal1 merged and removed the thin-EOL condition.
+On this North/West layout the PDN Metal1 strap sits ~0.11 um from the
+contact Metal1 (does not merge) at all six MX sites.
+
+ODB DEF instances (openroad-librelane read of hold_eco/routed.def):
+
+Marker                         Instance   Orient  Approx LL (um)
+(963.71, 207.48)               _13682_    MX      957.04, 206.64
+(745.31, 217.56)               _17407_    MX      738.64, 216.72
+(969.87, 217.56)               _13744_    MX      963.20, 216.72
+(40.83, 368.76)                _09888_    MX      34.16, 367.92
+(250.27, 429.24)               _15985_    MX      243.60, 428.40
+(572.83, 1074.36)              _10690_    MX      566.16, 1073.52
+
+KLayout lyrdb edge-pairs:
+  (963.71,207.45;963.71,207.51)/(963.705,207.45;963.705,207.51)
+  (745.31,217.53;745.31,217.59)/(745.305,217.53;745.305,217.59)
+  (969.87,217.53;969.87,217.59)/(969.865,217.53;969.865,217.59)
+  (40.83,368.73;40.83,368.79)/(40.825,368.73;40.825,368.79)
+  (250.27,429.21;250.27,429.27)/(250.265,429.21;250.265,429.27)
+  (572.83,1074.33;572.83,1074.39)/(572.825,1074.33;572.825,1074.39)
+
+Cause: common — MX-oriented aoi221_2 contact/Metal1 EOL, not filler, not
+antenna, not GDS hand geometry, not a 1 nm streamout round-off of a passing
+cell.
+
+Repair chosen: native ECO swap of those six masters to
+gf180mcu_fd_sc_mcu9t5v0__aoi221_1 (same pin names, smaller, MX CO.6a = 0),
+localized rip/reroute, filler_placement, Magic restream.
+Do not hand-edit GDS. Do not redesign PDN. Do not move SRAMs.

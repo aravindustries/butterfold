@@ -1,52 +1,49 @@
-# 11 — Signoff summary
+# 11 — Signoff summary (pin-placement-redesign)
 
-# BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE
+# BUTTERFOLD NORTH/WEST PIN-PLACEMENT SIGNOFF COMPLETE
 
-ECO topology is timing/electrical/antenna closed. Full device-level LVS
-**PASS**. Interval-10 foundry-SRAM functional **PASS**. Canonical team GDS
-promoted (`gds/butterfold_top.gds` SHA `5a99213a…`).
+This dashboard is for the **North/West pin-placement** layout on
+`pin-placement-redesign`. RTL, golden models, FFT64/DFT12, 38.4 MHz, and
+SRAM count are unchanged. Canonical `gds/butterfold_top.gds` is the promoted
+North/West Magic GDS.
 
-Minimum-clear density: **PASS**
-Minimum-metal density: **INTEGRATOR FILL PENDING**
+Canonical Magic GDS (repo root):
 
-This is **not** final post-integration manufacturing signoff. The integrator
-still owns minimum-metal fill (M2.4–M5.4 / MT.3).
+`gds/butterfold_top.gds`
+
+byte-identical copy of
+`butterfold_proto/physical/results/nw_pins_eco/co6a_repair/magic_gds/butterfold_top.magic.gds`
+
+SHA-256 `6d66a47623c96dcbfb2e6258081934f7a26c033f953b57469b1730d0c5e7dd12`
+
+Same SHA used for main DRC, density, MSLOT, and full-device LVS.
 
 | Check | Status | Metric | Report | Evidence |
 |---|---|---|---|---|
-| Functional | **PASS** | TX_BYTE_INTERVAL=10 foundry SRAM; FINAL-PIN OVERALL RESULT: PASS | — | [log](evidence/functional/interval10_regression.log) |
-| Max-SS setup | PASS | +0.183361 ns | [01](01_setup_max_ss.md) | [summary](evidence/setup/max_ss_setup_summary.rpt) |
-| Min-FF hold | PASS | +0.152106 ns | [02](02_hold_min_ff.md) | [summary](evidence/hold/min_ff_hold_summary.rpt) |
-| Non-reset slew | PASS | 0 | [03](03_electrical.md) | [slew](evidence/electrical/max_slew.rpt) |
-| Non-reset cap | PASS | 0 | [03](03_electrical.md) | [cap](evidence/electrical/max_cap.rpt) |
-| Fanout | PASS | 0 violators | [03](03_electrical.md) | [fanout](evidence/electrical/fanout.rpt) |
-| Reset electrical | PASS | 0 | [04](04_reset.md) | [reset](evidence/reset/reset_electrical.rpt) |
-| Antenna | PASS | 0 nets/pins, 14 diodes | [05](05_antenna.md) | [OpenROAD](evidence/antenna/openroad_check_antennas.rpt) |
-| Routing | PASS | overflow 0, DRT 0 | [08](08_erc.md) | [GRT](evidence/routing/grt_summary.rpt) / [DRT](evidence/routing/drt_summary.rpt) |
-| Max/clear density | **PASS** | DCF.1d COMP 36.18% ≤ 70%; no metal-max rule | [06](06_drc.md) | [prefill](evidence/drc/density_prefill_summary.rpt) |
-| Min-metal density | **INTEGRATOR FILL PENDING** | M2.4 19.03% / M3.4 24.25% / M4.4 3.40% / M5.4=MT.3 3.90% | [06](06_drc.md) | [prefill](evidence/drc/density_prefill.rpt) |
-| MSLOT | **PASS** | 0 items, Metal1–Metal5 (unified table) | [06](06_drc.md) | [pass](evidence/drc/mslot_pass.rpt) |
-| Foundry DRC (non-density) | PASS | other pre-fill tables 0 items | [06](06_drc.md) | [summary](evidence/drc/klayout_drc_summary.rpt) |
-| Full device LVS | **PASS** | uniquely matched; stdcell MOSFETs compared | [07](07_lvs.md) | [summary](evidence/lvs/full_netgen_lvs_summary.rpt) |
-| Pin-level Netgen (legacy) | INFO | uniquely matched abstracts; not full LVS | [07](07_lvs.md) | [netgen](evidence/lvs/netgen_lvs_summary.rpt) |
-| KLayout LVS vs OpenROAD CDL | FAIL | zero-device stubs; not LVS of record | [07](07_lvs.md) | [pairs](evidence/lvs/klayout_lvs_circuit_pairs.rpt) |
-| ERC | **N/A** | no standalone ERC deck | [08](08_erc.md) | [pins](evidence/routing/disconnected_pins.rpt) |
-| IR | PASS | VDD 1.01 mV / VSS 1.13 mV | [08](08_erc.md) | [IR](evidence/ir/power_grid.rpt) |
-| Power | INFO | 0.115 W **vectorless, no VCD/SAIF** | [09](09_power.md) | [power](evidence/power/vectorless_power.rpt) |
-| Die area | PASS | 1.223277 mm² | [00](00_manifest.md) | [area](evidence/area/final_area.rpt) |
-| Canonical GDS | **PROMOTED** | SHA `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6` | [10](10_final_artifacts.md) | `gds/butterfold_top.gds` |
+| Branch | PASS | pin-placement-redesign | — | git |
+| RTL / golden | PASS | unchanged | — | git diff |
+| SRAM | PASS | 2 | [00a](00a_pin_placement.md) | LibreLane |
+| Terminals | PASS | 23 | [00a](00a_pin_placement.md) | [pins](evidence/pins/final_odb_pins.rpt) |
+| North / West / East / South | PASS | 12 / 11 / 0 / 0 | [00a](00a_pin_placement.md) | [pins](evidence/pins/final_odb_pins.rpt) |
+| Area | PASS | 1.223277 mm² | — | [area](evidence/area/librelane_area.rpt) |
+| Pin access / DRT | PASS | DRT = 0 | [08](08_erc.md) | [DRT](evidence/routing/drt_summary.rpt) |
+| GRT | PASS | overflow 0 | [08](08_erc.md) | [GRT](evidence/routing/grt_summary.rpt) |
+| Max-SS setup | PASS | WNS +1.62 ns MET, TNS 0 | [01](01_setup_max_ss.md) | [paths](evidence/setup/max_ss_setup_paths.rpt) |
+| Min-FF hold | PASS | WNS +0.25 ns MET, TNS 0 | [02](02_hold_min_ff.md) | [paths](evidence/hold/min_ff_hold_paths.rpt) |
+| Slew / cap / fanout | PASS | empty violator files | [03](03_electrical.md) | [slew](evidence/electrical/max_slew.rpt) |
+| Reset electrical | PASS | empty violator files | [04](04_reset.md) | [reset](evidence/reset/reset_slew.rpt) |
+| Antenna | PASS | 0 nets / 0 pins, 35 diodes | [05](05_antenna.md) | [OpenROAD](evidence/antenna/openroad_check_antennas.rpt) |
+| DCF.1d min-clear | PASS | COMP 34.39% ≤ 70% | [06](06_drc.md) | [density](evidence/drc/density_filled_summary.rpt) |
+| Min-metal M2–MT | INTEGRATOR FILL PENDING | M2.4 19.66% / M3.4 24.72% / M4.4 4.22% / M5.4=MT.3 5.36% | [06](06_drc.md) | [density](evidence/drc/density_filled_summary.rpt) |
+| MSLOT | PASS | 0 items (unified table_name=main) | [06](06_drc.md) | [mslot](evidence/drc/mslot_unified.lyrdb) |
+| CO.6a | PASS | 0 | [06](06_drc.md) | [after](evidence/drc/co6a_after_markers.rpt) |
+| Foundry DRC (non-fill) | PASS | 0 items; official log clean | [06](06_drc.md) | [full log](evidence/drc/klayout_drc_full.log) |
+| Full device LVS | PASS | uniquely match; 12770 devices / 12761 nets; SRAM 2 | [07](07_lvs.md) | [summary](evidence/lvs/full_netgen_lvs_summary.rpt) |
+| IR | PASS | VDD/VSS connected; distributed VSRC worst 7.42 / 7.39 mV | [08](08_erc.md) | [IR](evidence/ir/ir_antenna.log) |
+| Power | INFO | 0.120 W vectorless | [09](09_power.md) | [power](evidence/power/vectorless_power.rpt) |
+| Canonical GDS | **PROMOTED** | `6d66a476…` | [10](10_final_artifacts.md) | [SHA](evidence/final/gds.sha256) |
 
-## Density (Chipathon)
-
-Official `density.drc` maximum-metal/clear: **DCF.1d only** (COMP ≤ 70%) —
-**PASS** at 36.18%. No M2–MT maximum exists in this deck.
-
-Minimum-metal M2.4–M5.4/MT.3 remain foundry `[ERROR]` on the pre-fill GDS.
-Organizer: integrators (or a later fill step) will add fill. **Not waived.**
-**Not closed by team fill.** Earlier `fill_all.rb` GDS (`e02fb870…`) is
-experiment evidence only.
-
-## Do not write READY FOR FINAL TAPEOUT REVIEW
-
-Team-side package is complete. Integrator still owns minimum-metal fill.
-KLayout vs OpenROAD CDL remains a documented non-record FAIL.
+CO.6a repair: six MX `aoi221_2` instances swapped to `aoi221_1`, then DRT=0,
+25705 fillers, Magic restream. LVS unique-match required tying filler/antenna
+power pins in the source netlist (`global_connect`); layout GDS was not
+changed for that step.
