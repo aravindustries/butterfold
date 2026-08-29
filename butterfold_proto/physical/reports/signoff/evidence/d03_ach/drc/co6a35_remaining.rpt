@@ -1,0 +1,39 @@
+eco35 bounded local-cluster + foreign-M2 jog (incomplete, not promotable)
+
+Site 0.56 um. Started from pgfix. Nine aoi221_2 R180.
+
+Occupancy-free scan (d03_co6a_eco35_scanx.py): every target has multiple same-row
+X with legal Via1 landings on all 6 signal pins (e.g. _11280_ 58 sites,
+including k=0). Adjacent functional cells are NOT the reason Via1 cannot land
+at the original row positions.
+
+Path-based connection (0.28 um M2 to existing same-net metal) has NO occupancy-free
+X in +/- 42 sites with fails=0. 1-bend/2-bend paths remain blocked by foreign M2.
+
+Cluster shift: VIA_OK X at |k|<=1 is already placeable without moving functional
+neighbors (plan True, func_moved=0). Neighbor sliding was available but not
+required for Via1 sites.
+
+Foreign M2 local U-jog (decoder copy, replace overlapping Metal2 POINT segments
+around the pin keepout, rebuild idx):
+  _11280_ jogs=16 still fails=5 (A1 no_path, A2 no_via, B1 no_path, B2 no_path, C no_via)
+  _11106_ jogs=12 still fails=3 (B1 no_path, C no_via, ZN no_path)
+  _11366_ jogs=10 still fails=3 (A2 no_via, B2 no_path, C no_path)
+Jog did not free a 0.28/0.28 Via1+path. Blocking geometry is often via enclosures
+or non-PATH metal, not a single POINT-POINT trunk.
+
+Did not Mag-stream co6a34 or co6a35.
+Last fully-connected Mag GDS remains co6a32 SHA ff03ca1b (M2.1=22 M2.2a=71).
+
+Example _11366_ A2 net197:
+  pin ~249.13,1187.325-250.30,1188.23 (after small X)
+  blocking foreign M2 rst_lf50 249.34-249.62 vertical through pin
+  blocking foreign M2 fifo_x0_q[0][2] 250.32-250.60 at pin edge
+  same-net M2 5.25 um away
+  Opening a 0.84 um channel requires either relocating rst_lf50's entire local
+  vertical (not just a PATH pair) or moving logic off this M2 track by more than
+  a same-row cluster can provide without a real selected-net detailed route.
+
+Cannot finish without one of: selected-net DRT (forbidden as full/global),
+SRAM/template/RTL/clock change (forbidden), or a working local OpenDB delete of
+via-enclosure M2 (not achieved in this bounded attempt).

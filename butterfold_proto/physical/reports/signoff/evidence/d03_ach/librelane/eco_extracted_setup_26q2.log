@@ -1,0 +1,64 @@
+[INFO ODB-0388] unsupported LEF58_EOLENCLOSURE property for layer Via1 :"
+  	EOLENCLOSURE 0.34 0.06 ;"
+[INFO ODB-0388] unsupported LEF58_EOLENCLOSURE property for layer Via2 :" EOLENCLOSURE 0.34 0.06 ; "
+[INFO ODB-0388] unsupported LEF58_EOLENCLOSURE property for layer Via3 :" EOLENCLOSURE 0.34 0.06 ; "
+[INFO ODB-0388] unsupported LEF58_EOLENCLOSURE property for layer Via4 :" EOLENCLOSURE 0.34 0.06 ; "
+[INFO ODB-0227] LEF file: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/techlef/gf180mcu_fd_sc_mcu9t5v0__nom.tlef, created 15 layers, 56 vias
+[WARNING ODB-0220] WARNING (LEFPARS-2008): NOWIREEXTENSIONATPIN statement is obsolete in version 5.6 or later.
+The NOWIREEXTENSIONATPIN statement will be ignored. See file /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lef/gf180mcu_fd_sc_mcu9t5v0.lef at line 2.
+
+[INFO ODB-0227] LEF file: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lef/gf180mcu_fd_sc_mcu9t5v0.lef, created 229 library cells
+[WARNING ODB-0220] WARNING (LEFPARS-2008): NOWIREEXTENSIONATPIN statement is obsolete in version 5.6 or later.
+The NOWIREEXTENSIONATPIN statement will be ignored. See file /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram256x8m8wm1.lef at line 2.
+
+[INFO ODB-0227] LEF file: /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram256x8m8wm1.lef, created 1 library cells
+[INFO ODB-0127] Reading DEF file: /headless/aravindustries-repos/butterfold/butterfold_proto/physical/results/d03_ach_pg_eco/butterfold_top.def
+[INFO ODB-0128] Design: butterfold_top
+[INFO ODB-0130]     Created 23 pins.
+[INFO ODB-0131]     Created 54749 components and 244876 component-terminals.
+[INFO ODB-0132]     Created 2 special nets and 202484 connections.
+[INFO ODB-0133]     Created 11490 nets and 42313 connections.
+[INFO ODB-0134] Finished DEF file: /headless/aravindustries-repos/butterfold/butterfold_proto/physical/results/d03_ach_pg_eco/butterfold_top.def
+ECO_PRE_WNS
+wns max -8.58
+tns max -3040.19
+max_delay/setup group core_clk
+
+                                      Required    Actual
+Endpoint                                 Delay     Delay     Slack
+------------------------------------------------------------------
+u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram/A[7] (gf180mcu_fd_ip_sram__sram256x8m8wm1)   27.1706   35.7486   -8.5780 (VIOLATED)
+
+ECO_REPAIR_TIMING_SETUP
+[INFO RSZ-0100] Repair move sequence: BufferMove 
+[INFO RSZ-0094] Found 735 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 735 out of 735 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |   StTNS    |   EnTNS    |  Viol  |  Worst  
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            |            | Endpts | St/EnPt 
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% |   -8.578 |     -273.3 |    -3040.2 |    735 | u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram/A[7]
+Signal 11 received
+Stack trace:
+ 0# 0x0000627E00EEDEE6 in /foss/tools/bin/openroad
+ 1# 0x000076C1D86D5330 in /lib/x86_64-linux-gnu/libc.so.6
+ 2# grt::GlobalRouter::getPinGridPositions(odb::dbNet*) in /foss/tools/bin/openroad
+ 3# rsz::Resizer::makeBufferedNetGroute(sta::Pin const*, sta::Scene const*) in /foss/tools/bin/openroad
+ 4# rsz::Resizer::makeBufferedNet(sta::Pin const*, sta::Scene const*) in /foss/tools/bin/openroad
+ 5# rsz::Rebuffer::rebufferPin(sta::Pin const*) in /foss/tools/bin/openroad
+ 6# rsz::BufferMove::doMove(sta::Path const*, float) in /foss/tools/bin/openroad
+ 7# rsz::RepairSetup::repairEndpoint(sta::Pin*, sta::Delay, float) in /foss/tools/bin/openroad
+ 8# rsz::RepairSetup::repairSetup_Legacy(float, int, int, int, bool, int&, float, float&, char) in /foss/tools/bin/openroad
+ 9# rsz::RepairSetup::repairSetup(float, double, int, int, int, bool, std::vector<rsz::MoveType, std::allocator<rsz::MoveType> > const&, char const*, bool, bool, bool, bool, bool, bool, bool, bool) in /foss/tools/bin/openroad
+10# rsz::Resizer::repairSetup(double, double, int, int, int, bool, bool, std::vector<rsz::MoveType, std::allocator<rsz::MoveType> > const&, char const*, bool, bool, bool, bool, bool, bool, bool, bool) in /foss/tools/bin/openroad
+11# 0x0000627E00FEDF2D in /foss/tools/bin/openroad
+12# TclNRRunCallbacks in /lib/x86_64-linux-gnu/libtcl8.6.so
+13# 0x000076C1DC33C6BC in /lib/x86_64-linux-gnu/libtcl8.6.so
+14# Tcl_EvalEx in /lib/x86_64-linux-gnu/libtcl8.6.so
+15# Tcl_Eval in /lib/x86_64-linux-gnu/libtcl8.6.so
+16# sta::sourceTclFile(char const*, bool, bool, Tcl_Interp*) in /foss/tools/bin/openroad
+17# 0x0000627E036B16EC in /foss/tools/bin/openroad
+18# Tcl_MainEx in /lib/x86_64-linux-gnu/libtcl8.6.so
+19# main in /foss/tools/bin/openroad
+20# 0x000076C1D86BA1CA in /lib/x86_64-linux-gnu/libc.so.6
+21# __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
+22# _start in /foss/tools/bin/openroad

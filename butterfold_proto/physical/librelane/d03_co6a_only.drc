@@ -1,0 +1,35 @@
+# Official GF CO.6a only. Skips CO.6 (full Euclidean enclosure) which hung the contact table.
+require 'logger'
+$stdout.sync = true
+logger = Logger.new($stdout)
+logger.formatter = proc { |_s, t, _p, m| "#{t}: #{m}\n" }
+logger.info("CO.6a-only on #{$input}")
+if $topcell
+  source($input, $topcell)
+else
+  source($input)
+end
+report('CO.6a', $report)
+threads($thr.to_i) if $thr
+flat
+
+def get_polygons(layer, data_type)
+  polygons(layer, data_type).merged
+end
+
+contact = get_polygons(33, 0)
+logger.info("contact polygons #{contact.count}")
+metal1 = get_polygons(34, 0) + get_polygons(34, 4)
+logger.info("metal1 polygons #{metal1.count}")
+contact_edges = contact.edges
+metal1_edges = metal1.edges
+
+logger.info('Executing rule CO.6a')
+cont_6a_cond = metal1.width(0.34.um + 1.dbu).with_length(0.24.um, nil, both)
+cont_6a_cond_edge1 = cont_6a_cond.first_edges
+cont_6a_cond_edge2 = cont_6a_cond.second_edges
+cont_6a_eol = metal1_edges.with_length(nil, 0.34.um).interacting(cont_6a_cond_edge1).interacting(cont_6a_cond_edge2)
+                          .not(cont_6a_cond_edge1).not(cont_6a_cond_edge2)
+cont_6a_l1 = contact_edges.enclosed(cont_6a_eol, 0.06.um, projection)
+cont_6a_l1.output('CO.6a', 'CO.6a : (i) Metal1 (< 0.34um) end-of-line overlap contact : 0.06um')
+logger.info('CO.6a done')

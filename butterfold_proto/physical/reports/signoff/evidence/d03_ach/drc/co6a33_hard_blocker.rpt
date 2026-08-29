@@ -1,0 +1,88 @@
+MARKER-DRIVEN M2 CLEANUP — HARD BLOCKER
+BRANCH def-integration
+HEAD 632e9d3576c349d0fd6fe48d7d53a32cb37dcdc3
+CANDIDATE_GDS physical/results/d03_ach_candidate/co6a32_gds/butterfold_top.magic.gds
+CANDIDATE_SHA256 ff03ca1b0886dadcb22f986166cbd40e591ea7e2278dd29471efec563257cd34
+
+GF180 metal2.drc (authoritative):
+  M2.1  min width  0.28 um  euclidean
+  M2.2a min space  0.28 um  euclidean
+  M2.2b space to wide M2 (L and W > 10 um) 0.30 um
+LEF Metal2 WIDTH 0.280 SPACING 0.280 PITCH 0.56
+Inserting a new 0.28 um wire between two 0.28 um neighbors requires
+edge-to-edge gap >= 0.84 um.
+
+co6a32 jogs (43 endpoints / 29 nets) used dbWireEncoder.newPath without
+an explicit width. Layer default was applied as a 0.14 um path. Those
+paths sit in 0.56 um-pitch M2 gaps, which is why Mag GDS SHA ff03ca1b
+reports M2.1=22 (neck 0.14 um) and M2.2a=71 (remainder space ~0.07 um).
+
+Bounded marker-driven attempt (d03_co6a_eco33_markerdrc.py):
+  start = pgfix ODB + 9 x aoi221_2 R180 at original XY
+  no TritonRoute, no cell move, no trunk rip
+  legal 0.28 um channels from actual nearby M2
+  Via1 only where via M1 overlaps the R180 pin
+Result: 4 legal endpoints, 39 failed.
+
+NO_VIA_SITE (20) — pin bbox has no 0.84 um M2 channel, so a min-width
+Via1 landing shorts or spacing-violates neighboring 0.56 um-pitch M2.
+  _11241_ A2 _05821_
+  _11241_ B1 _05827_
+  _11241_ B2 _05829_
+  _11280_ A2 _05862_
+  _11280_ B1 _05864_
+  _11339_ A2 net197
+  _11339_ B1 net208
+  _11366_ A2 net197
+  _11366_ C net213
+  _11394_ A1 u_transform_scheduler_core.fifo_x0_q[0][4]
+  _11394_ B2 _05969_
+  _11408_ A1 u_transform_scheduler_core.fifo_x0_q[0][5]
+  _11408_ A2 net198
+  _11408_ B1 net208
+  _11474_ A1 net283
+  _11474_ A2 _06041_
+  _11474_ B1 _06043_
+  _11106_ B1 net208
+  _11106_ B2 _05703_
+  _11136_ B2 _05730_
+
+VIA_OK_NO_PATH (19) — a legal via site exists on the pin but no legal
+Manhattan M2 of width 0.28 um reaches existing same-net M2 without
+violating M2.2a to the surrounding forest. M1 escape through the cell
+is blocked by pin M1 / OBS / rail M1 (M1.1=0.23 um, M1.2a=0.23 um).
+  _11106_ A2 net197
+  _11106_ C net213
+  _11106_ ZN _05704_
+  _11136_ A1 u_transform_scheduler_core.fifo_x0_i[0][2]
+  _11136_ A2 net197
+  _11136_ B1 net208
+  _11136_ C net213
+  _11241_ C net205
+  _11280_ B2 _05865_
+  _11280_ C net206
+  _11339_ A1 u_transform_scheduler_core.fifo_x0_q[0][0]
+  _11339_ B2 _05918_
+  _11339_ C net213
+  _11339_ ZN _05920_
+  _11394_ A2 net198
+  _11394_ C net213
+  _11408_ B2 _05982_
+  _11408_ C net213
+  _11474_ C net205
+
+Example blocker geometry (_11280_ B1 net _05864_, pin 772.315,1157.020-773.215,1157.535):
+  _06509_ M2 772.940,1102.220-773.220,1192.940   (0.28 um vertical)
+  _05862_ M2 772.330,1157.610-772.710,1157.990
+  _06494_ M2 773.500,1120.700-773.780,1162.420
+  Track centers 772.52 / 773.08 / 773.64 = 0.56 um pitch.
+  Gap between 772.71 and 772.94 = 0.23 um. Cannot host 0.28 um metal.
+
+Required connection: R180 pin M1 to existing same-net M2 (typically the
+pre-rotation MX via landing, 3-7 um away). Allowed shapes were local
+horizontal/vertical M2 with one bend. That is geometrically illegal on
+these pins at the foundry min width/spacing.
+
+Nine R180 cells, template, SRAM, PG, clock, RTL unchanged.
+co6a33 ODB is incomplete and must not be promoted.
+Keep co6a32 Mag GDS SHA ff03ca1b as the last full local-ECO candidate.

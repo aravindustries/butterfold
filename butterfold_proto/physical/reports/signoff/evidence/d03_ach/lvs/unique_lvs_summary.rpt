@@ -1,0 +1,24 @@
+GDS SHA-256
+969dff4700bc53222a869a129f7d76a89baae758be8bd68b427f83df6da23fba
+physical/results/d03_ach_candidate/butterfold_top.gds
+= physical/results/d03_ach_candidate/butterfold_top.pgfix.gds
+
+Layout spice
+physical/results/d03_ach_candidate/full_lvs/extract_pgfix/butterfold_top.lvsfix.spice
+(Magic 8.3 GDS extract, MAGIC_EXT_USE_GDS=1, MAGTYPE=mag, MAGIC_EXT_UNIQUE=all,
+ SRAM LEFview blackbox, then d03_lvsfix_mag_spice.py ODB-true unique-split aliases)
+
+Source
+physical/results/d03_ach_candidate/butterfold_top.filled.pnl.v
++ /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/spice/gf180mcu_fd_sc_mcu9t5v0.spice
+Setup /foss/pdks/gf180mcuD/libs.tech/netgen/gf180mcuD_setup.tcl
+Compare netgen -blackbox -json
+
+Final result: Circuits match uniquely.
+Number of devices: 11768 | 11768
+Number of nets:    11769 | 11769
+SRAM instances:    2 | 2
+Pins equivalent including VDD and VSS.
+
+Native Mag spice without aliases remains 11775 vs 11769 (six Mag unique-split pin nets).
+Mag GDS Metal1 is present at both gwen_driver ZN ports.

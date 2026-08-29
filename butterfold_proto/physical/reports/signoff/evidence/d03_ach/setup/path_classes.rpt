@@ -1,0 +1,30 @@
+D03/ACH extracted max-SS setup path classes
+Source: runs/d03_ach_pnr_pad4_gds/11-openroad-stapostpnr/max_ss_125C_4v50/violator_list.rpt
+
+n=735  TNS=-3014.75 ns  WNS=-8.578 ns
+
+Startpoints:
+  _20041_  (fft128_active, dffrnq_4)   689
+  _18568_                              19
+  _18564_                              14
+  _18566_                              13
+
+Endpoints:
+  STD_FF                               682   TNS ~ -2678 ns
+  SRAM (lo 26 + hi 26)                  52   TNS ~ -334 ns
+  din_ready_o                            1
+
+Slack bins:
+  <= -8 ns     9
+  (-8,-6]     78
+  (-6,-4]    369
+  (-4,-2]    136
+  (-2,-1]     90
+  (-1,0)      53
+
+Dominant path: fft128_active -> load_slew221 (buf_8, FO=22, slew 1.56 ns)
+  -> nor2_4/and3_1/nor2_1/nand3_1/aoi211_2/clkinv_1/and4_1 ...
+  -> multiply_product_fire / SRAM A,D,WEN,CEN
+
+Same failure class as production pre-ECO (~ -9.51 ns): underestimated
+extracted slew/load on scheduler control, not clock-frequency or RTL.

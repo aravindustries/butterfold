@@ -1,0 +1,36 @@
+CO.6a marker map — Mag GDS SHA 969dff4700bc53222a869a129f7d76a89baae758be8bd68b427f83df6da23fba
+
+Rule: CO.6a Metal1 (<0.34 µm) EOL overlap of contact = 0.06 µm.
+Each marker is a 5 nm X-offset between contact left edge and Metal1 EOL
+on a 0.06 µm vertical contact edge.
+
+PDK GDS of gf180mcu_fd_sc_mcu9t5v0__aoi221_2 Metal1/contact polygons are
+byte-identical to the Mag-streamed cell. Probe DRC of PDK cells only:
+
+  aoi221_2 R0  : CO.6a = 0
+  aoi221_2 MX  : CO.6a = 1 (same 5 nm class)
+  aoi221_1 R0  : CO.6a = 0
+  aoi221_1 MX  : CO.6a = 0
+
+ Mag stream-out does not introduce the 5 nm. It is the PDK MX aoi221_2
+ cell, the same class previously closed by aoi221_2 MX -> aoi221_1.
+
+ODB aoi221_2: 12 total (9 MX + 3 R0). All 9 MX are the 9 KLayout markers.
+3 R0 aoi221_2 are clean and left unchanged.
+
+#  KLayout (µm)                 master                         orient  ODB inst   ODB bbox (µm)
+1  771.07,1154.97               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11280_    764.400,1154.160 776.160,1159.200
+2  265.95,1175.13               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11106_    259.280,1174.320 271.040,1179.360
+3  254.19,1185.21               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11366_    247.520,1184.400 259.280,1189.440
+4  268.75,1195.29               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11339_    262.080,1194.480 273.840,1199.520
+5  270.99,1286.01               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11136_    264.320,1285.200 276.080,1290.240
+6  648.43,1296.09               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11474_    641.760,1295.280 653.520,1300.320
+7  374.59,1346.49               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11394_    367.920,1345.680 379.680,1350.720
+8  408.75,1376.73               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11408_    402.080,1375.920 413.840,1380.960
+9  770.51,1487.61               gf180mcu_fd_sc_mcu9t5v0__aoi221_2  MX   _11241_    763.840,1486.800 775.600,1491.840
+
+Required overlap: 0.060 µm. Measured Metal1-beyond-contact: 0.005 µm.
+
+Repair: swapMaster those 9 instances to gf180mcu_fd_sc_mcu9t5v0__aoi221_1
+(W 6.16 vs 11.76 µm), keep MX, legalize-in-place, rip their signal nets,
+GRT/DRT, restore fill.

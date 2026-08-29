@@ -1,0 +1,28 @@
+eco27 aoi221_1 MX electrical (max-SS extracted), before drive restore.
+
+Library: only aoi221_1 / _2 / _4. Isolated KLayout contact:
+  aoi221_2 MX  : CO.6a fail
+  aoi221_2 R0  : clean
+  aoi221_2 MY  : clean
+  aoi221_2 R180: clean
+  aoi221_1 MX  : clean
+  aoi221_4 MX  : clean (SIZE 22.40 µm; does not fit in 11.76 µm sites)
+
+All 9 sit on MX rows (site GF018hv5v_green_sc9). MX and R180 share VDD/VSS rail polarity.
+R180 at original (x,y) is check_placement OK (same bbox). MY is R0-rail, illegal on MX rows.
+
+Fanout = ITerms on ZN net (driver + sinks).
+
+inst      net     fanout  slew_ns  limit  cap_pF  cap_lim  class
+_11394_   _05971_ 3       10.91    7.20   0.20    0.15     slew+cap
+_11106_   _05704_ 2        9.54    7.20   0.18    0.15     slew+cap
+_11136_   _05732_ 2        8.42    7.20   -       -        slew
+_11339_   _05920_ 2        7.65    7.20   -       -        slew
+_11474_   _06045_ 2        7.37    7.20   -       -        slew
+_11280_   _05866_ 2        MET     7.20   MET     -        ok
+_11366_   _05945_ 2        MET     7.20   MET     -        ok
+_11408_   _05984_ 2        MET     7.20   MET     -        ok
+_11241_   _05830_ 2        MET     7.20   MET     -        ok
+
+Repair: keep aoi221_2, setOrient MX->R180 at same origin (pgfix ODB, one DRT).
+Do not bring back MX aoi221_2. Do not use aoi221_4 (too wide).
