@@ -17,10 +17,10 @@ Do not infer intended behavior from `legacy/` or other sibling trees.
 
 ## Current Implementation Status
 
-**TEAM-SIDE REVIEWER SIGNOFF COMPLETE**
+**TEAM-SIDE REVIEWER SIGNOFF COMPLETE (22-pin compact core)**
 
-This repository contains the current team-side ACH-integrated reviewer
-implementation. Final organizer-level integration/fill may occur later.
+This is the compact 22-pin ButterFold production chip. It does **not** use
+ACH DEF / `FP_DEF_TEMPLATE`. VSS counts toward the pin limit.
 
 | | |
 |---|---|
@@ -30,52 +30,48 @@ implementation. Final organizer-level integration/fill may occur later.
 | Clock | **38.4 MHz** / 26.041667 ns |
 | TX pacing | `TX_BYTE_INTERVAL = 10` |
 | Canonical GDS | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| GDS SHA-256 | `93f2aba11dab0df4e3c9431ff2e2c060fce066da17924ad1ed2657b19e4e5dd7` |
-| ACH outer bbox | **1110 × 1675 µm** (organizer pin/integration envelope) |
-| Compact CORE | `6.72 20.16 1085.84 1088.64` → **1079.12 × 1068.48 µm** |
-| Template pins | **23 / 23** matched |
-| Setup | **PASS** — max-SS worst MET **+3.88 ns** |
-| Hold | **PASS** — min-FF worst MET **+0.08 ns** |
+| GDS SHA-256 | `31dbce1e19295c6678531c205bba780898b013a69976e6056837821c3de9a64e` |
+| Die | **1092.66 × 1108.80 µm** (1.211541 mm²) ≤ 1110 × 1110 |
+| CORE | `6.72 20.16 1085.84 1088.64` |
+| Physical terminals | **22** including VDD and VSS |
+| Status pin | `stream_status_o` (READY in input phase, VALID in output phase) |
+| Setup | **PASS** — max-SS worst MET **+0.079 ns** |
+| Hold | **PASS** — min-FF worst MET **+0.027 ns** |
 | Routing | **PASS** — GRT overflow 0, DRT 0 |
 | LVS | **PASS** — Circuits match uniquely |
-
-The compact ButterFold implementation occupies the CORE above. The extra
-outer height is organizer ACH integration / pin geometry, not expanded
-standard-cell placement.
 
 ---
 
 ## Signoff Dashboard
 
 Full package:
-[`11_signoff_summary.md`](butterfold_proto/physical/reports/d03_ach_resized/11_signoff_summary.md)
+[`11_signoff_summary.md`](butterfold_proto/physical/reports/pin22_signoff/11_signoff_summary.md)
 
-Official GF180 `density.drc` evaluates the full 1110 × 1675 µm GDS extent
-(`CHIP = extent.sized(0.0)`). Empty OpenSTA `-violators` dumps mean zero
-violations.
+Empty OpenSTA `-violators` dumps mean zero violations.
 
 | Check | Status | Result | Report | Evidence |
 |---|---|---|---|---|
-| ACH DEF / template | **PASS** | 23 BTERMs, 21/21 functional, VDD/VSS geometry | [template](butterfold_proto/physical/reports/d03_ach_resized/00_template_apply.md) | [pins](butterfold_proto/physical/reports/d03_ach_resized/evidence/template/template_pins.rpt) |
-| Functional regression | **PASS** | Foundry-SRAM Icarus, `TX_BYTE_INTERVAL=10`; FINAL-PIN OVERALL RESULT: PASS | [12](butterfold_proto/physical/reports/d03_ach_resized/12_functional.md) | [log](butterfold_proto/physical/reports/d03_ach_resized/evidence/functional/interval10_regression.log) |
-| Max-SS setup | **PASS** | `max_ss_125C_4v50` worst MET **+3.88 ns**, WNS 0, TNS 0, 0 violations | [01](butterfold_proto/physical/reports/d03_ach_resized/01_setup_max_ss.md) | [STA](butterfold_proto/physical/reports/d03_ach_resized/evidence/setup/max_ss_setup_summary.rpt) |
-| Min-FF hold | **PASS** | `min_ff_n40C_5v50` worst MET **+0.08 ns**, WNS 0, TNS 0, 0 violations | [02](butterfold_proto/physical/reports/d03_ach_resized/02_hold_min_ff.md) | [STA](butterfold_proto/physical/reports/d03_ach_resized/evidence/hold/min_ff_hold_summary.rpt) |
-| Electrical | **PASS** | slew/cap/fanout = 0 | [03](butterfold_proto/physical/reports/d03_ach_resized/03_electrical.md) | [log](butterfold_proto/physical/reports/d03_ach_resized/evidence/electrical/extract_elec.log) / [fanout](butterfold_proto/physical/reports/d03_ach_resized/evidence/electrical/fanout.rpt) |
-| Reset electrical | **PASS** | slew 0, cap 0 | [04](butterfold_proto/physical/reports/d03_ach_resized/04_reset.md) | [violators](butterfold_proto/physical/reports/d03_ach_resized/evidence/reset/reset_visible_violators.rpt) |
-| Routing | **PASS** | GRT overflow 0, DRT 0, opens/shorts/unrouted 0 | [08](butterfold_proto/physical/reports/d03_ach_resized/08_routing_pg_ir.md) | [GRT](butterfold_proto/physical/reports/d03_ach_resized/evidence/routing/grt_summary.rpt) / [DRT](butterfold_proto/physical/reports/d03_ach_resized/evidence/routing/drt_summary.rpt) |
-| PG connectivity | **PASS** | VDD connected, VSS connected | [08](butterfold_proto/physical/reports/d03_ach_resized/08_routing_pg_ir.md) | [PSM](butterfold_proto/physical/reports/d03_ach_resized/evidence/pg/psm_connectivity.rpt) |
-| Antenna | **PASS** | 0 violating nets / 0 pins, **7** diodes | [05](butterfold_proto/physical/reports/d03_ach_resized/05_antenna.md) | [OpenROAD](butterfold_proto/physical/reports/d03_ach_resized/evidence/antenna/openroad_check_antennas.rpt) |
-| Non-fill geometric DRC | **PASS** | 0 items, CO.6a = 0 | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [summary](butterfold_proto/physical/reports/d03_ach_resized/evidence/drc/non_fill_drc_summary.rpt) |
-| DCF.1d minimum-clear | **PASS** | COMP **23.56%** ≤ 70% | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [density](butterfold_proto/physical/reports/d03_ach_resized/evidence/density/official_full_envelope_summary.rpt) |
-| DCF.1b | **BELOW NOMINAL STANDALONE THRESHOLD ON ACH INTEGRATION ENVELOPE** | COMP **23.56%** < 25% | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [density](butterfold_proto/physical/reports/d03_ach_resized/evidence/density/official_full_envelope_summary.rpt) |
-| Poly2 PL.8 | **PASS** | **17.93%** ≥ 14% | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [density](butterfold_proto/physical/reports/d03_ach_resized/evidence/density/official_full_envelope_summary.rpt) |
-| M1.4 | **BELOW NOMINAL STANDALONE THRESHOLD ON ACH INTEGRATION ENVELOPE** | **21.71%** < 30% | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [density](butterfold_proto/physical/reports/d03_ach_resized/evidence/density/official_full_envelope_summary.rpt) |
-| M2.4–MT.3 | **INTEGRATOR FILL PENDING** | 13.08 / 16.41 / 2.49 / 2.53 / 2.53 % | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [density](butterfold_proto/physical/reports/d03_ach_resized/evidence/density/official_full_envelope_summary.rpt) |
-| MSLOT | **PASS** | 0 items | [06](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md) | [lyrdb](butterfold_proto/physical/reports/d03_ach_resized/evidence/mslot/mslot_unified.lyrdb) |
-| Full device-level LVS | **PASS** | Circuits match uniquely; **11537** devices / **11552** nets; 2 SRAM | [07](butterfold_proto/physical/reports/d03_ach_resized/07_lvs.md) | [summary](butterfold_proto/physical/reports/d03_ach_resized/evidence/lvs/lvs_summary.rpt) |
-| IR | **CHARACTERIZED** | VDD worst **0.149 V** (3.32% of 4.5 V); VSS worst **0.088 V** (1.96%) | [08](butterfold_proto/physical/reports/d03_ach_resized/08_routing_pg_ir.md) | [IR](butterfold_proto/physical/reports/d03_ach_resized/evidence/ir/irdrop_summary.rpt) |
-| Power | **INFO** | **0.134196 W** vectorless, no VCD/SAIF | [09](butterfold_proto/physical/reports/d03_ach_resized/09_power.md) | [power](butterfold_proto/physical/reports/d03_ach_resized/evidence/power/vectorless_power.rpt) |
-| GDS / integration geometry | **PASS** | outer 1110 × 1675 µm; CORE ≤1110 × 1110; 0 rows above 1088.64 | [00](butterfold_proto/physical/reports/d03_ach_resized/00_manifest.md) | [bbox](butterfold_proto/physical/reports/d03_ach_resized/evidence/gds/gds_sha_bbox.rpt) / [floorplan](butterfold_proto/physical/reports/d03_ach_resized/evidence/floorplan/core_rows_sram.rpt) |
+| ACH DEF / `FP_DEF_TEMPLATE` | **NOT USED** | compact LibreLane floorplan | [00](butterfold_proto/physical/reports/pin22_signoff/00_manifest.md) | [fill](butterfold_proto/physical/reports/pin22_signoff/evidence/routing/fill.log) |
+| Functional regression | **PASS** | Foundry-SRAM Icarus, `TX_BYTE_INTERVAL=10`; FINAL-PIN OVERALL RESULT: PASS | [12](butterfold_proto/physical/reports/pin22_signoff/12_functional.md) | [log](butterfold_proto/physical/reports/pin22_signoff/evidence/functional/interval10_regression.log) |
+| Stream-status protocol | **PASS** | STREAM-STATUS RESULT: PASS | [12](butterfold_proto/physical/reports/pin22_signoff/12_functional.md) | [log](butterfold_proto/physical/reports/pin22_signoff/evidence/functional/stream_status.log) |
+| Max-SS setup | **PASS** | `max_ss_125C_4v50` worst MET **+0.079 ns**, TNS 0, 0 violations | [01](butterfold_proto/physical/reports/pin22_signoff/01_setup_max_ss.md) | [STA](butterfold_proto/physical/reports/pin22_signoff/evidence/setup/sta_filled.log) |
+| Min-FF hold | **PASS** | `min_ff_n40C_5v50` worst MET **+0.027 ns**, TNS 0, 0 violations | [02](butterfold_proto/physical/reports/pin22_signoff/02_hold_min_ff.md) | [STA](butterfold_proto/physical/reports/pin22_signoff/evidence/hold/sta_capfix_ff.log) |
+| Electrical | **PASS** | slew/cap/fanout = 0 | [03](butterfold_proto/physical/reports/pin22_signoff/03_electrical.md) | [rpt](butterfold_proto/physical/reports/pin22_signoff/evidence/electrical/elec_filled.rpt) |
+| Reset electrical | **PASS** | slew 0, cap 0 | [04](butterfold_proto/physical/reports/pin22_signoff/04_reset.md) | [violators](butterfold_proto/physical/reports/pin22_signoff/evidence/reset/reset_visible.rpt) |
+| Routing | **PASS** | GRT overflow 0, DRT 0, opens/shorts/unrouted 0 | [08](butterfold_proto/physical/reports/pin22_signoff/08_routing_pg_ir.md) | [GRT](butterfold_proto/physical/reports/pin22_signoff/evidence/routing/capfix_route.log) / [fill](butterfold_proto/physical/reports/pin22_signoff/evidence/routing/fill.log) |
+| PG connectivity | **PASS** | VDD connected, VSS connected | [08](butterfold_proto/physical/reports/pin22_signoff/08_routing_pg_ir.md) | [PSM](butterfold_proto/physical/reports/pin22_signoff/evidence/ir/ir_power.log) |
+| Antenna | **PASS** | 0 violating nets / 0 pins, **23** diodes | [05](butterfold_proto/physical/reports/pin22_signoff/05_antenna.md) | [OpenROAD](butterfold_proto/physical/reports/pin22_signoff/evidence/routing/fill.log) / [KLayout](butterfold_proto/physical/reports/pin22_signoff/evidence/antenna/klayout_antenna.lyrdb) |
+| Non-fill geometric DRC | **PASS** | 0 items, CO.6a = 0 | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [main](butterfold_proto/physical/reports/pin22_signoff/evidence/drc/main.lyrdb) / [contact](butterfold_proto/physical/reports/pin22_signoff/evidence/drc/contact.lyrdb) |
+| DCF.1d minimum-clear | **PASS** | COMP **36.338%** ≤ 70% | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [density](butterfold_proto/physical/reports/pin22_signoff/evidence/density/density.log) |
+| DCF.1b | **PASS** | COMP **36.338%** ≥ 25% | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [density](butterfold_proto/physical/reports/pin22_signoff/evidence/density/density.log) |
+| Poly2 PL.8 | **PASS** | **27.600%** ≥ 14% | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [density](butterfold_proto/physical/reports/pin22_signoff/evidence/density/density.log) |
+| M1.4 | **PASS** | **33.325%** > 30% | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [density](butterfold_proto/physical/reports/pin22_signoff/evidence/density/density.log) |
+| M2.4–MT.3 | **INTEGRATOR FILL PENDING** | 19.75 / 25.26 / 3.42 / 4.62 / 4.62 % | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [density](butterfold_proto/physical/reports/pin22_signoff/evidence/density/density.log) |
+| MSLOT | **PASS** | 0 items | [06](butterfold_proto/physical/reports/pin22_signoff/06_drc.md) | [lyrdb](butterfold_proto/physical/reports/pin22_signoff/evidence/mslot/mslot.lyrdb) |
+| Full device-level LVS | **PASS** | Circuits match uniquely; **11568** devices / **11582** nets; 2 SRAM; 22 pins | [07](butterfold_proto/physical/reports/pin22_signoff/07_lvs.md) | [summary](butterfold_proto/physical/reports/pin22_signoff/evidence/lvs/lvs_summary.rpt) |
+| IR | **CHARACTERIZED** | VDD worst **1.82 mV** (0.04% of 4.5 V); VSS worst **2.26 mV** (0.05%) | [08](butterfold_proto/physical/reports/pin22_signoff/08_routing_pg_ir.md) | [IR](butterfold_proto/physical/reports/pin22_signoff/evidence/ir/ir_power.log) |
+| Power | **INFO** | **0.1465 W** vectorless, no VCD/SAIF | [09](butterfold_proto/physical/reports/pin22_signoff/09_power.md) | [power](butterfold_proto/physical/reports/pin22_signoff/evidence/power/power_vectorless_max_ss.rpt) |
+| GDS geometry | **PASS** | 1092.66 × 1108.80 µm ≤ 1110 × 1110; 22 BTERMs | [00](butterfold_proto/physical/reports/pin22_signoff/00_manifest.md) | [sha](butterfold_proto/physical/reports/pin22_signoff/evidence/gds/butterfold_top.gds.sha256) |
 
 ---
 
@@ -104,18 +100,17 @@ OFDM TX short/long, `0x4A` ECHO, `0x4B` MAGIC, `0x4C`/`0x4D` SRAM read/write.
 
 ### Logical chip interface
 
-Logical ButterFold I/O (byte-stream core):
+Physical/logical ButterFold I/O (22 terminals including VDD and VSS):
 
 - Inputs: `rst_n`, `clk`, `din[7:0]`, `din_valid_i`
-- Outputs: `din_ready_o`, `dout[7:0]`, `dout_valid_o`
-- Power: `VDD`
+- Outputs: `stream_status_o`, `dout[7:0]`
+- Power: `VDD`, `VSS`
 
-All commands and data use that byte stream. No extra mode, debug, or SRAM pins
-on the logical interface.
+`stream_status_o` is READY during the input/command phase and VALID during
+the output phase. The host knows the phase from the command it issued.
+Internal `din_ready` / `dout_valid` are not chip pins.
 
-The ACH physical template adds organizer boundary geometry (23 BTERMs:
-21 functional + VDD + VSS). That is the physical integration envelope, not a
-change to the logical command protocol.
+All commands and data use that byte stream. No extra mode, debug, or SRAM pins.
 
 See [`final_frozen_pin_configuration.md`](butterfold_proto/docs/architecture/final_frozen_pin_configuration.md)
 and [`AGENTS.md`](butterfold_proto/AGENTS.md).
@@ -137,14 +132,14 @@ Do not silently change arithmetic scaling. Python golden models are the spec.
 | | |
 |---|---|
 | Path | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| SHA-256 | `93f2aba11dab0df4e3c9431ff2e2c060fce066da17924ad1ed2657b19e4e5dd7` |
-| ACH outer bbox | **1110 × 1675 µm** |
-| Compact CORE | 1079.12 × 1068.48 µm (`6.72 20.16 1085.84 1088.64`) |
+| SHA-256 | `31dbce1e19295c6678531c205bba780898b013a69976e6056837821c3de9a64e` |
+| Die | **1092.66 × 1108.80 µm** |
+| CORE | `6.72 20.16 1085.84 1088.64` |
 
 This is the GDS used for DRC, official density, MSLOT, antenna, Magic
 extraction, and Netgen LVS.
 
-Manifest: [`10_final_artifacts.md`](butterfold_proto/physical/reports/d03_ach_resized/10_final_artifacts.md)
+Manifest: [`10_final_artifacts.md`](butterfold_proto/physical/reports/pin22_signoff/10_final_artifacts.md)
 
 ---
 
@@ -159,10 +154,10 @@ connectivity. LibreLane default `setup.tcl` is not the team method.
 4. Official `gf180mcuD_setup.tcl`
 5. The two SRAM macros use the PDK-supported hard-macro blackbox
 
-Result: **Circuits match uniquely** (**11537** devices, **11552** nets).
+Result: **Circuits match uniquely** (**11568** devices, **11582** nets).
 
-Report: [`07_lvs.md`](butterfold_proto/physical/reports/d03_ach_resized/07_lvs.md)  
-Evidence: [`lvs_summary.rpt`](butterfold_proto/physical/reports/d03_ach_resized/evidence/lvs/lvs_summary.rpt)
+Report: [`07_lvs.md`](butterfold_proto/physical/reports/pin22_signoff/07_lvs.md)  
+Evidence: [`lvs_summary.rpt`](butterfold_proto/physical/reports/pin22_signoff/evidence/lvs/lvs_summary.rpt)
 
 ---
 
@@ -170,28 +165,28 @@ Evidence: [`lvs_summary.rpt`](butterfold_proto/physical/reports/d03_ach_resized/
 
 A clone of this repository is the reviewer package.
 
-1. [Signoff dashboard](butterfold_proto/physical/reports/d03_ach_resized/11_signoff_summary.md)
-2. [ACH report package](butterfold_proto/physical/reports/d03_ach_resized/README.md)
-3. [Functional log](butterfold_proto/physical/reports/d03_ach_resized/evidence/functional/interval10_regression.log)
-4. [Setup](butterfold_proto/physical/reports/d03_ach_resized/01_setup_max_ss.md) · [Hold](butterfold_proto/physical/reports/d03_ach_resized/02_hold_min_ff.md)
-5. [DRC / density / MSLOT](butterfold_proto/physical/reports/d03_ach_resized/06_drc.md)
-6. [Full LVS](butterfold_proto/physical/reports/d03_ach_resized/07_lvs.md)
-7. [Final artifacts](butterfold_proto/physical/reports/d03_ach_resized/10_final_artifacts.md)
+1. [Signoff dashboard](butterfold_proto/physical/reports/pin22_signoff/11_signoff_summary.md)
+2. [22-pin report package](butterfold_proto/physical/reports/pin22_signoff/README.md)
+3. [Functional log](butterfold_proto/physical/reports/pin22_signoff/evidence/functional/interval10_regression.log)
+4. [Setup](butterfold_proto/physical/reports/pin22_signoff/01_setup_max_ss.md) · [Hold](butterfold_proto/physical/reports/pin22_signoff/02_hold_min_ff.md)
+5. [DRC / density / MSLOT](butterfold_proto/physical/reports/pin22_signoff/06_drc.md)
+6. [Full LVS](butterfold_proto/physical/reports/pin22_signoff/07_lvs.md)
+7. [Final artifacts](butterfold_proto/physical/reports/pin22_signoff/10_final_artifacts.md)
 
 Native OpenSTA / OpenROAD / KLayout / Netgen / Icarus copies live under
-[`evidence/`](butterfold_proto/physical/reports/d03_ach_resized/evidence/).
+[`evidence/`](butterfold_proto/physical/reports/pin22_signoff/evidence/).
 
 ---
 
 ## Functional verification
 
 Foundry-SRAM Icarus regression
-([log](butterfold_proto/physical/reports/d03_ach_resized/evidence/functional/interval10_regression.log))
+([log](butterfold_proto/physical/reports/pin22_signoff/evidence/functional/interval10_regression.log))
 passed at `TX_BYTE_INTERVAL=10`:
 
 ECHO, MAGIC, SRAM R/W, FFT2, IFFT2, FFT3, DFT12 (`0x45`), FFT64 (`0x41`),
 IFFT64 (`0x42`), OFDM RX short/long (`0x46`/`0x47`), OFDM TX short/long
-(`0x48`/`0x49`). Reset-recovery also **PASS**.
+(`0x48`/`0x49`). Reset-recovery and stream-status protocol also **PASS**.
 
 From `butterfold_proto/`:
 
@@ -200,6 +195,7 @@ make -f Makefile.gf180_sram vectors
 make -f Makefile.gf180_sram behavioral
 make -f Makefile.gf180_sram foundry-functional
 make -f Makefile.gf180_sram reset-recovery
+make -f Makefile.gf180_sram stream-status
 ```
 
 `foundry-functional` uses the official GF180 SRAM Verilog in FUNCTIONAL mode

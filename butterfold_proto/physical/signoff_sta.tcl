@@ -29,7 +29,7 @@ if {$contract} {
   set_input_delay -min 0.75 -clock core_clk [get_ports {din[*] din_valid_i}]
   set_input_delay -max 2.04 -clock core_clk [get_ports {din[*] din_valid_i}]
   set_input_transition 0.50 [get_ports {clk din[*] din_valid_i}]
-  set_load 0.04 [get_ports {din_ready_o dout[*] dout_valid_o}]
+  set_load 0.04 [get_ports {stream_status_o dout[*]}]
   set_clock_uncertainty -setup 0.10 [get_clocks core_clk]
   set_clock_uncertainty -hold 0.05 [get_clocks core_clk]
 }
@@ -54,8 +54,8 @@ report_tns -min > "$corner_dir/hold_tns.rpt"
 report_checks -from [all_registers] -path_delay min -group_path_count 50 -format full_clock_expanded > "$corner_dir/internal_hold.rpt"
 report_checks -from [get_ports {din[*] din_valid_i}] -path_delay max -group_path_count 50 -format full_clock_expanded > "$corner_dir/input_setup.rpt"
 report_checks -from [get_ports {din[*] din_valid_i}] -path_delay min -group_path_count 50 -format full_clock_expanded > "$corner_dir/input_hold.rpt"
-report_checks -to [get_ports {din_ready_o dout[*] dout_valid_o}] -path_delay max -group_path_count 50 -format full_clock_expanded > "$corner_dir/output_max.rpt"
-report_checks -to [get_ports {din_ready_o dout[*] dout_valid_o}] -path_delay min -group_path_count 50 -format full_clock_expanded > "$corner_dir/output_min.rpt"
+report_checks -to [get_ports {stream_status_o dout[*]}] -path_delay max -group_path_count 50 -format full_clock_expanded > "$corner_dir/output_max.rpt"
+report_checks -to [get_ports {stream_status_o dout[*]}] -path_delay min -group_path_count 50 -format full_clock_expanded > "$corner_dir/output_min.rpt"
 report_checks -from [get_pins {_19540_/Q _19541_/Q _19542_/Q}] -path_delay max -group_path_count 20 -format full_clock_expanded > "$corner_dir/dft12.rpt"
 report_checks -from [get_pins {_20283_/Q _20284_/Q _20285_/Q _20286_/Q _20287_/Q _20288_/Q _20289_/Q _20290_/Q _20321_/Q _20322_/Q _20323_/Q _20324_/Q _20325_/Q _20326_/Q _20327_/Q _20328_/Q _20329_/Q _20330_/Q}] -path_delay max -group_path_count 20 -format full_clock_expanded > "$corner_dir/multiplier.rpt"
 report_checks -to [get_pins -hierarchical *u_sram/A*] -path_delay max -group_path_count 20 -format full_clock_expanded > "$corner_dir/sram_address_setup.rpt"

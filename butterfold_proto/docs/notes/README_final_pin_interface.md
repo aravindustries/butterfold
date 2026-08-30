@@ -6,11 +6,14 @@ interface:
 
 ```text
 Inputs:  rst_n, clk, din[7:0], din_valid_i
-Outputs: din_ready_o, dout[7:0], dout_valid_o
+Outputs: stream_status_o, dout[7:0]
+Power:   VDD, VSS
+Total:   22 physical terminals including VDD and VSS
 ```
 
-The VDD pad is added by the physical padframe flow rather than modeled as a
-functional RTL signal. No additional logical pins are required.
+`stream_status_o` is READY during the input/command phase and VALID during
+the output phase. The host knows the phase from the command it issued.
+Internal `din_ready` / `dout_valid` are not chip pins.
 
 ## Commands
 

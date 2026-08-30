@@ -1,22 +1,19 @@
 # Physical reports
 
-On branch `def-integration-resized` the project-canonical GDS is
+On branch `pin-redesign-22` the project-canonical GDS is
 repo-root `gds/butterfold_top.gds` SHA
-`93f2aba11dab0df4e3c9431ff2e2c060fce066da17924ad1ed2657b19e4e5dd7`
-(1110 × 1675 µm outer; ACH_VALIDATION_ONLY; not final D03_A).
+`31dbce1e19295c6678531c205bba780898b013a69976e6056837821c3de9a64e`
+(1092.66 × 1108.80 µm; **22 pins including VDD and VSS**; no ACH DEF).
 
-The previous main/pre-ACH baseline SHA
-`f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906`
-(1092.66 × 1108.80 µm) is historical only.
-
-- [`d03_ach_resized/`](d03_ach_resized/README.md) — **current ACH validation
-  integration** (this branch). Not final D03_A.
-- [`signoff/`](signoff/README.md) — **historical pre-ACH shrunk production
-  baseline**. Do not present those metrics as the current ACH artifact.
+- [`pin22_signoff/`](pin22_signoff/README.md) — **current 22-pin compact
+  production signoff**.
+- [`d03_ach_resized/`](d03_ach_resized/README.md) — historical ACH validation
+  integration (1110 × 1675 µm). Not this chip.
+- [`signoff/`](signoff/README.md) — historical pre-ACH shrink baseline.
 - `38p4_mhz_setup_closure.md` — historical 38.4 MHz interval-10 max-SS notes.
 - `shrink_area_feasibility.md` — historical area-compliance note vs 1110 × 1110
   Block A.
 
-Native ACH copies live in
-[`d03_ach_resized/evidence/`](d03_ach_resized/evidence/). Heavy ODB/SPEF remain
+Native 22-pin copies live in
+[`pin22_signoff/evidence/`](pin22_signoff/evidence/). Heavy ODB/SPEF remain
 under `physical/results/` (not recommended for git).

@@ -15,7 +15,7 @@ set_clock_uncertainty 0.0 [get_clocks core_clk]
 # No board delay, input slew, or output capacitance is invented here.
 set_input_delay 0.0 -clock core_clk [get_ports {din[*] din_valid_i}]
 set_output_delay 0.0 -clock core_clk \
-    [get_ports {din_ready_o dout[*] dout_valid_o}]
+    [get_ports {stream_status_o dout[*]}]
 
 # Analyze normal operation with asynchronous reset deasserted. This avoids
 # treating reset recovery/removal and reset-fed latch constants as data paths.

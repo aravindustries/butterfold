@@ -1,0 +1,98 @@
+cd golden && python3 gen_full_regression_vectors.py
+Generated vectors/fft64_twiddle_re.hex
+Generated vectors/fft64_twiddle_im.hex
+Generated 5 FFT64 tests
+Input vectors:       vectors/fft64_inputs.hex
+Bit-accurate golden: vectors/fft64_expected.hex
+NumPy comparison:    vectors/fft64_numpy_reference.csv
+RMS complex error versus np.fft: 0.025663
+Maximum complex error versus np.fft: 0.125413
+Generated 5 IFFT64 tests
+Input vectors:       vectors/ifft64_inputs.hex
+Bit-accurate golden: vectors/ifft64_expected.hex
+NumPy comparison:    vectors/ifft64_numpy_reference.csv
+RMS complex error versus np.ifft: 0.004863
+Maximum complex error versus np.ifft: 0.010813
+fft3: RMS complex error=0.005290, max=0.013321
+dft12: RMS complex error=0.009287, max=0.042782
+fft128: RMS complex error=0.039416, max=0.291283
+ifft128: RMS complex error=0.004934, max=0.010984
+Generated 8 mixed FFT2/IFFT2 tests
+Generated 8 FFT3 tests
+Generated 8 DFT12 tests
+Generated 5 FFT128 tests
+Generated 5 IFFT128 tests
+Generated 4 normal-CP and 4 extended-CP OFDM_RX tests.
+Generated 5 normal-CP and 5 extended-CP DFT-s-OFDM TX tests using bins 1..12.
+
+=== Running gen_fft64_twiddles.py ===
+
+=== Running gen_fft64_vectors.py ===
+
+=== Running gen_ifft64_vectors.py ===
+
+=== Running gen_dft12_vectors.py ===
+
+=== Running gen_ofdm_rx_vectors.py ===
+
+=== Running gen_ofdm_tx_vectors.py ===
+
+All full-regression vector files passed count and TX CP-copy checks.
+mkdir -p build/sim
+iverilog -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM -DBUTTERFOLD_TX10 \
+	-s butterfold_top_tb -o build/sim/sim_butterfold_foundry_sram.out \
+	verification/tb/butterfold_top_tb.sv rtl/memory/gf180_sram_256x8_wrapper.sv rtl/memory/gf180_sram_256x16_complex.sv rtl/transform/fft128_modulo_controller.sv rtl/transform/fft128_twiddle_rom.sv rtl/transform/mixed_radix_butterfly.sv rtl/io/tdiq_input_cp_remove.sv rtl/io/fdiq_input_adapter.sv rtl/io/fdiq_output_adapter_sram.sv rtl/io/tdiq_output_cp_insert_sram.sv rtl/io/subcarrier_mapper.sv rtl/io/subcarrier_extractor.sv rtl/io/standalone_result_serializer.sv rtl/scheduler/transform_scheduler_core.sv rtl/top/butterfold_top.sv /foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:132: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:133: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:134: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:136: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:137: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:138: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:139: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:140: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:142: warning: Choosing typ expression.
+/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram256x8m8wm1.v:143: warning: Choosing typ expression.
+rtl/scheduler/transform_scheduler_core.sv:853: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:854: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:855: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:856: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:857: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:858: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:863: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:864: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:868: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:869: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:874: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:875: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:881: warning: @* is sensitive to all 4 words in array 'fifo_radix3'.
+rtl/scheduler/transform_scheduler_core.sv:884: warning: @* is sensitive to all 4 words in array 'fifo_x0_i'.
+rtl/scheduler/transform_scheduler_core.sv:885: warning: @* is sensitive to all 4 words in array 'fifo_x0_q'.
+rtl/scheduler/transform_scheduler_core.sv:886: warning: @* is sensitive to all 4 words in array 'fifo_x1_i'.
+rtl/scheduler/transform_scheduler_core.sv:887: warning: @* is sensitive to all 4 words in array 'fifo_x1_q'.
+rtl/scheduler/transform_scheduler_core.sv:888: warning: @* is sensitive to all 4 words in array 'fifo_x2_i'.
+rtl/scheduler/transform_scheduler_core.sv:889: warning: @* is sensitive to all 4 words in array 'fifo_x2_q'.
+rtl/scheduler/transform_scheduler_core.sv:891: warning: @* is sensitive to all 4 words in array 'fifo_radix3'.
+vvp build/sim/sim_butterfold_foundry_sram.out
+============================================================
+ButterFold FINAL-PIN regression
+Uses din/din_valid/stream_status_o and dout.
+============================================================
+-------- MESSAGE: CEN is just reset, memory is operational ---------
+-------- @Time 250000: scope = butterfold_top_tb.dut.u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram ---------
+-------- MESSAGE: CEN is just reset, memory is operational ---------
+-------- @Time 250000: scope = butterfold_top_tb.dut.u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram ---------
+PASS debug protocol: ECHO MAGIC SRAM READ/WRITE full sweep
+PASS interface exercise:  FFT2
+PASS interface exercise: IFFT2
+PASS interface exercise: FFT3
+PASS interface exercise: command 0x45
+PASS interface exercise: command 0x41
+PASS interface exercise: command 0x42
+PASS interface exercise: OFDM_RX 0x46
+PASS interface exercise: OFDM_RX 0x47
+PASS interface exercise: OFDM_TX 0x48
+PASS interface exercise: OFDM_TX 0x49
+============================================================
+FINAL-PIN OVERALL RESULT: PASS
+============================================================
+verification/tb/butterfold_top_tb.sv:774: $finish called at 200095000 (1ps)

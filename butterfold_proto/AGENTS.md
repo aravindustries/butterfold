@@ -44,20 +44,28 @@ Inputs:
 
 Outputs:
 
-* din_ready_o
+* stream_status_o
 * dout[7:0]
-* dout_valid_o
 
 Power:
 
 * VDD
+* VSS
 
-Total physical pin target: 22.
+Total physical terminals: **22**, including VDD and VSS.
+
+`stream_status_o` is phase-dependent:
+
+* input/command phase: READY (`din_ready` behavior)
+* output phase: VALID (`dout_valid` behavior)
+
+The host knows the phase from the command protocol. Do not expose
+`din_ready_o` or `dout_valid_o` as external pins.
 
 Do not add debug pins, mode pins, result-ready pins, SRAM pins, TDD pins, configuration pins, or any other chip-level signals.
 
-All commands and data must pass through din/din_valid_i/din_ready_o.
-All returned data must pass through dout/dout_valid_o.
+All commands and data must pass through din/din_valid_i and stream_status_o (READY).
+All returned data must pass through dout and stream_status_o (VALID).
 
 Standalone transform diagnostics must also use the existing byte-stream output.
 

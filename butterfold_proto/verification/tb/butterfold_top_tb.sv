@@ -10,7 +10,9 @@ module butterfold_top_tb;
     localparam integer SC_START_BIN = 1;
     localparam integer NUM_EXTRACTED_SC = 12;
     localparam integer MAX_WAIT = 200000;
-`ifdef BUTTERFOLD_WAVE_PACED
+`ifdef BUTTERFOLD_TX10
+    localparam integer TEST_TX_BYTE_INTERVAL = 10;
+`elsif BUTTERFOLD_WAVE_PACED
     localparam integer TEST_TX_BYTE_INTERVAL = 16;
 `else
     localparam integer TEST_TX_BYTE_INTERVAL = 1;
@@ -43,9 +45,8 @@ module butterfold_top_tb;
     logic rst_n;
     logic [7:0] din;
     logic din_valid_i;
-    logic din_ready_o;
+    logic stream_status_o;
     logic [7:0] dout;
-    logic dout_valid_o;
 
     // Independent vectors generated under golden/vectors/.
     logic [7:0]  two_point_commands [0:7];
@@ -186,7 +187,7 @@ module butterfold_top_tb;
         if (dut.external_fire)
             $display("PERF DIN t=%0t state=%0d data=%02h", $time,
                 dut.ext_state, din);
-        if (dout_valid_o)
+        if (!dut.stream_input_phase && stream_status_o)
             $display("PERF DOUT t=%0t data=%02h", $time, dout);
     end
 `endif
@@ -198,14 +199,27 @@ module butterfold_top_tb;
         .rst_n        (rst_n),
         .clk          (clk),
         .din          (din),
-        .din_valid_i  (din_valid_i),
-        .din_ready_o  (din_ready_o),
-        .dout         (dout),
-        .dout_valid_o (dout_valid_o)
+        .din_valid_i     (din_valid_i),
+        .stream_status_o (stream_status_o),
+        .dout            (dout)
     );
 
     always #5 clk = ~clk;
     always @(posedge clk) cycle_count <= cycle_count + 1;
+
+    always @(posedge clk) begin
+        if (rst_n) begin
+            if (dut.din_ready_int && dut.dout_valid_int)
+                $fatal(1, "stream_status overlap: ready and valid both 1");
+            if (dut.stream_input_phase) begin
+                if (stream_status_o !== dut.din_ready_int)
+                    $fatal(1, "input-phase stream_status != din_ready_int");
+            end else begin
+                if (stream_status_o !== dut.dout_valid_int)
+                    $fatal(1, "output-phase stream_status != dout_valid_int");
+            end
+        end
+    end
 
     task automatic send_byte(input logic [7:0] value);
         integer wait_count;
@@ -218,7 +232,7 @@ module butterfold_top_tb;
             accepted = 1'b0;
             while (!accepted) begin
                 @(posedge clk);
-                if (din_valid_i && din_ready_o)
+                if (din_valid_i && stream_status_o)
                     accepted = 1'b1;
                 else begin
                     wait_count = wait_count + 1;
@@ -240,7 +254,7 @@ module butterfold_top_tb;
             received = 1'b0;
             while (!received) begin
                 @(posedge clk);
-                if (dout_valid_o) begin
+                if (stream_status_o) begin
                     value = dout;
                     received = 1'b1;
                 end else begin
@@ -636,7 +650,7 @@ module butterfold_top_tb;
     integer scheduled_accept_count;
     integer scheduled_input_done_count;
     always @(posedge clk) begin
-        if (rst_n && (dut.ext_state == 0) && din_valid_i && din_ready_o &&
+        if (rst_n && (dut.ext_state == 0) && din_valid_i && stream_status_o &&
             ((din == CMD_RX_SHORT) || (din == CMD_RX_LONG) ||
              (din == CMD_TX_SHORT) || (din == CMD_TX_LONG)) &&
             scheduled_accept_count < 8) begin
@@ -681,7 +695,7 @@ module butterfold_top_tb;
 
         $display("============================================================");
         $display("ButterFold FINAL-PIN regression");
-        $display("Only din/din_valid/din_ready and dout/dout_valid are used.");
+        $display("Uses din/din_valid/stream_status_o and dout.");
         $display("============================================================");
 
         run_debug_protocol();

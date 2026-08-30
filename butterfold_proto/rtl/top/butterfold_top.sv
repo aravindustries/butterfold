@@ -14,9 +14,8 @@ module butterfold_top #(
     input  logic       clk,
     input  logic [7:0] din,
     input  logic       din_valid_i,
-    output logic       din_ready_o,
-    output logic [7:0] dout,
-    output logic       dout_valid_o
+    output logic       stream_status_o,
+    output logic [7:0] dout
 `ifdef USE_POWER_PINS
     , inout wire VDD
     , inout wire VSS
@@ -120,7 +119,15 @@ module butterfold_top #(
     logic core_ofdm_active, drain_active;
     logic core_rx_selected_complete, core_rx_complete, core_tx_complete;
 
-    assign external_fire = din_valid_i && din_ready_o;
+    // Internal ready/valid remain the original handshake. The single
+    // external pin stream_status_o is READY in the input/command phase and
+    // VALID in the output phase. The host knows the phase from the command
+    // it issued. Processing states drive both internals to 0.
+    logic din_ready_int;
+    logic dout_valid_int;
+    logic stream_input_phase;
+
+    assign external_fire = din_valid_i && din_ready_int;
     assign feeder_start = external_fire && (top_state == TOP_IDLE) && is_ofdm(din);
     assign job_head_command = active_command;
     assign core_ofdm_active = ofdm_active;
@@ -129,16 +136,32 @@ module butterfold_top #(
                        ((top_state == TOP_TRANSFORM_INPUT) ? 3'd1 : 3'd3);
 
     always @* begin
-        din_ready_o = 1'b0;
+        stream_input_phase = 1'b0;
         case (top_state)
-          TOP_IDLE:            din_ready_o = core_din_ready;
-          TOP_TRANSFORM_INPUT: din_ready_o = core_din_ready;
+          TOP_IDLE,
+          TOP_TRANSFORM_INPUT,
           TOP_ECHO_INPUT,
           TOP_SRAM_READ_ADDR,
           TOP_SRAM_WRITE_ADDR,
           TOP_SRAM_WRITE_HI,
-          TOP_SRAM_WRITE_LO:   din_ready_o = 1'b1;
-          default:             din_ready_o = 1'b0;
+          TOP_SRAM_WRITE_LO:
+            stream_input_phase = 1'b1;
+          default:
+            stream_input_phase = 1'b0;
+        endcase
+    end
+
+    always @* begin
+        din_ready_int = 1'b0;
+        case (top_state)
+          TOP_IDLE:            din_ready_int = core_din_ready;
+          TOP_TRANSFORM_INPUT: din_ready_int = core_din_ready;
+          TOP_ECHO_INPUT,
+          TOP_SRAM_READ_ADDR,
+          TOP_SRAM_WRITE_ADDR,
+          TOP_SRAM_WRITE_HI,
+          TOP_SRAM_WRITE_LO:   din_ready_int = 1'b1;
+          default:             din_ready_int = 1'b0;
         endcase
     end
 
@@ -196,15 +219,15 @@ module butterfold_top #(
 
     always @* begin
         dout = 8'h00;
-        dout_valid_o = 1'b0;
+        dout_valid_int = 1'b0;
         if (serializer_valid) begin
             dout = serializer_dout;
-            dout_valid_o = 1'b1;
+            dout_valid_int = 1'b1;
         end else if (core_dout_valid) begin
             dout = core_dout;
-            dout_valid_o = 1'b1;
+            dout_valid_int = 1'b1;
         end else case (top_state)
-          TOP_ECHO_OUTPUT: begin dout = echo_data; dout_valid_o = 1'b1; end
+          TOP_ECHO_OUTPUT: begin dout = echo_data; dout_valid_int = 1'b1; end
           TOP_MAGIC_OUTPUT: begin
             case (magic_index)
               3'd0: dout = 8'h42; // B
@@ -212,14 +235,16 @@ module butterfold_top #(
               3'd2: dout = 8'h4c; // L
               default: dout = 8'h44; // D
             endcase
-            dout_valid_o = 1'b1;
+            dout_valid_int = 1'b1;
           end
-          TOP_SRAM_READ_HI: begin dout = debug_read_latch[15:8]; dout_valid_o = 1'b1; end
-          TOP_SRAM_READ_LO: begin dout = debug_read_latch[7:0]; dout_valid_o = 1'b1; end
-          TOP_SRAM_WRITE_ACK: begin dout = SRAM_WRITE_ACK; dout_valid_o = 1'b1; end
+          TOP_SRAM_READ_HI: begin dout = debug_read_latch[15:8]; dout_valid_int = 1'b1; end
+          TOP_SRAM_READ_LO: begin dout = debug_read_latch[7:0]; dout_valid_int = 1'b1; end
+          TOP_SRAM_WRITE_ACK: begin dout = SRAM_WRITE_ACK; dout_valid_int = 1'b1; end
           default: begin end
         endcase
     end
+
+    assign stream_status_o = stream_input_phase ? din_ready_int : dout_valid_int;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin

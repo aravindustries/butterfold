@@ -1,10 +1,12 @@
 # ButterFold physical signoff — historical pre-ACH shrink baseline
 
-**This directory is the pre-ACH shrunk production baseline, not the current
-`def-integration-resized` ACH validation artifact.**
+**Current 22-pin compact production package:**
+[`../pin22_signoff/`](../pin22_signoff/README.md)
+(die 1092.66 × 1108.80 µm, SHA `31dbce1e…`, 22 terminals).
 
-Current ACH package: [`../d03_ach_resized/`](../d03_ach_resized/README.md)
-(outer GDS 1110 × 1675 µm, SHA `93f2aba1…`).
+**This directory is the pre-ACH shrunk production baseline, not the current
+22-pin chip.** Historical ACH validation:
+[`../d03_ach_resized/`](../d03_ach_resized/README.md).
 
 On this branch the project-canonical file `gds/butterfold_top.gds` **is**
 that ACH GDS (SHA `93f2aba1…`). The previous main/pre-ACH baseline SHA

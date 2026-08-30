@@ -25,7 +25,7 @@ COMMON_RTL = \
 	rtl/scheduler/transform_scheduler_core.sv \
 	rtl/top/butterfold_top.sv
 
-.PHONY: vectors wrapper reset-recovery behavioral foundry foundry-functional foundry-info \
+.PHONY: vectors wrapper reset-recovery stream-status behavioral foundry foundry-functional foundry-info \
 	characterize stress-fast stress-paced scheduled-fast scheduled-paced padframe-smoke synth-sta clean
 
 vectors:
@@ -43,6 +43,12 @@ reset-recovery:
 	$(IVERILOG) -g2012 -Wall -s reset_recovery_tb -o $(SIM_BUILD)/sim_reset_recovery.out \
 		$(TB_DIR)/reset_recovery_tb.sv $(COMMON_RTL)
 	$(VVP) $(SIM_BUILD)/sim_reset_recovery.out
+
+stream-status:
+	mkdir -p $(SIM_BUILD)
+	$(IVERILOG) -g2012 -Wall -s stream_status_tb -o $(SIM_BUILD)/sim_stream_status.out \
+		$(TB_DIR)/stream_status_tb.sv $(COMMON_RTL)
+	$(VVP) $(SIM_BUILD)/sim_stream_status.out
 
 padframe-smoke:
 	mkdir -p $(SIM_BUILD)
@@ -105,7 +111,7 @@ foundry: foundry-functional
 foundry-functional: vectors
 	mkdir -p $(SIM_BUILD)
 	@test -f "$(SRAM256_MODEL)" || (echo "Missing SRAM256 model: $(SRAM256_MODEL)"; exit 1)
-	$(IVERILOG) -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM \
+	$(IVERILOG) -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM -DBUTTERFOLD_TX10 \
 		-s butterfold_top_tb -o $(SIM_BUILD)/sim_butterfold_foundry_sram.out \
 		$(TB_DIR)/butterfold_top_tb.sv $(COMMON_RTL) $(SRAM256_MODEL)
 	$(VVP) $(SIM_BUILD)/sim_butterfold_foundry_sram.out
