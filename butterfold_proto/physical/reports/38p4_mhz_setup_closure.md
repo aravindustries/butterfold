@@ -1,3 +1,5 @@
+> **Historical** 38.4 MHz setup-closure note on an older die (1.223277 mm²). Not the ACH validation artifact. Current ACH package: [`d03_ach_resized/`](d03_ach_resized/README.md).
+
 # 38.4 MHz max-SS setup closure
 
 Production point: **38.4 MHz**, period **26.041667 ns**, `TX_BYTE_INTERVAL=10`.

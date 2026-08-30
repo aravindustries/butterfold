@@ -1,3 +1,5 @@
+> **Historical** pre-ACH area-compliance note for the 1092.66 × 1108.80 µm shrink GDS. Current ACH validation outer GDS is 1110 × 1675 µm; compact CORE remains inside 1110 × 1110. See [`d03_ach_resized/`](d03_ach_resized/README.md).
+
 # ButterFold area compliance — pre-DEF shrink
 
 **THIS PROVES AREA COMPLIANCE.**
@@ -88,15 +90,17 @@ feasibility.
 `rst_n` still has ~1461 sinks. A regional reset tree will be rebuilt after
 the official DEF. It was not rebuilt on this temporary pre-DEF layout.
 
-## Demonstration GDS
+## Demonstration GDS (historical shrink)
 
-Streamed for area evidence only. **Canonical `gds/butterfold_top.gds` was not overwritten.**
+Streamed for area evidence only. This demonstration did not overwrite a
+production GDS. It is **not** the current ACH validation GDS
+(`gds/butterfold_top.gds` on this branch, SHA `93f2aba1…`, 1110 × 1675 µm).
 
 | | |
 |---|---|
 | Path | `physical/results/shrink_area/butterfold_top.gds` |
 | SHA-256 | `8f48cd4e9329b05b8e064323025529daef90a7a646997230b2f95cbf87aa8496` |
-| Top-cell bbox | 1092.66 × 1108.80 µm |
+| Historical shrink top-cell bbox | 1092.66 × 1108.80 µm |
 
 No full KLayout, density, MSLOT, LVS, or IR was run.
 

@@ -1,0 +1,18 @@
+ACH electrical fanout
+Of-record extracted session (filled.odb, VIEW=elec):
+  extract_elec.log prints SLEW 0 CAP 0
+  OpenSTA -violators dump for that session (max_slew/max_cap): empty
+    physical/reports/d03_ach_resized/evidence/electrical/max_slew_cap_violators.rpt
+
+Companion OpenSTA dump with:
+  report_check_types -max_slew -max_capacitance -max_fanout -violators
+is empty (zero violators including fanout):
+--- elec_reset_visible.rpt (empty file) ---
+(end)
+
+LibreLane filled-state metrics (not the extracted STA of record):
+  design__max_fanout_violation__count = 0
+  design__max_fanout_violation__count__corner:nom_tt_025C_5v00 = 0
+  design__max_fanout_violation__count__corner:nom_ss_125C_4v50 = 0
+  design__max_fanout_violation__count__corner:nom_ff_n40C_5v50 = 0
+  source physical/results/d03_ach_resized/state_filled.json

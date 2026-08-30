@@ -1,9 +1,16 @@
-# 11 — Signoff summary
+# 11 — Signoff summary (historical pre-ACH shrink baseline)
 
-# BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE
+# HISTORICAL: BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE (pre-ACH)
+
+This dashboard describes the **shrunk production baseline**
+**1092.66 × 1108.80 µm (1.211541 mm²)**, SHA `f193cb1b…`.
+
+Current ACH validation package (1110 × 1675 µm, SHA `93f2aba1…`):
+[`../d03_ach_resized/11_signoff_summary.md`](../d03_ach_resized/11_signoff_summary.md).
 
 Shrunk pre-integration team GDS **1092.66 × 1108.80 µm (1.211541 mm²)**
-promoted (`gds/butterfold_top.gds` SHA `f193cb1b…`).
+(previous main/pre-ACH SHA `f193cb1b…`; on this branch repo-root
+`gds/butterfold_top.gds` is now the ACH GDS `93f2aba1…`).
 
 Minimum-clear density: **PASS**
 Minimum-metal density: **INTEGRATOR FILL PENDING**
@@ -30,7 +37,7 @@ This is **not** final post-integration manufacturing signoff. Official
 | IR | CHARACTERIZED | VDD 1.03 mV / VSS 1.00 mV (no README numeric threshold) | [08](08_erc.md) | [IR](evidence/ir/power_grid.rpt) |
 | Power | INFO | 0.116 W **vectorless, no VCD/SAIF** | [09](09_power.md) | [power](evidence/power/vectorless_power.rpt) |
 | Die area | PASS | 1.211541 mm² ≤ 1.25 mm²; 1092.66 × 1108.80 ≤ 1110 × 1110 | [00](00_manifest.md) | [area](evidence/area/final_area.rpt) |
-| Canonical GDS | **PROMOTED** | SHA `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` | [10](10_final_artifacts.md) | `gds/butterfold_top.gds` |
+| Historical shrink GDS | **on `main` / previous baseline** | SHA `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` | [10](10_final_artifacts.md) | Git history of `gds/butterfold_top.gds` on `main` |
 
 ## Do not write READY FOR FINAL TAPEOUT REVIEW
 

@@ -1,3 +1,5 @@
+> **Historical pre-ACH shrunk production baseline** (die 1092.66 × 1108.80 µm, SHA `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906`). This is **not** the current `def-integration-resized` ACH validation GDS (`93f2aba1…`, 1110 × 1675 µm). See [`../d03_ach_resized/`](../d03_ach_resized/README.md).
+
 # 00 — Signoff manifest
 
 ## Purpose
@@ -37,16 +39,20 @@ loaded): 0 items on Metal1–Metal5.
 | DIE_AREA | `[0, 0, 1092.66, 1108.80]` |
 | CORE_AREA | `[6.72, 20.16, 1085.84, 1088.64]` |
 
-## Canonical GDS
+## Historical shrink GDS (this package)
 
 | Artifact | SHA-256 |
 |---|---|
-| Filled Magic streamout / team GDS | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
-| `gds/butterfold_top.gds` | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
+| Filled Magic streamout / shrink team GDS | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
+| Previous main/pre-ACH `gds/butterfold_top.gds` | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
 
-Byte-identical promotion verified. All GDS-dependent checks used this SHA.
+All GDS-dependent checks in **this** `signoff/` directory used SHA `f193cb1b…`.
 
 Die **1092.66 × 1108.80 µm = 1.211541 mm²** (≤ 1110 × 1110 and ≤ 1.25 mm²).
+
+On `def-integration-resized`, repo-root `gds/butterfold_top.gds` has been
+promoted to the ACH validation GDS SHA `93f2aba1…` (1110 × 1675 µm).
+Do not use this directory’s metrics as the current branch GDS.
 
 This is **not** final D03_A.def post-integration manufacturing signoff.
 Minimum-metal fill remains integrator pending.
