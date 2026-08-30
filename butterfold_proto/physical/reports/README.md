@@ -1,9 +1,9 @@
 # Physical reports
 
 - [`signoff/`](signoff/README.md) — **team-side GF180 signoff** (complete).
-  Canonical pre-fill GDS is repo-root `gds/butterfold_top.gds`
-  (SHA `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6`).
-  Minimum-clear density PASS. Minimum-metal fill is **integrator pending**.
+  Canonical pre-integration GDS is repo-root `gds/butterfold_top.gds`
+  (SHA `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906`).
+  Die 1092.66 × 1108.80 µm. Minimum-clear density PASS. Minimum-metal fill is **integrator pending**.
 - `38p4_mhz_setup_closure.md` — 38.4 MHz interval-10 max-SS setup closure
   (post-route extracted-aware ECO on the LibreLane production run).
 

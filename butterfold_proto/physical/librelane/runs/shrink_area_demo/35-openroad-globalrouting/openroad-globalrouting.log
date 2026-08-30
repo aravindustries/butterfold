@@ -1,0 +1,76 @@
+Reading timing models for corner nom_tt_025C_5v00…
+Reading timing library for the 'nom_tt_025C_5v00' corner at '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__tt_025C_5v00.lib'…
+Reading timing library for the 'nom_tt_025C_5v00' corner at '/foss/pdks/gf180mcuD/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__tt_025C_5v00.lib'…
+Reading OpenROAD database at '/headless/aravindustries-repos/butterfold/butterfold_proto/physical/librelane/runs/shrink_area_demo/33-openroad-resizertimingpostcts/butterfold_top.odb'…
+Reading design constraints file at '/headless/aravindustries-repos/butterfold/butterfold_proto/physical/constraints.sdc'…
+[INFO] No information on clock propagation in input SDC file-- propagating all clocks.
+[INFO] Setting signal min routing layer to: Metal2 and clock min routing layer to Metal2. 
+[INFO] Setting signal max routing layer to: Metal5 and clock max routing layer to Metal5. 
++ global_route -congestion_iterations 50 -verbose
+[INFO GRT-0020] Min routing layer: Metal2
+[INFO GRT-0021] Max routing layer: Metal5
+[INFO GRT-0022] Global adjustment: 30%
+[INFO GRT-0023] Grid origin: (0, 0)
+[INFO GRT-0088] Layer Metal1  Track-Pitch = 0.5600  line-2-Via Pitch: 0.4750
+[INFO GRT-0088] Layer Metal2  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal3  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal4  Track-Pitch = 0.5600  line-2-Via Pitch: 0.5600
+[INFO GRT-0088] Layer Metal5  Track-Pitch = 0.9000  line-2-Via Pitch: 0.8200
+[INFO GRT-0003] Macros: 2
+[INFO GRT-0004] Blockages: 4
+[INFO GRT-0019] Found 120 clock nets.
+[WARNING GRT-0281] Net rst_n has a large fanout of 1461 terminals.
+[INFO GRT-0001] Minimum degree: 2
+[INFO GRT-0002] Maximum degree: 1461
+
+[INFO GRT-0053] Routing resources analysis:
+          Routing      Original      Derated      Resource
+Layer     Direction    Resources     Resources    Reduction (%)
+---------------------------------------------------------------
+Metal1     Horizontal          0             0          0.00%
+Metal2     Vertical       188662        125898          33.27%
+Metal3     Horizontal     191396        127501          33.38%
+Metal4     Vertical       249552        166497          33.28%
+Metal5     Horizontal     155058        104490          32.61%
+---------------------------------------------------------------
+
+[INFO GRT-0197] Via related to pin nodes: 79601
+[INFO GRT-0198] Via related Steiner nodes: 2498
+[INFO GRT-0199] Via filling finished.
+[INFO GRT-0111] Final number of vias: 101979
+[INFO GRT-0112] Final usage 3D: 414619
+
+[INFO GRT-0096] Final congestion report:
+Layer         Resource        Demand        Usage (%)    Max H / Max V / Total Overflow
+---------------------------------------------------------------------------------------
+Metal1               0             0            0.00%             0 /  0 /  0
+Metal2          125898         48557           38.57%             0 /  0 /  0
+Metal3          127501         50099           39.29%             0 /  0 /  0
+Metal4          166497          4146            2.49%             0 /  0 /  0
+Metal5          104490          5880            5.63%             0 /  0 /  0
+---------------------------------------------------------------------------------------
+Total           524386        108682           20.73%             0 /  0 /  0
+
+[INFO GRT-0018] Total wirelength: 1249038 um
+[INFO GRT-0014] Routed nets: 11483
+[INFO GRT-0303] Global routing runtime = 00:00:01
+Setting global connections for newly added cells…
+[INFO] Setting global connections...
+.*u_lo.*u_sram matched with u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram
+.*u_hi.*u_sram matched with u_transform_scheduler_core.u_fft_scratch_sram.u_hi.u_sram
+[INFO ODB-0403] 0 connections made, 0 conflicts skipped.
+Updating metrics…
+Cell type report:                       Count       Area
+  Macro                                     2  294424.87
+  Endcap cell                             716    4041.68
+  Tap cell                               4126   23290.44
+  Buffer                                   32    1264.44
+  Clock buffer                            132   10499.33
+  Timing Repair Buffer                    212   15255.07
+  Inverter                                492    5661.73
+  Clock inverter                           77    1874.07
+  Sequential cell                        1993  174017.89
+  Multi-Input combinational cell         8608  225140.03
+  Total                                 16390  755469.56
+Writing OpenROAD database to '/headless/aravindustries-repos/butterfold/butterfold_proto/physical/librelane/runs/shrink_area_demo/35-openroad-globalrouting/butterfold_top.odb'…
+Writing layout to '/headless/aravindustries-repos/butterfold/butterfold_proto/physical/librelane/runs/shrink_area_demo/35-openroad-globalrouting/butterfold_top.def'…

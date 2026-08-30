@@ -1,33 +1,19 @@
 # 10 — Final artifacts
 
 Canonical team GDS **promoted** to `gds/butterfold_top.gds` (byte-for-byte copy
-of the pre-fill ECO streamout). Minimum-metal density remains integrator-fill
+of the filled Magic streamout). Minimum-metal density remains integrator-fill
 pending.
 
 ## Hashes
 
 | Artifact | SHA-256 |
 |---|---|
-| Freeze ODB | `073bcd1b1029fdb8d7a3914cd65b43709a53ad2f7c76e83bfbce20ba9bfa1e64` |
-| ECO routed ODB | `ca78b97b84868b6673513fbe152862fd5d2c182caa2298e362d29163cf4bdadd` |
-| Max SPEF | `b822d55ddff3c06c6b4b3cff4a41e00615f8272757de9a0ff4e5c8ff71391d8c` |
-| Min SPEF | `a65ef9f15dcbf0159dbd8586737c1a9969d8f9ba7c0765a25df8a40572be76ec` |
-| Pre-dummy / team GDS | `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6` |
-| Dummy-filled GDS (fill experiment only; not signoff) | `e02fb870efa2ca9aa1d72180cd5f09d6ab27ed7f76838a4045c098d27aa24f2e` |
-| ECO netlist | `78ea4d7cbce894815ae771b5425baef810c593dfef2ab519adbd92747fd91cda` |
-| CDL | `415ad8aac2bd7345250a56d979aa9b2fc3b771664528a5b549e44643fb19c9cf` |
-| `gds/butterfold_top.gds` | `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6` |
+| Candidate / team GDS | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
+| `gds/butterfold_top.gds` | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
 
-Verified after promotion: SHA of `gds/butterfold_top.gds` equals the pre-fill
-team GDS. Dummy-filled `e02fb870…` was not promoted.
+Verified after promotion: SHA identity. Die 1092.66 × 1108.80 µm.
 
 ## Tools
 
 LibreLane 3.0.2, OpenROAD 26Q2-254-g61932e897, Magic 8.3.636, KLayout 0.30.8,
-Netgen 1.5.318, open_pdks `7b70722e33c03fcb5dabcf4d479fb0822d9251c9`.
-
-## Evidence index
-
-See [11_signoff_summary.md](11_signoff_summary.md) for per-check evidence
-links. Dummy fill is GDS datatype 4. OpenRCX extracts ODB LEF metals, not GDS
-dummy — fill experiments do not invalidate the ECO SPEF/STA numbers above.
+Netgen 1.5.318.

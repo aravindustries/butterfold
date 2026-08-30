@@ -1,0 +1,26 @@
+mkdir -p build/sim
+iverilog -g2012 -Wall -s reset_recovery_tb -o build/sim/sim_reset_recovery.out \
+	verification/tb/reset_recovery_tb.sv rtl/memory/gf180_sram_256x8_wrapper.sv rtl/memory/gf180_sram_256x16_complex.sv rtl/transform/fft128_modulo_controller.sv rtl/transform/fft128_twiddle_rom.sv rtl/transform/mixed_radix_butterfly.sv rtl/io/tdiq_input_cp_remove.sv rtl/io/fdiq_input_adapter.sv rtl/io/fdiq_output_adapter_sram.sv rtl/io/tdiq_output_cp_insert_sram.sv rtl/io/subcarrier_mapper.sv rtl/io/subcarrier_extractor.sv rtl/io/standalone_result_serializer.sv rtl/scheduler/transform_scheduler_core.sv rtl/top/butterfold_top.sv
+rtl/scheduler/transform_scheduler_core.sv:853: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:854: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:855: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:856: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:857: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:858: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:863: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:864: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:868: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:869: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:874: warning: @* is sensitive to all 12 words in array 'dft12_ram_i'.
+rtl/scheduler/transform_scheduler_core.sv:875: warning: @* is sensitive to all 12 words in array 'dft12_ram_q'.
+rtl/scheduler/transform_scheduler_core.sv:881: warning: @* is sensitive to all 1 words in array 'fifo_radix3'.
+rtl/scheduler/transform_scheduler_core.sv:884: warning: @* is sensitive to all 1 words in array 'fifo_x0_i'.
+rtl/scheduler/transform_scheduler_core.sv:885: warning: @* is sensitive to all 1 words in array 'fifo_x0_q'.
+rtl/scheduler/transform_scheduler_core.sv:886: warning: @* is sensitive to all 1 words in array 'fifo_x1_i'.
+rtl/scheduler/transform_scheduler_core.sv:887: warning: @* is sensitive to all 1 words in array 'fifo_x1_q'.
+rtl/scheduler/transform_scheduler_core.sv:888: warning: @* is sensitive to all 1 words in array 'fifo_x2_i'.
+rtl/scheduler/transform_scheduler_core.sv:889: warning: @* is sensitive to all 1 words in array 'fifo_x2_q'.
+rtl/scheduler/transform_scheduler_core.sv:891: warning: @* is sensitive to all 1 words in array 'fifo_radix3'.
+vvp build/sim/sim_reset_recovery.out
+RESET-RECOVERY RESULT: PASS
+verification/tb/reset_recovery_tb.sv:91: $finish called at 27485000 (1ps)

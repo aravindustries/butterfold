@@ -1,7 +1,8 @@
 # ButterFold physical signoff — reviewer package
 
 ButterFold GF180MCU core, LibreLane 3.0.2 / OpenROAD. Production clock
-**38.4 MHz** (26.041667 ns), `TX_BYTE_INTERVAL=10`. Die **1.223277 mm²**.
+**38.4 MHz** (26.041667 ns), `TX_BYTE_INTERVAL=10`. Die **1.211541 mm²**
+(1092.66 × 1108.80 µm).
 
 ## How to review
 
@@ -10,7 +11,7 @@ ButterFold GF180MCU core, LibreLane 3.0.2 / OpenROAD. Production clock
 | `*.md` in this directory | Human interpretation of one check |
 | [`evidence/`](evidence/) | **Native tool output** copied into git |
 | `physical/results/` | Heavy local artifacts (ODB/SPEF/GDS); gitignored |
-| `gds/butterfold_top.gds` at repo root | Canonical tracked **team** GDS (pre-fill SHA `5a99213a…`) |
+| `gds/butterfold_top.gds` at repo root | Canonical tracked **team** GDS (filled SHA `f193cb1b…`) |
 
 Navigate: [11_signoff_summary.md](11_signoff_summary.md) → per-check `.md` → `evidence/`.
 
@@ -34,9 +35,9 @@ require `/tmp`, ignored `physical/results/`, or the original workstation.
 
 **BUTTERFOLD TEAM-SIDE SIGNOFF COMPLETE.**
 
-Minimum-clear density: **PASS** (DCF.1d COMP 36.18% ≤ 70%).
+Minimum-clear density: **PASS** (DCF.1d COMP 35.72% ≤ 70%).
 Minimum-metal density: **INTEGRATOR FILL PENDING** (not manufacturing-closed).
 
 Full device-level Netgen LVS PASS. Interval-10 foundry-SRAM functional PASS.
-Canonical `gds/butterfold_top.gds` is the pre-fill team GDS `5a99213a…`.
+Canonical `gds/butterfold_top.gds` is the filled team GDS `f193cb1b…`.
 Do not claim post-integration manufacturing signoff.

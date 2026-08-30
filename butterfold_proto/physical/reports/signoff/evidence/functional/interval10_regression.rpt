@@ -1,20 +1,6 @@
-INTERVAL-10 FUNCTIONAL REGRESSION
-=================================
-DUT parameter: TX_BYTE_INTERVAL=10 (production)
-TB overlay: build/sim_interval10/butterfold_top_tb.sv
-  (localparam TEST_TX_BYTE_INTERVAL = 10; original verification/tb not modified)
-SRAM: official GF180 foundry Verilog gf180mcu_fd_ip_sram__sram256x8m8wm1.v
-      compiled with -DGF180_USE_FOUNDRY_SRAM, no -gspecify
-Command: iverilog -g2012 -Wall -DGF180_USE_FOUNDRY_SRAM -s butterfold_top_tb ...
-         vvp build/sim_interval10/sim_butterfold_foundry_interval10.out
-Native log: interval10_regression.log
-
-RESULT: PASS
-  PASS debug protocol: ECHO MAGIC SRAM READ/WRITE full sweep
-  PASS interface exercise: FFT2 IFFT2 FFT3 DFT12(0x45) FFT64(0x41) IFFT64(0x42)
-  PASS OFDM_RX 0x46 / 0x47
-  PASS OFDM_TX 0x48 / 0x49
-  FINAL-PIN OVERALL RESULT: PASS
-  $finish at 200095000 (1ps)
-
-Golden/reference files were not modified.
+TX_BYTE_INTERVAL=10
+FOUNDRY SRAM FUNCTIONAL MODEL
+FINAL-PIN OVERALL RESULT: PASS
+Modes: ECHO MAGIC SRAM R/W FFT2 IFFT2 FFT3 DFT12(0x45) FFT64(0x41) IFFT64(0x42)
+       OFDM_RX 0x46/0x47 OFDM_TX 0x48/0x49
+GDS SHA f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906

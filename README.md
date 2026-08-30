@@ -25,8 +25,9 @@ minimum-metal dummy fill is expected during Chipathon integration.
 | | |
 |---|---|
 | Canonical team GDS | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| SHA-256 | `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6` |
-| Minimum-clear density | **PASS** (DCF.1d COMP 36.18% ≤ 70%) |
+| SHA-256 | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
+| Die | **1092.66 × 1108.80 µm (1.211541 mm²)** within 1110 × 1110 |
+| Minimum-clear density | **PASS** (DCF.1d COMP 35.72% ≤ 70%) |
 | Minimum-metal density | **INTEGRATOR FILL PENDING** |
 
 Dashboard: [`butterfold_proto/physical/reports/signoff/11_signoff_summary.md`](butterfold_proto/physical/reports/signoff/11_signoff_summary.md)
@@ -36,19 +37,19 @@ Dashboard: [`butterfold_proto/physical/reports/signoff/11_signoff_summary.md`](b
 | Check | Status | Result | Report | Native evidence |
 |---|---|---|---|---|
 | Functional regression | **PASS** | Foundry-SRAM Icarus, `TX_BYTE_INTERVAL=10`; FINAL-PIN OVERALL RESULT: PASS | [summary](butterfold_proto/physical/reports/signoff/evidence/functional/interval10_regression.rpt) | [log](butterfold_proto/physical/reports/signoff/evidence/functional/interval10_regression.log) |
-| Max-SS setup | **PASS** | `max_ss_125C_4v50` WNS **+0.183361 ns**, TNS 0, 0 violations | [01](butterfold_proto/physical/reports/signoff/01_setup_max_ss.md) | [STA](butterfold_proto/physical/reports/signoff/evidence/setup/max_ss_setup_summary.rpt) |
-| Min-FF hold | **PASS** | `min_ff_n40C_5v50` WNS **+0.152106 ns**, TNS 0, 0 violations | [02](butterfold_proto/physical/reports/signoff/02_hold_min_ff.md) | [STA](butterfold_proto/physical/reports/signoff/evidence/hold/min_ff_hold_summary.rpt) |
+| Max-SS setup | **PASS** | `max_ss_125C_4v50` WNS **+5.04 ns**, TNS 0, 0 violations | [01](butterfold_proto/physical/reports/signoff/01_setup_max_ss.md) | [STA](butterfold_proto/physical/reports/signoff/evidence/setup/max_ss_setup_summary.rpt) |
+| Min-FF hold | **PASS** | `min_ff_n40C_5v50` WNS **+0.26 ns**, TNS 0, 0 violations | [02](butterfold_proto/physical/reports/signoff/02_hold_min_ff.md) | [STA](butterfold_proto/physical/reports/signoff/evidence/hold/min_ff_hold_summary.rpt) |
 | Electrical | **PASS** | non-reset slew/cap/fanout violators = 0 | [03](butterfold_proto/physical/reports/signoff/03_electrical.md) | [slew](butterfold_proto/physical/reports/signoff/evidence/electrical/max_slew.rpt) / [cap](butterfold_proto/physical/reports/signoff/evidence/electrical/max_cap.rpt) / [fanout](butterfold_proto/physical/reports/signoff/evidence/electrical/fanout.rpt) |
 | Reset electrical | **PASS** | slew 0, cap 0 (`rst_n` visible) | [04](butterfold_proto/physical/reports/signoff/04_reset.md) | [reset](butterfold_proto/physical/reports/signoff/evidence/reset/reset_electrical.rpt) |
-| Antenna | **PASS** | 0 nets / 0 pins, **14** diodes | [05](butterfold_proto/physical/reports/signoff/05_antenna.md) | [OpenROAD](butterfold_proto/physical/reports/signoff/evidence/antenna/openroad_check_antennas.rpt) |
-| Routing | **PASS** | GRT overflow 0, DRT violations 0 | [08](butterfold_proto/physical/reports/signoff/08_erc.md) | [GRT](butterfold_proto/physical/reports/signoff/evidence/routing/grt_summary.rpt) / [DRT](butterfold_proto/physical/reports/signoff/evidence/routing/drt_summary.rpt) |
-| Minimum-clear density | **PASS** | DCF.1d COMP **36.18%** ≤ 70% | [06](butterfold_proto/physical/reports/signoff/06_drc.md) | [prefill](butterfold_proto/physical/reports/signoff/evidence/drc/density_prefill_summary.rpt) |
+| Antenna | **PASS** | 0 nets / 0 pins, **15** diodes | [05](butterfold_proto/physical/reports/signoff/05_antenna.md) | [OpenROAD](butterfold_proto/physical/reports/signoff/evidence/antenna/openroad_check_antennas.rpt) |
+| Routing | **PASS** | GRT overflow 0, DRT violations 0, opens 0, shorts 0 | [08](butterfold_proto/physical/reports/signoff/08_erc.md) | [GRT](butterfold_proto/physical/reports/signoff/evidence/routing/grt_summary.rpt) / [DRT](butterfold_proto/physical/reports/signoff/evidence/routing/drt_summary.rpt) |
+| Minimum-clear density | **PASS** | DCF.1d COMP **35.72%** ≤ 70% | [06](butterfold_proto/physical/reports/signoff/06_drc.md) | [prefill](butterfold_proto/physical/reports/signoff/evidence/drc/density_prefill_summary.rpt) |
 | Minimum-metal density | **INTEGRATOR FILL PENDING** | M2.4 / M3.4 / M4.4 / M5.4 / MT.3 still under 30% | [06](butterfold_proto/physical/reports/signoff/06_drc.md) | [prefill log](butterfold_proto/physical/reports/signoff/evidence/drc/density_prefill.rpt) |
 | MSLOT | **PASS** | MSLOT.0–.9 = 0 items (unified official deck) | [06](butterfold_proto/physical/reports/signoff/06_drc.md) | [pass](butterfold_proto/physical/reports/signoff/evidence/drc/mslot_pass.rpt) |
-| Full device-level LVS | **PASS** | Netgen: Circuits match uniquely; 11,629 devices / 11,638 nets | [07](butterfold_proto/physical/reports/signoff/07_lvs.md) | [summary](butterfold_proto/physical/reports/signoff/evidence/lvs/full_netgen_lvs_summary.rpt) |
-| IR | **PASS** | VDD worst **1.01 mV**, VSS worst **1.13 mV** | [08](butterfold_proto/physical/reports/signoff/08_erc.md) | [IR](butterfold_proto/physical/reports/signoff/evidence/ir/power_grid.rpt) |
-| Power | **INFO** | **~0.115 W vectorless estimate**, no VCD/SAIF | [09](butterfold_proto/physical/reports/signoff/09_power.md) | [power](butterfold_proto/physical/reports/signoff/evidence/power/vectorless_power.rpt) |
-| Die area | **PASS** | **1.223277 mm²** ≤ 1.25 mm² | [00](butterfold_proto/physical/reports/signoff/00_manifest.md) | [area](butterfold_proto/physical/reports/signoff/evidence/area/final_area.rpt) |
+| Full device-level LVS | **PASS** | Netgen: Circuits match uniquely; 11,612 devices / 11,623 nets | [07](butterfold_proto/physical/reports/signoff/07_lvs.md) | [summary](butterfold_proto/physical/reports/signoff/evidence/lvs/full_netgen_lvs_summary.rpt) |
+| IR | **CHARACTERIZED** | VDD worst **1.03 mV**, VSS worst **1.00 mV** (no README numeric threshold) | [08](butterfold_proto/physical/reports/signoff/08_erc.md) | [IR](butterfold_proto/physical/reports/signoff/evidence/ir/power_grid.rpt) |
+| Power | **INFO** | **0.116 W vectorless estimate**, no VCD/SAIF | [09](butterfold_proto/physical/reports/signoff/09_power.md) | [power](butterfold_proto/physical/reports/signoff/evidence/power/vectorless_power.rpt) |
+| Die area | **PASS** | **1.211541 mm²** ≤ 1.25 mm²; 1092.66 × 1108.80 µm ≤ 1110 × 1110 | [00](butterfold_proto/physical/reports/signoff/00_manifest.md) | [area](butterfold_proto/physical/reports/signoff/evidence/area/final_area.rpt) |
 
 Empty electrical/reset violator files are the native OpenSTA `-violators` dumps (zero violations).
 
@@ -78,11 +79,11 @@ slot scheduling is **external**).
 | External samples | signed 8-bit Q1.7, interleaved I then Q |
 | Internal datapath | signed 16-bit, 7 fractional bits |
 | CP (15 kHz numerology) | short normal CP = 4 samples, long normal CP = 5 samples at N=64 |
-| Die | **1.223277 mm²** |
-| Antenna diodes | 14 |
-| Setup slack | +0.183361 ns (max-SS) |
-| Hold slack | +0.152106 ns (min-FF) |
-| Power | ~0.115 W **vectorless estimate** |
+| Die | **1092.66 × 1108.80 µm / 1.211541 mm²** |
+| Antenna diodes | 15 |
+| Setup slack | +5.04 ns (max-SS) |
+| Hold slack | +0.26 ns (min-FF) |
+| Power | 0.116 W **vectorless estimate** |
 
 Command bytes on `din`: `0x40` FFT2, `0x41` FFT64, `0x42` IFFT64, `0x43` IFFT2,
 `0x44` FFT3, `0x45` DFT12, `0x46`/`0x47` OFDM RX short/long, `0x48`/`0x49`
@@ -130,7 +131,7 @@ Final comparison:
 5. The two SRAM macros use the **PDK-supported hard-macro blackbox** (LEFview /
    abstract). They were **not** transistor-flattened.
 
-Result: **Circuits match uniquely** (11,629 devices, 11,638 nets).
+Result: **Circuits match uniquely** (11,612 devices, 11,623 nets).
 
 Representative stdcell compares: `and2_1` 3 PFET + 3 NFET; `inv_1` 1+1;
 `nand2_1` 2+2; `dffrnq_1` 14+14.
@@ -148,15 +149,15 @@ GDS.
 
 | Rule | Limit | Measured | Classification |
 |---|---|---|---|
-| DCF.1d COMP | ≤ 70% | 36.18% | **PASS** (minimum-clear) |
-| DCF.1b COMP | ≥ 25% | 36.18% | PASS |
-| PL.8 Poly2 | ≥ 14% | 27.54% | PASS |
-| M1.4 Metal1 | > 30% | 33.29% | PASS |
-| M2.4 Metal2 | > 30% | 19.03% | **INTEGRATOR FILL PENDING** |
-| M3.4 Metal3 | > 30% | 24.25% | **INTEGRATOR FILL PENDING** |
-| M4.4 Metal4 | > 30% | 3.40% | **INTEGRATOR FILL PENDING** |
-| M5.4 Metal5 | > 30% | 3.90% | **INTEGRATOR FILL PENDING** |
-| MT.3 MetalTop (5LM = Metal5) | > 30% | 3.90% | **INTEGRATOR FILL PENDING** |
+| DCF.1d COMP | ≤ 70% | 35.72% | **PASS** (minimum-clear) |
+| DCF.1b COMP | ≥ 25% | 35.72% | PASS |
+| PL.8 Poly2 | ≥ 14% | 27.19% | PASS |
+| M1.4 Metal1 | > 30% | 33.21% | PASS |
+| M2.4 Metal2 | > 30% | 19.52% | **INTEGRATOR FILL PENDING** |
+| M3.4 Metal3 | > 30% | 24.54% | **INTEGRATOR FILL PENDING** |
+| M4.4 Metal4 | > 30% | 3.63% | **INTEGRATOR FILL PENDING** |
+| M5.4 Metal5 | > 30% | 4.17% | **INTEGRATOR FILL PENDING** |
+| MT.3 MetalTop (5LM = Metal5) | > 30% | 4.17% | **INTEGRATOR FILL PENDING** |
 
 M2.4–MT.3 are **not waived** foundry minima. Chipathon organizers stated that
 minimum-clear must pass on the team GDS and that minimum-metal fill may be
@@ -180,11 +181,13 @@ Evidence: [`density_prefill_summary.rpt`](butterfold_proto/physical/reports/sign
 | | |
 |---|---|
 | Path | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| SHA-256 | `5a99213aa4de522a96d3d83cae5651fbab961b8032b313d6e2420eba3dc9b8c6` |
+| SHA-256 | `f193cb1b7f4ec60f41e8993f662416ed2c2a4e63ae107d213a85d8f4749f3906` |
+| Die | 1092.66 × 1108.80 µm (1.211541 mm²) |
 
-This is the exact pre-fill ECO streamout that passed team-side signoff
+This is the exact filled ECO streamout that passed team-side signoff
 (functional, setup/hold, electrical, reset, antenna, routing, min-clear,
-MSLOT, geometric DRC tables, full device LVS, IR, area).
+MSLOT, geometric DRC tables, full device LVS, IR, area). It is **not**
+final D03_A.def post-integration manufacturing signoff.
 
 An experimental dummy-filled GDS (`e02fb870…`) was **not** promoted. Fill
 polygons from that experiment are not the team submission.

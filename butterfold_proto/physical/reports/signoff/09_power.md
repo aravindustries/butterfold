@@ -1,24 +1,9 @@
-# 09 — Power
+# 09 — Vectorless power
 
-## VECTORLESS ESTIMATE — NO VCD/SAIF
+**INFO** — not a hard signoff threshold.
 
-This is **not** activity-accurate silicon power.
+max-SS `report_power`, **no VCD/SAIF**:
 
-## Result
+**0.116 W** total vectorless estimate.
 
-**INFO** — OpenSTA `report_power` total **0.115058 W** (shown as 1.149672e-01
-in the native table) at max-SS, 38.4 MHz.
-
-| | Internal | Switching | Leakage | Total |
-|---|---:|---:|---:|---:|
-| Total (W) | 7.571e-02 | 3.924e-02 | 1.299e-05 | 1.150e-01 |
-
-## Evidence
-
-| Item | Path |
-|---|---|
-| Native `report_power` | [evidence/power/vectorless_power.rpt](evidence/power/vectorless_power.rpt) |
-
-- Tool: OpenSTA in OpenROAD 26Q2-254-g61932e897
-- Original: `power_vectorless_max_ss.rpt`
-- Corner: max_ss_125C_4v50 + max SPEF
+Evidence: [vectorless_power.rpt](evidence/power/vectorless_power.rpt)
