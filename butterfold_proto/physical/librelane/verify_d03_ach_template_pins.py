@@ -68,6 +68,27 @@ def parse_pins(text: str) -> dict[str, dict]:
     return pins
 
 
+def parse_blockages(text: str) -> list[tuple[str, int, int, int, int]]:
+    m = re.search(r"^BLOCKAGES\s+(\d+)\s*;\n(.*)\nEND BLOCKAGES", text, re.S | re.M)
+    if not m:
+        return []
+    rects = []
+    for bm in re.finditer(
+        r"- LAYER (\S+)\s+(?:\+\s+)?RECT \( ([-\d]+) ([-\d]+) \) \( ([-\d]+) ([-\d]+) \)",
+        m.group(2),
+    ):
+        rects.append(
+            (
+                bm.group(1),
+                int(bm.group(2)),
+                int(bm.group(3)),
+                int(bm.group(4)),
+                int(bm.group(5)),
+            )
+        )
+    return rects
+
+
 def diearea(text: str):
     m = re.search(
         r"^DIEAREA \( ([-\d]+) ([-\d]+) \) \( ([-\d]+) ([-\d]+) \)", text, re.M
@@ -132,7 +153,22 @@ def main() -> int:
     print(f"FUNCTIONAL_MATCH {func_ok}/{len(FUNCTIONAL)}")
     print(f"PG_MATCH {pg_ok}")
     print(f"BTERM_EXPECTED {len(EXPECTED)}")
-    return 0 if func_ok == len(FUNCTIONAL) and pg_ok and not missing else 1
+
+    src_path = Path(sys.argv[3]) if len(sys.argv) > 3 else None
+    src_rects = parse_blockages(src_path.read_text()) if src_path else parse_blockages(template)
+    tpl_rects = parse_blockages(template)
+    print(f"SOURCE_M2_BLOCKAGES {len([r for r in src_rects if r[0]=='Metal2'])}")
+    print(f"TEMPLATE_M2_BLOCKAGES {len([r for r in tpl_rects if r[0]=='Metal2'])}")
+    m2_ok = 0
+    for r in src_rects:
+        if r in tpl_rects:
+            m2_ok += 1
+            print(f"MATCH_BLOCKAGE {r}")
+        else:
+            print(f"MISSING_BLOCKAGE {r}")
+    print(f"TEMPLATE_M2_BLOCKAGE_MATCH {m2_ok}/{len(src_rects)}")
+
+    return 0 if func_ok == len(FUNCTIONAL) and pg_ok and not missing and m2_ok == len(src_rects) else 1
 
 
 if __name__ == "__main__":

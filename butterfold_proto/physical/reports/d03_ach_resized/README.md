@@ -1,5 +1,9 @@
 # Resized ACH validation — reviewer package
 
+Superseded on `m2-fix` by
+[`../m2_fix/`](../m2_fix/README.md) (organizer Metal2 keep-out).
+This package is the previous ACH validation without that obstruction.
+
 **RESIZED ACH VALIDATION INTEGRATION COMPLETE**
 
 This is **not** final D03_A manufacturing signoff. Pad controls remain

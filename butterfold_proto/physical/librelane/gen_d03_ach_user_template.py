@@ -21,6 +21,7 @@ geometry from D03_ACH.def without inventing coordinates:
   input pads  (cell Y) : exact name match (clk, rst_n, din[], din_valid_i)
   output pads (cell A) : din_ready_o_OUT / dout_valid_o_OUT / dout_OUT[n]
   power/ground         : VDD, VSS (all Metal2 abutment rectangles)
+  BLOCKAGES            : organizer routing obstructions (Metal2 keep-out)
 """
 from __future__ import annotations
 
@@ -94,6 +95,38 @@ USE = {
 }
 
 
+def parse_blockage_rects(text: str) -> list[tuple[str, int, int, int, int]]:
+    """Parse LAYER/RECT pairs from a BLOCKAGES section. Coordinates are DEF DBU.
+
+    Organizer syntax is compact: `- LAYER Metal2 + RECT ( x1 y1 ) ( x2 y2 ) ;`
+    OpenROAD's DEF parser requires the LEF/DEF 5.8 multiline form without `+`.
+    """
+    section_m = re.search(r"^BLOCKAGES\s+\d+\s*;\n(.*)\nEND BLOCKAGES", text, re.S | re.M)
+    if not section_m:
+        return []
+    section = section_m.group(1)
+    rects = []
+    for m in re.finditer(
+        r"- LAYER (\S+)\s+(?:\+\s+)?RECT \( ([-\d]+) ([-\d]+) \) \( ([-\d]+) ([-\d]+) \)",
+        section,
+    ):
+        rects.append(
+            (m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)))
+        )
+    return rects
+
+
+def format_blockages(rects: list[tuple[str, int, int, int, int]]) -> str:
+    if not rects:
+        return ""
+    lines = [f"BLOCKAGES {len(rects)} ;"]
+    for layer, x1, y1, x2, y2 in rects:
+        lines.append(f"- LAYER {layer}")
+        lines.append(f"  RECT ( {x1} {y1} ) ( {x2} {y2} ) ;")
+    lines.append("END BLOCKAGES\n")
+    return "\n".join(lines)
+
+
 def parse_pins(text: str) -> dict[str, str]:
     m = re.search(r"^PINS\s+\d+\s*;\n(.*)\nEND PINS", text, re.S | re.M)
     if not m:
@@ -139,11 +172,14 @@ def main() -> int:
     for user, src in PIN_MAP.items():
         out_pins.append(rewrite_block(user, pins[src]))
 
+    rects = parse_blockage_rects(text)
+    blockages = format_blockages(rects)
     header = f"""# CLASSIFICATION: ACH_VALIDATION_ONLY
 # NOT the final D03_A.def interface.
 # Pad-control pins omitted pending organizer D03_A.def.
 # Source: {SRC_DEF}
 # Source SHA-256: {src_sha}
+# Organizer BLOCKAGES preserved: {len(rects)} rect(s)
 VERSION 5.8 ;
 DIVIDERCHAR "/" ;
 BUSBITCHARS "[]" ;
@@ -152,13 +188,19 @@ DESIGN butterfold_top ;
 {die}
 PINS {len(out_pins)} ;
 """
-    body = "\n".join(out_pins) + "\nEND PINS\nEND DESIGN\n"
+    body = "\n".join(out_pins) + "\nEND PINS\n"
+    if blockages:
+        body += blockages
+    body += "END DESIGN\n"
     OUT_DEF.write_text(header + body)
     out_sha = hashlib.sha256(OUT_DEF.read_bytes()).hexdigest()
     print(f"wrote {OUT_DEF}")
     print(f"source SHA-256 {src_sha}")
     print(f"output SHA-256 {out_sha}")
     print(f"pins {len(out_pins)}")
+    print(f"blockages {len(rects)}")
+    for layer, x1, y1, x2, y2 in rects:
+        print(f"  {layer} ({x1} {y1}) ({x2} {y2})")
     print("classification ACH_VALIDATION_ONLY")
     return 0
 

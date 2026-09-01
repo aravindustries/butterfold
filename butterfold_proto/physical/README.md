@@ -1,12 +1,12 @@
 # Authoritative two-SRAM physical flow
 
-On branch `def-integration-resized` the project-canonical GDS is
-repo-root `gds/butterfold_top.gds` (SHA `93f2aba1…`, 1110 × 1675 µm outer;
-ACH_VALIDATION_ONLY; **not** final D03_A). The previous main/pre-ACH baseline
-is SHA `f193cb1b…` (1092.66 × 1108.80 µm), historical only.
+On branch `m2-fix` the project-canonical GDS is
+repo-root `gds/butterfold_top.gds` (SHA `af6758ea…`, 1110 × 1675 µm outer;
+ACH_VALIDATION_ONLY + organizer Metal2 keep-out; **not** final D03_A).
+The previous ACH SHA `93f2aba1…` and pre-ACH SHA `f193cb1b…` are historical.
 
 The current ACH validation package is
-[`reports/d03_ach_resized/`](reports/d03_ach_resized/README.md).
+[`reports/m2_fix/`](reports/m2_fix/README.md).
 This file describes an older experimental physical-flow notebook; it is
 **not** the ACH validation signoff dashboard.
 
