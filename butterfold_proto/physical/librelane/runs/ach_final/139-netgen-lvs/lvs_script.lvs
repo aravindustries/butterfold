@@ -1,0 +1,7 @@
+set circuit1 [readnet spice /foss/designs/butterfold/butterfold_proto/physical/librelane/runs/ach_final/137-magic-spiceextraction/butterfold_top.spice]
+set circuit2 [readnet verilog /dev/null]
+puts "Reading SPICE netlist file '/headless/pdk_shadow/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/spice/gf180mcu_fd_sc_mcu9t5v0.spice'..."
+readnet spice /headless/pdk_shadow/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu9t5v0/spice/gf180mcu_fd_sc_mcu9t5v0.spice $circuit2
+puts "Reading Verilog netlist file '/foss/designs/butterfold/butterfold_proto/physical/librelane/runs/ach_final/48-openroad-fillinsertion/butterfold_top.pnl.v'..."
+readnet verilog /foss/designs/butterfold/butterfold_proto/physical/librelane/runs/ach_final/48-openroad-fillinsertion/butterfold_top.pnl.v $circuit2
+lvs "$circuit1 butterfold_top" "$circuit2 butterfold_top" /usr/local/lib/python3.12/dist-packages/librelane/scripts/netgen/setup.tcl /foss/designs/butterfold/butterfold_proto/physical/librelane/runs/ach_final/139-netgen-lvs/reports/lvs.netgen.rpt -blackbox -json
