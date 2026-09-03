@@ -10,6 +10,11 @@ There is no later organizer integration step. The final ACH shell preserves
 all 135 organizer terminals while keeping the ButterFold logical core API at
 23 terminals and exactly two SRAM macros.
 
+The final reviewer power-strengthening ECO uses GF180 technology-generated
+multi-cut via arrays: three independent VDD core entries and a constrained VSS
+entry strengthened to 6-cut/9-cut transitions. No critical via cuts are
+hand-drawn, and no main supply entry depends on one cut.
+
 The current routed-run pointer and artifact provenance are recorded in
 [`results/CURRENT_RUN.md`](results/CURRENT_RUN.md). A GDS stream-out stage has
 been added for a clearly labeled candidate snapshot; do not treat it as final

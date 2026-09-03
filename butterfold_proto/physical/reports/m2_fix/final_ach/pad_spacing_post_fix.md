@@ -1,6 +1,6 @@
 # Pad-spacing post-fix evidence
 
-Final candidate GDS SHA: `b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed`
+Final candidate GDS SHA: `12876f003ed41f9b6229ef95207e50af71b16ef45a63ffb8516eb1be5dd71d2d`
 
 BEFORE: `din_ready_o` Metal2 spacing to `din_ready_o_OE` was `0.000 um`, less
 than the GF180 M2.2a requirement of `0.280 um`.

@@ -12,7 +12,7 @@ final GDS has zero Metal2 in the prohibited rectangle, and closes the unchanged
 
 Canonical final ACH reviewer/submission GDS on this branch:
 [`gds/butterfold_top.gds`](../../../../gds/butterfold_top.gds)
-SHA-256 `b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed`.
+SHA-256 `12876f003ed41f9b6229ef95207e50af71b16ef45a63ffb8516eb1be5dd71d2d`.
 
 Previous ACH (no Metal2 keep-out) SHA `93f2aba1…` remains in Git history on
 `main`. Previous main/pre-ACH shrink SHA `f193cb1b…` is historical only.
@@ -30,6 +30,7 @@ Previous ACH (no Metal2 keep-out) SHA `93f2aba1…` remains in Git history on
 | SRAM | 2 × sram256x8m8wm1 R0 at (51.120, 720.560) and (531.120, 720.560) |
 | Clock | 38.4 MHz / 26.041667 ns |
 | FINAL_M2_VIOLATING_REGIONS | **0** |
+| Reviewer single-via power concern | **RESOLVED** — generated multi-cut arrays; critical single-cut bottlenecks 0 |
 | RTL / golden | unchanged |
 
 | Report | Check |

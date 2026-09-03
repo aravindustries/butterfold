@@ -399,7 +399,9 @@ if {$phase eq "fill"} {
 }
 
 if {$phase eq "final_sta_ss"} {
-  load_ss $out/filled.odb
+  set final_odb $out/filled.odb
+  if {[info exists env(FINAL_ACH_ODB)]} { set final_odb $env(FINAL_ACH_ODB) }
+  load_ss $final_odb
   constrain_final_ach_outputs
   extract_max $out/spef/final_ach.max.spef
   puts "FINAL_SETUP_WNS"; report_worst_slack -max -digits 6
@@ -408,16 +410,31 @@ if {$phase eq "final_sta_ss"} {
   report_checks -path_delay max -group_path_count 20 -endpoint_path_count 1 -unique_paths_to_endpoint \
     -format full_clock_expanded -fields {capacitance slew fanout input_pin net} > $out/final_ach_setup_paths.rpt
   puts "FINAL_ELECTRICAL SLEW [sta::max_slew_violation_count] CAP [sta::max_capacitance_violation_count]"
+  catch {unset_case_analysis rst_n}
+  catch {unset_case_analysis [get_ports rst_n]}
+  puts "FINAL_RESET_ELECTRICAL SLEW [sta::max_slew_violation_count] CAP [sta::max_capacitance_violation_count]"
   exit 0
 }
 
 if {$phase eq "final_sta_ff"} {
-  load_ff $out/filled.odb
+  set final_odb $out/filled.odb
+  if {[info exists env(FINAL_ACH_ODB)]} { set final_odb $env(FINAL_ACH_ODB) }
+  load_ff $final_odb
   constrain_final_ach_outputs
   extract_min $out/spef/final_ach.min.spef
   puts "FINAL_HOLD_WNS"; report_worst_slack -min -digits 6
   puts "FINAL_HOLD_TNS"; report_tns -min -digits 6
   puts "FINAL_HOLD_VIO [sta::endpoint_violation_count min]"
+  exit 0
+}
+
+if {$phase eq "final_antenna"} {
+  set final_odb $out/filled.odb
+  if {[info exists env(FINAL_ACH_ODB)]} { set final_odb $env(FINAL_ACH_ODB) }
+  read_db $final_odb
+  pg_connect
+  if {[catch {check_placement -verbose} m]} { puts "FINAL_PLACE $m"; exit 1 }
+  puts "FINAL_ANTENNA [check_antennas] DIODE [diode_count]"
   exit 0
 }
 

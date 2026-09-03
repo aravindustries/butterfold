@@ -5,7 +5,11 @@ set c max_ss_125C_4v50
 define_corners $c
 read_liberty -corner $c $pdk/libs.ref/gf180mcu_fd_sc_mcu9t5v0/lib/gf180mcu_fd_sc_mcu9t5v0__ss_125C_4v50.lib
 read_liberty -corner $c $pdk/libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram256x8m8wm1__ss_125C_4v50.lib
-read_db $out/filled.odb
+if {[info exists ::env(FINAL_ACH_ODB)]} {
+    read_db $::env(FINAL_ACH_ODB)
+} else {
+    read_db $out/filled.odb
+}
 read_sdc $proto/physical/constraints.sdc
 set_output_delay 0.0 -clock core_clk [get_ports {din_ready_o_OUT dout_valid_o_OUT dout_OUT[*]}]
 set_propagated_clock [all_clocks]

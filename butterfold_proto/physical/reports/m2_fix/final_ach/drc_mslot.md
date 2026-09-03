@@ -1,7 +1,7 @@
 # Exact-final-GDS DRC and MSLOT
 
 Candidate SHA256:
-`b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed`.
+`12876f003ed41f9b6229ef95207e50af71b16ef45a63ffb8516eb1be5dd71d2d`.
 
 The authoritative GF180 separate-table methodology completed cleanly for
 Metal1, Metal2, Metal3, Metal4, Metal5, MetalTop, Via1, Via2, Via3, Via4,

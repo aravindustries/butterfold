@@ -3,8 +3,16 @@
 # complete PDK model inventory; only revision-specific paths are overridden.
 set proto /headless/aravindustries-repos/butterfold/butterfold_proto
 source $proto/physical/results/m2_fix/lvs/extract/_env.tcl
-set ::env(CURRENT_GDS) $proto/physical/results/m2_fix/candidate/butterfold_top.gds
-set ::env(CURRENT_DEF) $proto/physical/results/m2_fix/filled.def
+if {[info exists ::env(FINAL_ACH_GDS)]} {
+    set ::env(CURRENT_GDS) $::env(FINAL_ACH_GDS)
+} else {
+    set ::env(CURRENT_GDS) $proto/physical/results/m2_fix/candidate/butterfold_top.gds
+}
+if {[info exists ::env(FINAL_ACH_DEF)]} {
+    set ::env(CURRENT_DEF) $::env(FINAL_ACH_DEF)
+} else {
+    set ::env(CURRENT_DEF) $proto/physical/results/m2_fix/filled.def
+}
 set ::env(STEP_DIR) $proto/physical/results/m2_fix/final_ach_lvs/extract
 set ::env(SAVE_SPICE) $::env(STEP_DIR)/butterfold_top.spice
 set ::env(MAGIC_EXT_USE_GDS) 1
