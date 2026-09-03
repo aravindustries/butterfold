@@ -1,7 +1,7 @@
 # 06 — Foundry DRC / official density / MSLOT (m2-fix)
 
 GDS SHA `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3`.
-Outer DIE **1110 × 1675 µm** (intentional ACH validation extent).
+Outer DIE **1110 × 1675 µm** (final ACH envelope).
 Compact CORE `6.72 20.16 1085.84 1088.64`.
 Metal2 keep-out (0, 0)–(2.0, 65.0) µm: **zero drawing Metal2** in the GDS
 ([final_m2_intersection.json](evidence/m2_audit/final_m2_intersection.json)).

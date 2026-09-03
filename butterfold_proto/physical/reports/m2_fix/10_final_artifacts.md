@@ -1,10 +1,9 @@
 # 10 — Final artifact manifest (m2-fix)
 
-**M2-FIX ACH VALIDATION INTEGRATION COMPLETE**
+**FINAL D03 ACH INTEGRATION COMPLETE**
 
-This is the **canonical m2-fix ACH validation GDS** on `m2-fix`
-(`ACH_VALIDATION_ONLY` + organizer Metal2 keep-out), not the final D03_A
-manufacturing GDS. Previous ACH SHA `93f2aba1…` is historical on `main`.
+This is the **canonical final ACH GDS** on `m2-fix`, with the organizer
+Metal2 keep-out and complete YAML-defined interface shell.
 
 | Item | Path / value |
 |---|---|
@@ -17,9 +16,9 @@ manufacturing GDS. Previous ACH SHA `93f2aba1…` is historical on `main`.
 | Validation template | `physical/librelane/d03_ach_user_template.def` |
 | Template SHA | `112db498d3fb2fa277771376687d212ef9c1a58b10bdb253b615ec17223d0909` |
 | Candidate GDS | `physical/results/m2_fix/candidate/butterfold_top.gds` |
-| Candidate SHA | `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3` |
+| Candidate SHA | `b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed` |
 | Canonical GDS | `gds/butterfold_top.gds` |
-| Canonical SHA | `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3` |
+| Canonical SHA | `b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed` |
 | Same GDS | **YES** (byte-identical after promote) |
 | Outer bbox | **1110 × 1675 µm** |
 | Internal CORE | `6.72 20.16 1085.84 1088.64` (1079.12 × 1068.48 µm) |
@@ -28,8 +27,8 @@ manufacturing GDS. Previous ACH SHA `93f2aba1…` is historical on `main`.
 | Powered netlist | `physical/results/m2_fix/butterfold_top.final.pnl.v` |
 | SPEF (STA of record) | `physical/results/m2_fix/spef/filled.{max,min}.spef` |
 | STA corners | `max_ss_125C_4v50` (setup / electrical / reset / power), `min_ff_n40C_5v50` (hold) |
-| Final D03_A.def | **NOT AVAILABLE** |
-| Pad controls | **PENDING_FINAL_D03_A_DEF** |
+| Final organizer DEF | **D03_ACH.def** |
+| Pad controls | **102/102 connected** |
 
 Heavy ODB/SPEF/Magic spice remain under `physical/results/` (not recommended for git).
 

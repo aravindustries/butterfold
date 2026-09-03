@@ -1,14 +1,14 @@
 # Authoritative two-SRAM physical flow
 
-On branch `m2-fix` the project-canonical GDS is
-repo-root `gds/butterfold_top.gds` (SHA `af6758ea…`, 1110 × 1675 µm outer;
-ACH_VALIDATION_ONLY + organizer Metal2 keep-out; **not** final D03_A).
-The previous ACH SHA `93f2aba1…` and pre-ACH SHA `f193cb1b…` are historical.
+Branch `m2-fix` contains the **FINAL ACH INTEGRATION** against the final
+`D03_ACH.def` geometry and final `D03_ACH_interface.yaml` connectivity. The
+reviewer/submission GDS is repo-root `gds/butterfold_top.gds`; its SHA and full
+same-GDS signoff are recorded in
+[`reports/m2_fix/final_ach/`](reports/m2_fix/final_ach/).
 
-The current ACH validation package is
-[`reports/m2_fix/`](reports/m2_fix/README.md).
-This file describes an older experimental physical-flow notebook; it is
-**not** the ACH validation signoff dashboard.
+There is no later organizer integration step. The final ACH shell preserves
+all 135 organizer terminals while keeping the ButterFold logical core API at
+23 terminals and exactly two SRAM macros.
 
 The current routed-run pointer and artifact provenance are recorded in
 [`results/CURRENT_RUN.md`](results/CURRENT_RUN.md). A GDS stream-out stage has

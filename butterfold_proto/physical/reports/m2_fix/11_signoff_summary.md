@@ -1,18 +1,18 @@
-# 11 — m2-fix ACH validation dashboard
+# 11 — final m2-fix ACH integration dashboard
 
-# M2-FIX ACH VALIDATION INTEGRATION COMPLETE
+# FINAL D03 ACH INTEGRATION COMPLETE
 
-Outer GDS **1110 × 1675 µm** is the intentional ACH validation envelope.
+Outer GDS **1110 × 1675 µm** is the final ACH envelope.
 Compact implementation CORE `6.72 20.16 1085.84 1088.64` (≤1110 × 1110).
 Organizer Metal2 keep-out **(0, 0)–(2.0, 65.0) µm** is empty of Metal2.
 
-Canonical m2-fix ACH validation GDS on this branch:
+Canonical final ACH GDS on this branch:
 `gds/butterfold_top.gds` SHA
-`af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3`.
+`b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed`.
 Previous ACH SHA `93f2aba1…` is historical on `main`.
 
-This is **not** `FULL TEAM-SIDE SIGNOFF COMPLETE` for a 1110 × 1110 participant
-die. Final D03_A integration remains **PENDING**.
+Final ACH connectivity and physical signoff are complete. Density below is
+reported for the complete organizer envelope without clipping.
 
 | Check | Status | Result | Report | Evidence |
 |---|---|---|---|---|
@@ -40,8 +40,8 @@ die. Final D03_A integration remains **PENDING**.
 | Full device-level LVS | **PASS** | uniquely matched; **11621** devices / **11640** nets; 2 SRAM | [07](07_lvs.md) | [summary](evidence/lvs/lvs_summary.rpt) |
 | IR | **CHARACTERIZED** | VDD **0.153 V**, VSS **0.090 V** | [08](08_routing_pg_ir.md) | [IR](evidence/ir/irdrop_summary.rpt) |
 | Power | **INFO** | **0.136970 W** vectorless, no VCD/SAIF | [09](09_power.md) | [power](evidence/power/vectorless_power.rpt) |
-| Final D03_A integration | **PENDING** | D03_A.def not available; pad controls pending | [10](10_final_artifacts.md) | — |
+| Final ACH interface integration | **PASS** | 135/135 terminals; controls 102/102; functional 21/21 | [final](final_ach/README.md) | [connectivity](final_ach/evidence/core_to_padring_connectivity.json) |
 
-Full-envelope ACH density reflects the intentional 1110 × 1675 validation
-extent; DCF.1b and M1.4 are below standalone team thresholds on this
-validation artifact. Do not treat a 1110 × 1110 clip as official.
+Full-envelope ACH density reflects the final 1110 × 1675 extent; DCF.1b and
+several metal-density rules are below nominal thresholds and remain explicitly
+documented. Do not treat a 1110 × 1110 clip as official.

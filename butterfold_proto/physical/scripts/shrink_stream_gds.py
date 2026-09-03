@@ -30,43 +30,28 @@ for p in (DEF_PATH, TECH_LEF, CELL_LEF, SRAM_LEF, SC_GDS, SRAM_GDS, LYT, LYP, LY
     if not p.is_file():
         raise SystemExit(f"missing {p}")
 
-tech = pya.Technology()
-tech.load(str(LYT))
-opts = tech.load_layout_options
+opts = pya.LoadLayoutOptions()
 opts.lefdef_config.read_lef_with_def = False
 opts.lefdef_config.lef_files = [str(TECH_LEF), str(CELL_LEF), str(SRAM_LEF)]
 opts.lefdef_config.map_file = str(LYM)
 opts.lefdef_config.dbu = 0.0005
-opts.lefdef_config.net_property_name = None
-opts.lefdef_config.instance_property_name = None
-opts.lefdef_config.pin_property_name = None
-opts.cell_conflict_resolution = pya.LoadLayoutOptions.CellConflictResolution.RenameCell
+opts.lefdef_config.macro_layout_files = [str(SC_GDS), str(SRAM_GDS)]
+opts.lefdef_config.macro_resolution_mode = 2
 
 layout = pya.Layout()
 print(f"[INFO] Reading DEF {DEF_PATH}")
 layout.read(str(DEF_PATH), opts)
 top_index = layout.cell(DESIGN).cell_index()
-print("[INFO] Clearing abstract cells")
-for cell in layout.each_cell():
-    if cell.cell_index() != top_index and not cell.name.startswith("VIA"):
-        cell.clear()
-print("[INFO] Merging GDS libraries")
-for gds in (SC_GDS, SRAM_GDS):
-    layout.read(str(gds), opts)
-
-out_layout = pya.Layout()
-out_layout.dbu = layout.dbu
-top = out_layout.create_cell(DESIGN)
-top.copy_tree(layout.cell(DESIGN))
-missing = [c.name for c in out_layout.each_cell() if c.is_ghost_cell()]
+top = layout.cell(DESIGN)
+missing = [c.name for c in layout.each_cell() if c.is_ghost_cell()]
 if missing:
     raise SystemExit("missing GDS cells: " + ", ".join(missing))
 print("[INFO] All LEF cells have matching GDS cells.")
 
 GDS_PATH.parent.mkdir(parents=True, exist_ok=True)
-out_layout.write(str(GDS_PATH))
+layout.write(str(GDS_PATH))
 bbox = top.bbox()
-dbu = out_layout.dbu
+dbu = layout.dbu
 w_um = bbox.width() * dbu
 h_um = bbox.height() * dbu
 sha = hashlib.sha256(GDS_PATH.read_bytes()).hexdigest()

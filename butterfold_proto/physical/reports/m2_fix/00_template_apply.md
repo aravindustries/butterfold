@@ -1,6 +1,6 @@
 # m2-fix template application (cheap gate)
 
-Classification: ACH_VALIDATION_ONLY (final D03_A.def not available)
+Classification: FINAL ACH INTEGRATION (`D03_ACH.def` is final)
 
 - Organizer DEF: `D03.def/D03/project_defs/ACH/D03_ACH.def`
 - Organizer SHA-256: `79bd0dcad427802b4ad71ab030a0c649b9ead74354ce6e0ee58d16c73cff2f99`

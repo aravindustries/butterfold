@@ -1,12 +1,12 @@
-# 00 — m2-fix ACH validation manifest
+# 00 — final m2-fix ACH integration manifest
 
 | Item | Value |
 |---|---|
 | Branch | `m2-fix` |
 | ORIGINAL_MAIN_HEAD | `f56df5a94c1a020510612e7709794a5e1a66671e` |
-| Classification | ACH_VALIDATION_ONLY + organizer Metal2 keep-out |
-| Pad controls | PENDING_FINAL_D03_A_DEF |
-| Final D03_A.def | **NOT AVAILABLE** |
+| Classification | FINAL ACH INTEGRATION + organizer Metal2 keep-out |
+| Pad controls | **102/102 CONNECTED** |
+| Final organizer DEF | **D03_ACH.def** |
 | Clock | 38.4 MHz / 26.041667 ns |
 | SCL | `gf180mcu_fd_sc_mcu9t5v0` |
 | SRAM | 2 × `gf180mcu_fd_ip_sram__sram256x8m8wm1` |
@@ -17,7 +17,7 @@
 
 | | Path | SHA-256 |
 |---|---|---|
-| Canonical m2-fix ACH validation GDS (this branch; not final D03_A) | `gds/butterfold_top.gds` | `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3` |
+| Canonical final ACH GDS | `gds/butterfold_top.gds` | `b25fbd2fffaf138d211e33b281b8a8e248e0684ecded781003bc51f07532a5ed` |
 | Candidate (byte-identical) | `physical/results/m2_fix/candidate/butterfold_top.gds` | same |
 | Previous ACH (no M2 keep-out) | Git history of `gds/butterfold_top.gds` on `main` | `93f2aba11dab0df4e3c9431ff2e2c060fce066da17924ad1ed2657b19e4e5dd7` |
 
