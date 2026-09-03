@@ -164,16 +164,56 @@ def main() -> int:
         f"vdd_m4_stripe {m4_x1/dbu:.3f} {m4_y1/dbu:.3f} {m4_x2/dbu:.3f} {m4_y2/dbu:.3f}"
     )
 
+    # The core PDN drops only ONE VDD Metal4 stripe under the pin span, so the
+    # original single via + 1.6-um riser carried the entire chip supply
+    # ("you're powering your whole project through 1 via" -- review comment).
+    # The band above the core is free: every VSS Metal4 stripe stops at the
+    # core top and there is no signal M4/M5 routing there.  Build a wide plate
+    # in that band, tab several core stripes into it, and via EVERY pin.
     add_rect(sw_vdd, m2, x_lo, y_lo, x_hi, y_hi)
-    # Extend this M4 stripe from its current top up to the pin Y.
-    extend_from = max(m4_y1, min(m4_y2, core.yMax()))
-    add_rect(sw_vdd, m4, m4_x1, extend_from, m4_x2, y_hi)
-    add_rect(sw_vdd, m3, m4_x1, y_lo, m4_x2, y_hi)
-    cx = (m4_x1 + m4_x2) // 2
-    cy = (y_lo + y_hi) // 2
-    add_via(sw_vdd, via3, cx, cy)
-    add_via(sw_vdd, via2, cx, cy)
-    print(f"vdd_via {cx/dbu:.3f} {cy/dbu:.3f}")
+
+    vss_probe = block.findNet("VSS")
+    vss_m4_top = 0
+    if vss_probe is not None:
+        for b in special_rects(vss_probe, "Metal4"):
+            vss_m4_top = max(vss_m4_top, b[3])
+    # Clear every VSS Metal4 top by 1 um -- never overlap the other supply.
+    plate_y1 = max(vss_m4_top, core.yMax()) + um(dbu, 1.00)
+    plate_y2 = y_lo - um(dbu, 2.00)        # stop short of the pin row
+
+    # Full-height core stripes within reach of the pin span.
+    reach = um(dbu, 160.0)
+    feeders = [
+        b for b in vdd_m4
+        if b[0] >= x_lo - reach and b[2] <= x_hi + reach
+        and b[3] >= core.yMax() - um(dbu, 5.0)
+    ]
+    if not feeders:
+        feeders = [stripe]
+
+    if plate_y2 > plate_y1:
+        plate_x1 = min(b[0] for b in feeders)
+        plate_x2 = max(b[2] for b in feeders)
+        add_rect(sw_vdd, m4, plate_x1, plate_y1, plate_x2, plate_y2)
+        for b in feeders:
+            add_rect(sw_vdd, m4, b[0], min(b[3], plate_y1), b[2], plate_y1)
+        # Riser spans ONLY the pin x-range, so no metal reaches the die edge
+        # at an x where the organizer defined no pin.
+        add_rect(sw_vdd, m4, x_lo, plate_y2, x_hi, y_hi)
+        print(
+            f"vdd_plate {plate_x1/dbu:.3f} {plate_y1/dbu:.3f} "
+            f"{plate_x2/dbu:.3f} {plate_y2/dbu:.3f} feeders={len(feeders)}"
+        )
+    else:
+        extend_from = max(m4_y1, min(m4_y2, core.yMax()))
+        add_rect(sw_vdd, m4, m4_x1, extend_from, m4_x2, y_hi)
+        print("vdd_plate skipped: no clear band, single stripe retained")
+
+    add_rect(sw_vdd, m3, x_lo, y_lo, x_hi, y_hi)
+    for _, bx1, by1, bx2, by2 in vdd_boxes:
+        add_via(sw_vdd, via3, (bx1 + bx2) // 2, (by1 + by2) // 2)
+        add_via(sw_vdd, via2, (bx1 + bx2) // 2, (by1 + by2) // 2)
+    print(f"vdd_vias {len(vdd_boxes)}")
 
     # --- VSS ---
     vss = block.findNet("VSS")
