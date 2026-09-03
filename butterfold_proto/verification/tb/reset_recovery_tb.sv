@@ -12,7 +12,7 @@ module reset_recovery_tb;
     integer k;
     logic [7:0] expected [0:9];
 
-    butterfold_top dut(.*);
+    butterfold_core dut(.*);
     always #5 clk=~clk;
 
     task automatic apply_reset;

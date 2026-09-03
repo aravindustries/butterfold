@@ -13,7 +13,7 @@ PHYS = ROOT / "physical"
 OUT = PHYS / "results/padframe/lvs"
 WORK = OUT / "work"
 GDS = PHYS / "results/padframe/gds/butterfold_padframe_candidate.gds"
-EXPECTED = "a7820a96542f2b443ea2f5e44cf227d777583f751d031f629d542aea3fde8f4d"
+EXPECTED = "6afa3b1193ae688da11d4b9b1d217836f8710047c811ccbfddacfb0316b29c38"
 SETUP = Path("/foss/pdks/gf180mcuD/libs.tech/netgen/gf180mcuD_setup.tcl")
 MAGICRC = Path("/foss/pdks/gf180mcuD/libs.tech/magic/gf180mcuD.magicrc")
 
@@ -39,7 +39,7 @@ def main():
     merged = OUT / "layout_hierarchical_merged.gds"
     run([sys.executable, PHYS / "build_lvs_hier_layout.py", GDS, abstract],
         OUT / "layout_abstraction.log")
-    shutil.copy2(abstract, merged)
+    shutil.copyfile(abstract, merged)
     for layer in (34, 35, 36, 38, 42, 40, 46, 41, 81):
         temp = OUT / "layout_merge.tmp.gds"
         run([sys.executable, PHYS / "merge_lvs_layer.py", merged, temp, layer],
@@ -60,7 +60,7 @@ def main():
     run(["openroad", "-no_init", "-no_splash", "-exit",
          PHYS / "lvs_reference.tcl"], OUT / "reference_generation.log")
     raw = OUT / "reference_physical_raw.cdl"
-    shutil.copy2(OUT / "reference_physical.cdl", raw)
+    shutil.copyfile(OUT / "reference_physical.cdl", raw)
     layout = OUT / "layout.spice"
     reference = OUT / "reference.spice"
     bad = OUT / "reference_bad.spice"
@@ -75,7 +75,7 @@ def main():
     good_pass = "Final result: Circuits match uniquely." in good_report
 
     neg = OUT / "negative_control"; neg.mkdir(exist_ok=True)
-    shutil.copy2(bad, neg / "reference_bad.spice")
+    shutil.copyfile(bad, neg / "reference_bad.spice")
     bad_run = run(["netgen", "-batch", "lvs",
                    f"{layout} butterfold_padframe_top",
                    f"{neg / 'reference_bad.spice'} butterfold_padframe_top",

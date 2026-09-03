@@ -191,7 +191,7 @@ module butterfold_top_tb;
     end
 `endif
 
-    butterfold_top #(
+    butterfold_core #(
         .TRANSACTION_FIFO_DEPTH(4),
         .TX_BYTE_INTERVAL(TEST_TX_BYTE_INTERVAL)
     ) dut (

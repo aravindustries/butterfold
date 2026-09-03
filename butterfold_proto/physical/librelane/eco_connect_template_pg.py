@@ -206,9 +206,20 @@ def main() -> int:
     if pad_x1 < core.xMin() or pad_x2 > m5_box[2]:
         raise SystemExit("VSS M4 pad not over VSS Metal5 / inside core")
     pad_y1, pad_y2 = m5_box[1], m5_box[3]
-    # M3 vertical bus in the west pin column (x=0..1 um)
-    add_rect(sw_vss, m3, um(dbu, 0.0), min(ymin, pad_y1), um(dbu, 1.0), ymax)
-    add_rect(sw_vss, m3, um(dbu, 0.0), pad_y1, pad_x2, pad_y2)
+    # Metal in the x=0..1 um pin column must exist ONLY where the organizer
+    # actually placed a pin.  Metal that reaches the block boundary at a y with
+    # no pin sits a fraction of a micron from padring metal once the block is
+    # integrated, and trips minimum spacing (reported by LuighiV on the
+    # previous submission: "a long metal strip close to a pad violating a
+    # minimum distance").  So: keep the edge column to the pin span, and run
+    # inward from x >= 1 um to reach the M4 landing pad.
+    EDGE_KEEPOUT = um(dbu, 1.0)
+    # A: edge-column bus, pin span only -- Via2 lands at each pin centre x=0.5
+    add_rect(sw_vss, m3, um(dbu, 0.0), ymin, um(dbu, 1.5), ymax)
+    # B: vertical drop to pad level, inboard of the boundary, overlapping A
+    add_rect(sw_vss, m3, EDGE_KEEPOUT, pad_y1, um(dbu, 2.0), ymax)
+    # C: horizontal run to the M4 pad, no longer touching x=0
+    add_rect(sw_vss, m3, EDGE_KEEPOUT, pad_y1, pad_x2, pad_y2)
     add_rect(sw_vss, m4, pad_x1, pad_y1, pad_x2, pad_y2)
     cx_pad = (pad_x1 + pad_x2) // 2
     cy_pad = (pad_y1 + pad_y2) // 2

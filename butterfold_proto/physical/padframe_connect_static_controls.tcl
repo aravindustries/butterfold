@@ -48,20 +48,41 @@ proc create_pad_tie {pad_name value x y pins} {
   puts "PAD_CONTROL $pad_name $suffix $inst_name [join $pins ,]"
 }
 
-# West-side inputs: disable pull-up and pull-down.
-set y 500
+# Pad SIDE/location comes from PAD_TIE_INFO (generated from the official
+# ACH pad map by gen_pad_positions.py) -- do not hand-edit coordinates here.
+# Tie cells are placed a fixed inward offset from whichever row (west or
+# north) the pad actually sits on, rather than assuming everything is on one
+# edge. West row is at x=$PAD_WEST_ROW_X; north row is at y=$PAD_NORTH_ROW_Y.
+set phys_dir [file dirname [file normalize [info script]]]
+source "$phys_dir/padframe_pad_positions.generated.tcl"
+
+proc tie_xy {pad offset} {
+  global PAD_TIE_INFO PAD_WEST_ROW_X PAD_NORTH_ROW_Y
+  lassign $PAD_TIE_INFO($pad) side loc
+  if {$side eq "W"} {
+    return [list [expr {$PAD_WEST_ROW_X + $offset}] $loc]
+  } else {
+    return [list $loc [expr {$PAD_NORTH_ROW_Y - $offset}]]
+  }
+}
+
+# West-side-style inputs: disable pull-up and pull-down. (clk/rst_n are on
+# the west row too per the official map, so they take the same tie style as
+# the din bus -- this list is signal ROLE, not a physical side anymore.)
 foreach pad {u_pad_din_valid u_pad_din0 u_pad_din1 u_pad_din2 u_pad_din3 u_pad_din4 u_pad_din5 u_pad_din6 u_pad_din7 u_pad_clk u_pad_rst_n} {
-  create_pad_tie $pad 0 420 $y {PU PD}
-  set y [expr {$y + 75}]
+  lassign [tie_xy $pad 70] x y
+  create_pad_tie $pad 0 $x $y {PU PD}
 }
 
 # Output-capable pads: disable input, pulls, slew/CS options; enable output and
-# retain the selected maximum PDRV setting.
-set y 500
+# retain the selected maximum PDRV setting. These are split across west
+# (din_ready, dout_valid, dout[7], dout[6]) and north (dout[5:0]) per the
+# official map -- tie_xy resolves the correct row for each.
 foreach pad {u_pad_din_ready u_pad_dout0 u_pad_dout1 u_pad_dout2 u_pad_dout3 u_pad_dout4 u_pad_dout5 u_pad_dout6 u_pad_dout7 u_pad_dout_valid} {
-  create_pad_tie $pad 0 1780 $y {CS IE PD PU SL}
-  create_pad_tie $pad 1 1790 $y {OE PDRV0 PDRV1}
-  set y [expr {$y + 75}]
+  lassign [tie_xy $pad 70] x0 y0
+  lassign [tie_xy $pad 80] x1 y1
+  create_pad_tie $pad 0 $x0 $y0 {CS IE PD PU SL}
+  create_pad_tie $pad 1 $x1 $y1 {OE PDRV0 PDRV1}
 }
 
 # Legalize only the newly inserted local cells and their immediate neighbors.
