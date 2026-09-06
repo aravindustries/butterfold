@@ -1,0 +1,33 @@
+FINAL_RING_IR_ANALYZED = YES
+FINAL_RING_IR_TOPOLOGY_SHA = cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f
+ODB = physical/results/m2_fix/power_ring.odb (29320020 bytes, 2026-09-06 10:16)
+DEF = physical/results/m2_fix/power_ring.def (15454005 bytes, 2026-09-06 10:16)
+GDS_PROVENANCE = KLayout DEF->GDS of power_ring.def is geometry-identical (XOR 0 on 28 layers) to SHA cb449023; only GDS BGNLIB/BGNSTR timestamps differ
+SPEF = physical/results/m2_fix/irdrop_final_ring/spef/power_ring.max.spef (fresh OpenRCX max, 53340 rc segments)
+METHOD = final_ach_ir_power.tcl equivalent: max_ss_125C_4v50, VDD=4.5 V, VSS=0, irdrop/VDD.vsrc and VSS.vsrc, analyze_power_grid
+CORE_WIDTH_M5_BARS = absent (not restored)
+
+PRE_RING_IR_VDD = 0.125 V
+PRE_RING_IR_VSS = 0.0889 V
+
+POST_RING_IR_VDD = 0.206 V
+POST_RING_IR_VSS = 0.0889 V
+POST_RING_IR_VDD_PERCENT = 4.57 % of 4.5 V
+POST_RING_IR_VSS_PERCENT = 1.97 % of 4.5 V
+VECTORLESS_POWER_W = 0.120
+
+PSM_VDD = PASS
+PSM_VSS = PASS
+PSM-0040 VDD all shapes connected
+PSM-0040 VSS all shapes connected
+
+WORST_VDD_INSTANCE = _19562_ Metal1 (1036.670, 34.463) V=4.294148
+WORST_VSS_INSTANCE = FILLER_172_1760 Metal1 (992.600, 887.040) V=0.088860
+
+INVESTIGATION:
+Per-instance VDD extra drop vs pre-ring CSV is spatially uniform mean +80.6 mV (min +69.2 mV, max +90.2 mV).
+VSS worst rise is unchanged at 0.0889 V.
+VDD Metal4 feed rectangles are identical in power_fixed.odb and power_ring.odb (3 envelope feeds 1.6 um, y=1088.64-1675.00, overlapping core straps by 0.30 um).
+Ring added 4 Metal5 envelope rectangles (8.0 um) and 6 Via4 3x3 on those existing VDD M4 feeds (y=1100 and y=1669).
+Uniform series offset + identical M4 geometry => OpenROAD PDNSim via-on-strap series resistance, not a broken pad-to-core M4 path.
+Physical ring left unchanged.

@@ -10,9 +10,15 @@ that obstruction and all 135 YAML terminals from before routing, proves the
 final GDS has zero Metal2 in the prohibited rectangle, and closes the unchanged
 23-terminal ButterFold logical design against the final ACH padring interface.
 
-Canonical final ACH reviewer/submission GDS on this branch:
-[`gds/butterfold_top.gds`](../../../../gds/butterfold_top.gds)
-SHA-256 `12876f003ed41f9b6229ef95207e50af71b16ef45a63ffb8516eb1be5dd71d2d`.
+Canonical power-ring tapeout GDS on branch `power_ring`:
+[`gds/butterfold_top.gds`](../../../gds/butterfold_top.gds)
+SHA-256 `cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f`.
+
+Package: [`final_power_ring/`](final_power_ring/).  
+Manifest: [`final_power_ring/tapeout_artifact_manifest.md`](final_power_ring/tapeout_artifact_manifest.md).
+
+Pre-ring ACH reviewer GDS SHA `12876f003ed41f9b6229ef95207e50af71b16ef45a63ffb8516eb1be5dd71d2d`
+remains the via-fix baseline in [`final_ach/`](final_ach/).
 
 Previous ACH (no Metal2 keep-out) SHA `93f2aba1…` remains in Git history on
 `main`. Previous main/pre-ACH shrink SHA `f193cb1b…` is historical only.
