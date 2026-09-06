@@ -31,7 +31,7 @@ organizer-level integration/fill may occur later.
 | Clock | **38.4 MHz** / 26.041667 ns |
 | TX pacing | `TX_BYTE_INTERVAL = 10` |
 | Canonical GDS | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| GDS SHA-256 | `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3` |
+| GDS SHA-256 | `cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f` |
 | ACH outer bbox | **1110 × 1675 µm** (organizer pin/integration envelope) |
 | Compact CORE | `6.72 20.16 1085.84 1088.64` → **1079.12 × 1068.48 µm** |
 | Metal2 keep-out | **(0, 0)–(2.0, 65.0) µm** — zero Metal2 in final GDS |
@@ -140,7 +140,7 @@ Do not silently change arithmetic scaling. Python golden models are the spec.
 | | |
 |---|---|
 | Path | [`gds/butterfold_top.gds`](gds/butterfold_top.gds) |
-| SHA-256 | `af6758ea9759ce7d48cb3b78bfea4cb13fdba6af8b18af94d56e73a09e6c8cd3` |
+| SHA-256 | `cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f` |
 | ACH outer bbox | **1110 × 1675 µm** |
 | Compact CORE | 1079.12 × 1068.48 µm (`6.72 20.16 1085.84 1088.64`) |
 | Metal2 keep-out | (0, 0)–(2.0, 65.0) µm, **zero** Metal2 |

@@ -3,7 +3,7 @@
 GDS SHA `cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f`
 
 Candidate: `physical/results/m2_fix/candidate_power_ring/butterfold_top.gds`  
-Canonical: `gds/butterfold_top.gds` (byte-identical)
+Canonical: repo-root `gds/butterfold_top.gds` and `butterfold_proto/gds/butterfold_top.gds` (byte-identical)
 
 KLayout DEF→GDS streamout of `power_ring.odb` / `power_ring.def`, same method as the signed-off ACH GDS.
 
