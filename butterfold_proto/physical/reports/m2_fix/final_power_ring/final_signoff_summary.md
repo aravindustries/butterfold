@@ -15,13 +15,15 @@ KLayout DEF→GDS streamout of `power_ring.odb` / `power_ring.def`, same method 
 | FINAL_PDN | **PASS** |
 | FULL_SIGNOFF | **PASS** |
 | SAME_GDS_FOR_ALL_FINAL_CHECKS | **YES** |
-| SAFE_TO_PUSH | **NO** |
-| SAFE_TO_MERGE_TO_MAIN | **NO** |
-| SAFE_FOR_TAPEOUT | **NO** |
+| SAFE_TO_PUSH | **YES** |
+| SAFE_TO_MERGE_TO_MAIN | **YES** |
+| SAFE_FOR_TAPEOUT | **YES** |
 | AUTO_PUSHED / AUTO_MERGED | **NO** |
 | FINAL_RING_IR_ANALYZED | **YES** |
 | POST_RING_IR_VDD / VSS | **0.206 V** / **0.0889 V** (PSM both PASS) |
-| DENSITY_FILL_OWNERSHIP | **UNRESOLVED** |
+| DENSITY_FILL_OWNERSHIP | **ORGANIZER/INTEGRATOR** |
+| PARTICIPANT_DENSITY_BLOCKER | **NO** |
+| FINAL_INTEGRATOR_FILL_PENDING | **YES** |
 
 ## Ring
 
@@ -29,18 +31,21 @@ Closed Metal5 VDD/VSS ring in the ACH envelope, 8.0 µm, Via4 3×3 tech-generate
 
 See [power_ring_connectivity.md](power_ring_connectivity.md).
 
-## Remaining tapeout blocker
+## Fill and IR
 
 Quantitative IR on this SHA is closed: [final_ring_ir.md](final_ring_ir.md).
 VDD PDNSim 0.206 V vs pre-ring 0.125 V was investigated; VSS is unchanged;
 PSM-0040 both rails; physical ring not modified.
 
-Density/dummy-metal fill ownership is **not** established from organizer or
-Chipathon 2026 collateral. Participant envelope density remains below
-nominal minima and was **not** greened with fill.
+Dummy-metal / CMP fill is organizer/integrator-owned after participant GDS
+submission. Participant dummy fill is **not** required. Envelope density
+numbers remain below foundry minima and were **not** greened with fill.
 See [density_fill_ownership.md](density_fill_ownership.md).
 
+Checkpoint artifacts: [tapeout_artifact_manifest.md](tapeout_artifact_manifest.md).
+
 ```
-SAFE_FOR_TAPEOUT = NO
-DENSITY_FILL_OWNERSHIP = UNRESOLVED
+SAFE_FOR_TAPEOUT = YES
+DENSITY_FILL_OWNERSHIP = ORGANIZER/INTEGRATOR
+FINAL_INTEGRATOR_FILL_PENDING = YES
 ```

@@ -1,18 +1,26 @@
 # Density / dummy-metal fill ownership
 
 ```
-DENSITY_FILL_OWNERSHIP = UNRESOLVED
-PARTICIPANT_DENSITY_BLOCKER = UNRESOLVED
+DENSITY_FILL_OWNERSHIP = ORGANIZER/INTEGRATOR
+PARTICIPANT_DENSITY_BLOCKER = NO
+PARTICIPANT_DUMMY_FILL_REQUIRED = NO
+FINAL_INTEGRATOR_FILL_PENDING = YES
 ```
 
 Final-envelope official density on SHA `cb449023…` is below GF180 nominal
 minima (COMP 23.72 %, M1 21.77 %, M2 13.91 %, M3 16.85 %, M4 4.46 %,
-M5/MT 5.55 %). That is reported honestly. **No fill was added.**
+M5/MT 5.55 %). That is reported honestly. **No participant dummy fill was
+added and the GDS was not regenerated.**
 
-This note exists because prior text (“integrator fill pending”) is **not**
-accepted as ownership. Ownership was re-derived from Chipathon/organizer
-collateral already in this repository, plus the Chipathon 2026 Integration
-README that that collateral points at.
+Organizer clarification for this checkpoint: final dummy-metal / CMP fill
+will be performed by the organizer/integrator after participant GDS
+submission. Participant ButterFold GDS is not required to contain dummy
+fill. Envelope density remaining below foundry minima is therefore **not**
+a participant tapeout blocker.
+
+Local organizer/Chipathon collateral still does not contain a dummy-fill
+script. The assignment above is the organizer clarification recorded for
+this checkpoint, not a newly discovered fill deck in `D03.def`.
 
 ## What was searched
 
@@ -37,19 +45,11 @@ datatype 4) and sets `CHIP = extent.sized(0.0)` of **whatever GDS is being
 checked**. That is a foundry rule-deck fact. It does not assign who inserts
 those dummy layers for Chipathon 2026.
 
-## Why this is not option A or B
+## Assignment recorded for this checkpoint
 
-Organizer collateral **does** show that participant `butterfold_top.gds` is a
-**slot** (1110×1675 µm at origin 350/910) inside a **2935×2935 µm padring
-chip**, with Metal1–Metal5 routing blockages over the slot. That is the ACH
-integration model. It is **not** an explicit sentence that dummy/CMP fill of
-the participant slot or of the assembled chiptop is owned by the
-organizer/integrator after GDS submission.
-
-It is also **not** an explicit requirement that dummy metal must be inside
-the participant ButterFold GDS. `info.yaml` / `lvs_config.json` /
-`D03_ACH_interface.yaml` do not list a participant density-fill deliverable.
-
-Without that assignment, fill ownership is **UNRESOLVED**. Participant-side
-density is **not** independently satisfied. No fill was inserted to greening
-the numbers.
+Organizer collateral shows the participant GDS is a slot (1110×1675 µm at
+origin 350/910) inside a 2935×2935 µm padring chip. The local DEF/YAML still
+contain no dummy-fill deck. The organizer clarification for this checkpoint
+is that dummy-metal / CMP fill is performed after participant submission, so
+participant dummy fill is not required and envelope density is not a
+participant blocker. No fill was added to this GDS.

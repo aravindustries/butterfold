@@ -1,10 +1,27 @@
 # Authoritative two-SRAM physical flow
 
+Current tapeout checkpoint is on branch `power_ring`. Canonical GDS:
+
+[`../gds/butterfold_top.gds`](../gds/butterfold_top.gds)  
+SHA-256 `cb44902373b3189249cefb8f7085823e1aa2b0dcd9e483ff7426c30397c5bf9f`
+
+ODB/DEF: `results/m2_fix/power_ring.odb` / `.def`.  
+Signoff package: [`reports/m2_fix/final_power_ring/`](reports/m2_fix/final_power_ring/).  
+Artifact manifest: [`reports/m2_fix/final_power_ring/tapeout_artifact_manifest.md`](reports/m2_fix/final_power_ring/tapeout_artifact_manifest.md).
+
+Dummy-metal / CMP fill is organizer/integrator-owned
+(`FINAL_INTEGRATOR_FILL_PENDING = YES`). Do not add participant dummy fill.
+
+The preceding ACH-integrated power-via fix (SHA `12876f00…`) remains the
+pre-ring baseline. Reports for that baseline live in
+[`reports/m2_fix/final_ach/`](reports/m2_fix/final_ach/).
+
+---
+
 Branch `m2-fix` contains the **FINAL ACH INTEGRATION** against the final
 `D03_ACH.def` geometry and final `D03_ACH_interface.yaml` connectivity. The
-reviewer/submission GDS is repo-root `gds/butterfold_top.gds`; its SHA and full
-same-GDS signoff are recorded in
-[`reports/m2_fix/final_ach/`](reports/m2_fix/final_ach/).
+historical ACH reviewer GDS SHA `12876f00…` is superseded on `power_ring` by
+the power-ring GDS above.
 
 There is no later organizer integration step. The final ACH shell preserves
 all 135 organizer terminals while keeping the ButterFold logical core API at
