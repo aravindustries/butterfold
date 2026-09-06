@@ -76,3 +76,14 @@ second west-core branch).
 ## PSM
 
 `check_power_grid -net VDD` / `VSS`: all shapes connected (PSM-0040).
+
+## Quantitative IR (final topology, SHA `cb449023…`)
+
+| | Pre-ring | Final ring |
+|---|---:|---:|
+| VDD worst drop | 0.125 V | **0.206 V** |
+| VSS worst rise | 0.0889 V | **0.0889 V** |
+| PSM-0040 | PASS | PASS |
+
+Fresh SPEF + established `analyze_power_grid` / vsrc method.
+See [final_ring_ir.md](final_ring_ir.md). Physical ring unchanged.
