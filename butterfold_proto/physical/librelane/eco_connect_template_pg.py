@@ -189,34 +189,35 @@ def main() -> int:
 
     vdd_m4_xmin = min(b[0] for b in vdd_m4)
     print(f"leftmost_vdd_m4_x {vdd_m4_xmin/dbu:.3f}")
-    vss_m5 = special_rects(vss, "Metal5")
-    if not vss_m5:
-        raise SystemExit("no VSS Metal5 special wires")
-    m5_box = pick_vss_m5(vss_m5, core.xMin(), vdd_m4_xmin, um(dbu, 1.00))
-    print(
-        f"vss_m5_land {m5_box[0]/dbu:.3f} {m5_box[1]/dbu:.3f} {m5_box[2]/dbu:.3f} {m5_box[3]/dbu:.3f}"
-    )
 
-    # Proven west-margin M4 pad: 8.00..9.60, well west of VDD M4 at ~22.24.
-    # Do not snug against the VDD M4 stripe; that historically shorted VSS/VDD.
-    pad_x1 = um(dbu, 8.00)
-    pad_x2 = um(dbu, 9.60)
-    if pad_x2 >= vdd_m4_xmin - um(dbu, 2.00):
-        raise SystemExit("VSS M4 pad would be too close to VDD Metal4")
-    if pad_x1 < core.xMin() or pad_x2 > m5_box[2]:
-        raise SystemExit("VSS M4 pad not over VSS Metal5 / inside core")
-    pad_y1, pad_y2 = m5_box[1], m5_box[3]
-    # M3 vertical bus in the west pin column (x=0..1 um)
-    add_rect(sw_vss, m3, um(dbu, 0.0), min(ymin, pad_y1), um(dbu, 1.0), ymax)
-    add_rect(sw_vss, m3, um(dbu, 0.0), pad_y1, pad_x2, pad_y2)
-    add_rect(sw_vss, m4, pad_x1, pad_y1, pad_x2, pad_y2)
-    cx_pad = (pad_x1 + pad_x2) // 2
-    cy_pad = (pad_y1 + pad_y2) // 2
-    add_via(sw_vss, via3, cx_pad, cy_pad)
-    add_via(sw_vss, via4, cx_pad, cy_pad)
-    print(f"vss_pad {pad_x1/dbu:.3f} {pad_y1/dbu:.3f} {pad_x2/dbu:.3f} {pad_y2/dbu:.3f}")
+    # With PDN_CORE_RING enabled a VSS Metal4 ring trace runs the full core
+    # height immediately beside the west pin column, so the old fixed
+    # west-margin M4 pad (x 8.00..9.60) is unnecessary and no longer legal:
+    # the ring puts VDD Metal4 at x~4.12, east of that pad, which trips the
+    # VDD-proximity guard.  Land each pin straight onto the ring instead --
+    # shorter path, and the ring's own trace spacing keeps VDD and VSS apart
+    # rather than a hand-picked offset.
+    vss_m4 = special_rects(vss, "Metal4")
+    ring = None
+    for x1, y1, x2, y2 in vss_m4:
+        if x2 <= core.xMin() and (y2 - y1) > (ymax - ymin):
+            if ring is None or x1 < ring[0]:
+                ring = (x1, y1, x2, y2)
+    if ring is None:
+        raise SystemExit("no VSS Metal4 ring trace west of the core")
+    if ring[2] > vdd_m4_xmin:
+        raise SystemExit("VSS ring trace is not west of VDD Metal4")
+    print(
+        f"vss_m4_ring {ring[0]/dbu:.3f} {ring[1]/dbu:.3f} "
+        f"{ring[2]/dbu:.3f} {ring[3]/dbu:.3f}"
+    )
+    ring_cx = (ring[0] + ring[2]) // 2
     for _, x1, y1, x2, y2 in vss_pins:
-        add_via(sw_vss, via2, (x1 + x2) // 2, (y1 + y2) // 2)
+        cy = (y1 + y2) // 2
+        add_rect(sw_vss, m3, min(x1, ring[0]), y1, max(x2, ring[2]), y2)
+        add_via(sw_vss, via2, (x1 + x2) // 2, cy)
+        add_via(sw_vss, via3, ring_cx, cy)
+    print(f"vss_vias {len(vss_pins)} pins landed on ring at x={ring_cx/dbu:.3f}")
 
     design.writeDb(dst_odb)
     design.writeDef(dst_def)
