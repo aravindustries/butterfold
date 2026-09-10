@@ -1,0 +1,33 @@
+# Magic device extraction on the ACH-shelled native-ring GDS.
+# Reuses a committed LibreLane Magic environment; only paths are overridden.
+source $::env(BASE_ENV)
+set ::env(CURRENT_GDS) $::env(SHELL_GDS)
+set ::env(CURRENT_DEF) $::env(SHELL_DEF)
+set ::env(STEP_DIR) $::env(OUT_DIR)/lvs/extract
+set ::env(SAVE_SPICE) $::env(STEP_DIR)/butterfold_top.spice
+set ::env(MAGIC_EXT_USE_GDS) 1
+set ::env(MAGIC_EXT_UNIQUE) all
+file mkdir $::env(STEP_DIR)
+source $::env(SCRIPTS_DIR)/magic/common/read.tcl
+gds rescale true
+gds readonly false
+gds read $::env(CURRENT_GDS)
+read_macro_lef
+read_pdk_spice
+load $::env(DESIGN_NAME) -dereference
+load gf180mcu_fd_ip_sram__sram256x8m8wm1
+property LEFview true
+load $::env(DESIGN_NAME) -dereference
+set extdir $::env(STEP_DIR)/extraction
+file mkdir $extdir
+cd $extdir
+extract do local
+extract no capacitance
+extract no coupling
+extract no resistance
+extract no adjust
+extract unique all
+extract
+ext2spice lvs
+ext2spice -o $::env(OUT_DIR)/lvs/butterfold_top.spice butterfold_top.ext
+quit -noprompt
