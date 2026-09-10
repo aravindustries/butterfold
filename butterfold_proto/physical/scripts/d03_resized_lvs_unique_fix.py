@@ -26,7 +26,10 @@ LEFTOVER_JOINS = [
     (
         "u_transform_scheduler_core.u_fft_scratch_sram.u_lo.u_sram/Q[3]",
         "u_transform_scheduler_core.u_fft_scratch_sram.u_lo.macro_q[3]",
-    )
+    ),
+    # Mag labels both the pre-ACH and ACH-renamed participant on the same metal.
+    ("dout[2]", "dout_OUT[2]"),
+    ("dout[5]", "dout_OUT[5]"),
 ]
 
 

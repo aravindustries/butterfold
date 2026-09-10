@@ -1,0 +1,112 @@
+# Route only new ACH-shell nets on top of the native-ring signal routes.
+# ach_applied.odb still has the timing-closed native wires.
+set proto /headless/aravindustries-repos/butterfold/butterfold_proto
+set out $proto/physical/results/native_power_ring_ach
+set src $out/ach_applied.odb
+puts "SRC $src"
+
+proc pg_connect {} {
+  add_global_connection -net VDD -inst_pattern .* -pin_pattern VDD -power
+  add_global_connection -net VDD -inst_pattern .* -pin_pattern VNW -power
+  add_global_connection -net VSS -inst_pattern .* -pin_pattern VSS -ground
+  add_global_connection -net VSS -inst_pattern .* -pin_pattern VPW -ground
+  global_connect
+}
+proc diode_count {} {
+  set n 0
+  foreach inst [[ord::get_db_block] getInsts] {
+    if {[string match "*__antenna" [[$inst getMaster] getName]]} { incr n }
+  }
+  return $n
+}
+proc ensure_m2_obs {} {
+  set block [ord::get_db_block]
+  set layer [[[ord::get_db] getTech] findLayer Metal2]
+  set dbu [$block getDefUnits]
+  set x2 [expr {int(2.0 * $dbu)}]
+  set y2 [expr {int(65.0 * $dbu)}]
+  foreach o [$block getObstructions] {
+    set b [$o getBBox]
+    if {[$b getTechLayer] eq $layer && [$b xMin]==0 && [$b yMin]==0 && [$b xMax]==$x2 && [$b yMax]==$y2} { return }
+  }
+  odb::dbObstruction_create $block $layer 0 0 $x2 $y2
+}
+proc ensure_pad_spacing_obs {} {
+  set organizer "$::proto/physical/reports/native_power_ring_ach/evidence/D03_ACH.def"
+  set intended {
+    VSS clk rst_n din_valid_i din[7] din[6] din[5] din[4] din[3] din[2] din[1] din[0]
+    din_ready_o_OUT dout_valid_o_OUT dout_OUT[7] dout_OUT[6] dout_OUT[5] dout_OUT[4]
+    dout_OUT[3] dout_OUT[2] dout_OUT[1] dout_OUT[0] VDD
+  }
+  set fh [open $organizer r]
+  set text [read $fh]
+  close $fh
+  set block [ord::get_db_block]
+  set layer [[[ord::get_db] getTech] findLayer Metal2]
+  set dbu [$block getDefUnits]
+  set scale [expr {$dbu / 200.0}]
+  set die [$block getDieArea]
+  set current ""
+  set ::pad_spacing_obs {}
+  set created 0
+  foreach line [split $text "\n"] {
+    if {[regexp {^- ([^ ]+) } $line -> name]} { set current $name }
+    if {$current eq "" || [lsearch -exact $intended $current] >= 0} { continue }
+    if {[regexp {^[[:space:]]*\+ LAYER Metal2 \( (-?[0-9]+) (-?[0-9]+) \) \( (-?[0-9]+) (-?[0-9]+) \)} $line -> ax1 ay1 ax2 ay2]} {
+      set x1 [expr {max([$die xMin], int($ax1*$scale))}]
+      set y1 [expr {max([$die yMin], int($ay1*$scale))}]
+      set x2 [expr {min([$die xMax], int($ax2*$scale))}]
+      set y2 [expr {min([$die yMax], int($ay2*$scale))}]
+      lappend ::pad_spacing_obs [odb::dbObstruction_create $block $layer $x1 $y1 $x2 $y2]
+      incr created
+    }
+  }
+  puts "PAD_SPACING_OBSTRUCTIONS $created"
+}
+proc remove_pad_spacing_obs {} {
+  if {![info exists ::pad_spacing_obs]} { return }
+  foreach obs $::pad_spacing_obs { catch {odb::dbObstruction_destroy $obs} }
+}
+
+read_db $src
+pg_connect
+ensure_m2_obs
+set block [ord::get_db_block]
+set renamed 0
+foreach pair {
+  {din_ready_o din_ready_o_OUT}
+  {dout_valid_o dout_valid_o_OUT}
+  {dout[0] dout_OUT[0]} {dout[1] dout_OUT[1]} {dout[2] dout_OUT[2]} {dout[3] dout_OUT[3]}
+  {dout[4] dout_OUT[4]} {dout[5] dout_OUT[5]} {dout[6] dout_OUT[6]} {dout[7] dout_OUT[7]}
+} {
+  lassign $pair old new
+  set net [$block findNet $old]
+  if {$net ne "NULL" && $net ne ""} {
+    $net rename $new
+    incr renamed
+    puts "RENAME_NET $old -> $new"
+  }
+}
+puts "NETS_RENAMED $renamed BTERMS [llength [$block getBTerms]]"
+set_thread_count 16
+set_routing_layers -signal Metal2-Metal5 -clock Metal2-Metal5
+ensure_pad_spacing_obs
+puts "DRT_INCR_APPLIED DIODE [diode_count]"
+detailed_route -droute_end_iter 64 -or_seed 42 -verbose 1 -output_drc $out/drt/applied_incr.drc
+remove_pad_spacing_obs
+set ant [check_antennas]
+puts "ANT_AFTER $ant DIODE [diode_count]"
+if {$ant} {
+  set inserted [repair_antennas gf180mcu_fd_sc_mcu9t5v0__antenna -ratio_margin 10]
+  puts "REPAIR_ANTENNAS $inserted DIODE [diode_count]"
+  catch {detailed_placement -max_displacement {500 100}}
+  ensure_pad_spacing_obs
+  detailed_route -droute_end_iter 64 -or_seed 42 -verbose 1 -output_drc $out/drt/applied_incr_ant.drc
+  remove_pad_spacing_obs
+  set ant [check_antennas]
+  puts "ANT_AFTER2 $ant DIODE [diode_count]"
+}
+write_db $out/ach_native_routes.odb
+write_def $out/ach_native_routes.def
+puts "WROTE_ACH_NATIVE_ROUTES"
+exit
