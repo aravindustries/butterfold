@@ -18,6 +18,7 @@ GOTO_ENV_DIR = '''
 {{ env.PROJECT_ROOT_DIR }}
 {%- endif -%}
 '''
+GH_PROMPT_DISABLED = 1
 
 # Vivado
 _.source = '''
@@ -37,7 +38,7 @@ mkdir -p $PROJ_DIR/tools/vivado && cd "$PROJ_DIR/tools/vivado"
 vivado -mode batch -notrace -source $PROJ_DIR/scripts/create_project.tcl
 """
 
-[tasks.dev-session]
+[tasks."zellij:dev-session"]
 description = "Launch Zellij workspace & project directory"
 dir = "{{ config_root }}"
 run = """
@@ -52,13 +53,16 @@ run = "nohup vivado -mode gui -notrace -source $PROJ_DIR/scripts/init.tcl > /dev
 
 [tasks."vivado:lint"]
 hide = true
+dir = "{{ env.PROJ_DIR }}/tools/vivado"
 # run the vivado linter & paste output here
 
 [tasks."vivado:compile"]
 hide = true
+dir = "{{ env.PROJ_DIR }}/tools/vivado"
 # check for compile errors with the current code
 
 [tasks."vivado:simulate"]
+dir = "{{ env.PROJ_DIR }}/tools/vivado"
 run = """
 clear
 vivado -mode batch -notrace -source $PROJ_DIR/scripts/run_sim.tcl
@@ -68,7 +72,7 @@ vivado -mode batch -notrace -source $PROJ_DIR/scripts/run_sim.tcl
 hide = true
 # run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
 
-[tasks.start-container]
+[tasks."docker:start-container"]
 description = "Start the gf180 Docker container and attach shell"
 usage = '''
 flag --jupyter help="Launch Jupyter Notebook in the background"
@@ -102,7 +106,6 @@ hide = true
 # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
 
 [tasks.clean]
-hide = true
 # remove all temporary tool generated files
 
 # _optimise-area:

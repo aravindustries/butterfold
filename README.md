@@ -1,5 +1,20 @@
 # 🦋 ButterFold
 
+
+This targets the GF180mcu process node. Chipathon Track D.
+
+## Directory Overview :open_file_folder:
+For more information regarding the project flow, refer to CONTRIBUTING.md.
+| Name | Purpose |
+| :--- | :--- |
+| :file_folder: `agents/` | List of agent personas for the workflow |
+| :file_folder: `docs/` | Location of Project spec, code docs & assets |
+| :file_folder: `golden/` | High-Level implementations for Proof of Concept & golden reference for hardware implementations |
+| :file_folder: `proj/` | Project EDA tools & scripts |
+| :file_folder: `rtl/` | HDL source code & IP & macro directories |
+| :file_folder: `sim/` | Simulation & testbenching logic |
+| :file_folder: `syn/` | Synthesis constraints & output files |
+
 ## Why this chip exists
 
 Modern OFDM and DFT-s-OFDM systems require multiple transforms across the RX/TX datapath:

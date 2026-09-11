@@ -11,7 +11,7 @@ namespace eval constrs {
     ##################### End ###############################
 
     foreach constr_file $constr_files {
-        set abs_constr_path [file normalize [file join $constrs::dir $constr_file]]
+        set abs_constr_path [file normalize [file join $dir $constr_file]]
         add_files -fileset constrs_1 $abs_constr_path
     }
 }
