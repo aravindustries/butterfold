@@ -1,0 +1,192 @@
+# board_part = digilentinc.com:zybo:part0:2.0
+
+[tools]
+uv = "latest"
+"pipx:fusesoc" = "latest"
+
+[settings]
+python.uv_venv_auto = "create|source"
+
+[env]
+# Vivado
+_.source = '''
+{%- if os() == 'linux' -%}
+{{ env.TOOLS_HOME }}/xilinx/2025.1/Vivado/settings64.sh
+{%- endif -%}
+'''
+XSIM_COLOR = 1
+
+GH_PROMPT_DISABLED = 1
+
+PROJECT_ROOT_DIR = "{{ config_root }}"
+PROJECT_NAME     = "{{ config_root | split(pat='/') | last }}"
+
+RTL_DIR  = "{{ env.PROJECT_ROOT_DIR }}/rtl"
+SIM_DIR  = "{{ env.PROJECT_ROOT_DIR }}/sim"
+SYN_DIR  = "{{ env.PROJECT_ROOT_DIR }}/syn"
+WORK_DIR = "{{ env.PROJECT_ROOT_DIR }}/work"
+
+GOTO_ENV_DIR = '''
+{%- if os() in ['linux', 'macos'] -%}
+{{ env.PROJECT_ROOT_DIR }}
+{%- endif -%}
+'''
+
+[tasks.setup]
+hide = true
+description = "Run immediately after clone/branch"
+depends = ["sync"]
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+run = """
+mkdir -p $WORK_DIR/tools/verilator
+vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_project.vivado.tcl"
+"""
+
+[tasks.sync]
+description = "Sync repo state: pull, submodules, tool install, python env"
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+run = """
+git pull
+git submodule update --init --recursive
+mise trust && mise install
+uv sync --locked
+"""
+
+[tasks."zellij:dev-session"]
+description = "Launch Zellij workspace & project directory"
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+run = """
+{% if os() in ['linux', 'macos'] -%}
+open $PROJECT_ROOT_DIR
+{% endif %}
+zellij delete-session $PROJECT_NAME >/dev/null 2>&1 || true
+zellij --layout=$PROJECT_ROOT_DIR/zellij_layout.kdl attach --create $PROJECT_NAME
+"""
+
+[tasks."vivado:launch"]
+dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+run = "nohup vivado -mode gui -notrace -source $WORK_DIR/tools/vivado/subscripts/init.vivado.tcl > /dev/null 2>&1 &"
+
+[tasks."vivado:lint"]
+hide = true
+dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+# run the vivado linter & paste output here
+
+[tasks."vivado:simulate"]
+dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+usage = '''
+arg "<duration>" help="Max sim time (e.g. '1ns'); omit or 0 for run-all" default="all"
+'''
+run = """
+clear
+vivado -mode batch -notrace -source $WORK_DIR/tools/vivado/subscripts/run_sim.vivado.tcl -tclargs "$usage_duration"
+"""
+# FUTURE: if time units ARE specified, open in tcl mode to allow for stepping the time, else stick to batch mode
+
+[tasks."vivado:generate-bitstream"]
+hide = true
+# run optimise-area (or use the previous run) & gen bitstream file & open hardware manager
+
+[tasks."verilator:sim"]
+description = "PoC loop: build & run a Verilator sim — pass the top module first, then any number of files (raw = stream output live, tee keeps the log)"
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+raw = true
+usage = '''
+arg "<top>" help="Top module name, e.g. tb_counter"
+arg "<files...>" help="All design/testbench files (full filenames with .sv), e.g. rtl/src/counter.sv tb_counter.sv"
+'''
+run = """
+set -e
+mkdir -p $WORK_DIR/tools/verilator
+verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Mdir "$WORK_DIR/tools/verilator/sim" $usage_files -o sim 2>&1 | tee "$WORK_DIR/tools/verilator/sim.build.log"
+"$WORK_DIR/tools/verilator/sim/sim" +verilator+seed+1 2>&1 | tee "$WORK_DIR/tools/verilator/sim.sim.log"
+"""
+
+[tasks."docker:start-container"]
+description = "Start the gf180 Docker container and attach shell"
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+usage = '''
+flag --jupyter help="Launch Jupyter Notebook in the background"
+'''
+run = '''
+if [ -z "$(docker ps -q -f name=^/gf180$)" ]; then
+    CONTAINER_NAME=gf180 \
+    DOCKER_TAG=chipathon26 \
+    DESIGNS=$PROJECT_ROOT_DIR \
+    bash "$WORK_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
+    docker exec -u 0 gf180 sh -c 'getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup'
+fi
+
+if [ "$usage_jupyter" = "true" ]; then
+    (cd $PROJECT_ROOT_DIR && jupyter notebook >/dev/null 2>&1 &)
+fi
+
+docker exec -it gf180 bash -lc '
+    source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
+    librelane --version
+    exec bash
+'
+'''
+# # In the docker terminal run
+# librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk # to run the flow
+# # Or create rtl/scripts/ which will contain python scripts to setup env vars & like how the examples show
+
+[tasks.commit-prepare]
+hide = true
+# run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
+
+# [tasks.clean]
+# remove all temporary tool generated files
+# _optimise-area:
+#
+# _optimise-power:
+#
+# _optimise-timing:
+
+
+# NOTE: want to run fastfetch, & btop in one of those windows
+
+
+# Not really needed
+# [tasks."vivado:compile"]
+# hide = true
+# dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+# # check for compile errors with the current code
+
+
+# Envs
+################### Start of Cadence ###################
+# CDS_LIC_FILE = '''
+# {%- if os() == 'linux' -%}
+# {{xdg_data_home}}/cadence/license.dat
+# {%- elif os() == 'windows' -%}
+# {%- elif os() == 'macos' -%}
+# {%- endif -%}
+# '''
+# export CDS_ROOT="$TOOLS_HOME/cadence/XCELIUM2303"
+# export CDS_INST_DIR="$CDS_ROOT"
+# export CDSDIR="$CDS_ROOT"
+# export CDS_HOME="$CDS_ROOT"
+# # export PATH="$CDS_ROOT":$PATH
+# export PATH="$CDS_ROOT/tools.lnx86/bin/":$PATH
+
+# Conformal191
+# export PATH="$TOOLS_HOME/cadence/CONFORMAL191/tools.lnx86/bin":$PATH # run 'lec' to launch
+
+# # GENUS191
+# export PATH="$TOOLS_HOME/cadence/GENUS191/tools.lnx86/bin":$PATH
+
+# # IC231
+# export PATH="$TOOLS_HOME/cadence/IC231/tools.lnx86/bin":$PATH
+################### END of Cadence #######################
+
+################### Start of mentor ########################
+# # Mentor Graphics
+# export LM_LICENSE_FILE="$XDG_DATA_HOME/mentor/license.dat"
+# export MGLS_LICENSE_FILE="$XDG_DATA_HOME/mentor/mgls.lic"
+#
+# # Questasim
+# export PATH="$TOOLS_HOME/mentor/questasim/linux_x86_64":$PATH
+# export PATH="$TOOLS_HOME/mentor/questasim/RUVM_2021.2":$PATH
+################### End of Mentor ##########################
+

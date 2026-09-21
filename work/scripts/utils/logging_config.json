@@ -1,0 +1,35 @@
+{
+	"version": 1,
+	"disable_existing_loggers": false,
+	"formatters": {
+		"simple": {
+			"format": "%(levelname)s [%(filename)s] %(funcName)s(): {%(name)s} - %(message)s"
+		},
+		"full": {
+			"format": "%(asctime)s -> %(levelname)s [%(pathname)s %(lineno)d] %(funcName)s(): {%(name)s} - %(message)s",
+			"datefmt": "%Y-%m-%d %H:%M:%S"
+		}
+	},
+	"handlers": {
+		"stdout": {
+			"class": "logging.StreamHandler",
+			"level": "NOTSET",
+			"formatter": "simple",
+			"stream": "ext://sys.stdout"
+		},
+		"file": {
+			"class": "logging.FileHandler",
+			"level": "DEBUG",
+			"formatter": "full",
+			"filename": "log_file.log",
+			"mode": "w"
+		}
+	},
+	"loggers": {
+		"root": {
+			"level": "DEBUG",
+			"handlers": ["file"]
+		}
+	}
+}
+
