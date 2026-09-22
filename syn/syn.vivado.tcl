@@ -1,5 +1,6 @@
 namespace eval syn {
     variable dir [file dirname [info script]];
+    puts "=== SOURCING: [info script] ===" 
 
     #################### Begin ##############################
 
@@ -7,9 +8,10 @@ namespace eval syn {
 
     set board_name "digilentinc.com:zybo:part0:2.0"
 
-    # lappend constrs "design/timing_async_fifo.xdc"
-    # lappend constrs "design/debug.xdc"
-    # lappend constrs "boards/Zybo-pinout.xdc"
+    # lappend constrs "constrs/design/timing_counter.xdc"
+    # lappend constrs "constrs/design/timing_async_fifo.xdc"
+    # lappend constrs "constrs/design/debug.xdc"
+    # lappend constrs "constrs/boards/Zybo-pinout.xdc"
 
     ##################### End ###############################
 
@@ -22,3 +24,4 @@ namespace eval syn {
     }
 }
 
+# set_property STEPS.SYNTH_DESIGN.ARGS.GATED_CLOCK_CONVERSION auto [get_runs synth_1]

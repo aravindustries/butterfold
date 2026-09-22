@@ -1,8 +1,6 @@
-# board_part = digilentinc.com:zybo:part0:2.0
-
 [tools]
 uv = "latest"
-"pipx:fusesoc" = "latest"
+# "pipx:fusesoc" = "latest"
 
 [settings]
 python.uv_venv_auto = "create|source"
@@ -32,16 +30,6 @@ GOTO_ENV_DIR = '''
 {%- endif -%}
 '''
 
-[tasks.setup]
-hide = true
-description = "Run immediately after clone/branch"
-depends = ["sync"]
-dir = "{{ env.PROJECT_ROOT_DIR }}"
-run = """
-mkdir -p $WORK_DIR/tools/verilator
-vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_project.vivado.tcl"
-"""
-
 [tasks.sync]
 description = "Sync repo state: pull, submodules, tool install, python env"
 dir = "{{ env.PROJECT_ROOT_DIR }}"
@@ -50,6 +38,16 @@ git pull
 git submodule update --init --recursive
 mise trust && mise install
 uv sync --locked
+"""
+
+[tasks.setup]
+hide = true
+description = "Run immediately after clone/branch"
+depends = ["sync"]
+dir = "{{ env.PROJECT_ROOT_DIR }}"
+run = """
+mkdir -p $WORK_DIR/tools/verilator
+vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_project.vivado.tcl"
 """
 
 [tasks."zellij:dev-session"]
@@ -97,7 +95,6 @@ arg "<files...>" help="All design/testbench files (full filenames with .sv), e.g
 '''
 run = """
 set -e
-mkdir -p $WORK_DIR/tools/verilator
 verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Mdir "$WORK_DIR/tools/verilator/sim" $usage_files -o sim 2>&1 | tee "$WORK_DIR/tools/verilator/sim.build.log"
 "$WORK_DIR/tools/verilator/sim/sim" +verilator+seed+1 2>&1 | tee "$WORK_DIR/tools/verilator/sim.sim.log"
 """
@@ -131,28 +128,14 @@ docker exec -it gf180 bash -lc '
 # librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk # to run the flow
 # # Or create rtl/scripts/ which will contain python scripts to setup env vars & like how the examples show
 
-[tasks.commit-prepare]
-hide = true
-# run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
 
+# [tasks.commit-prepare]
+# run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
 # [tasks.clean]
 # remove all temporary tool generated files
 # _optimise-area:
-#
 # _optimise-power:
-#
 # _optimise-timing:
-
-
-# NOTE: want to run fastfetch, & btop in one of those windows
-
-
-# Not really needed
-# [tasks."vivado:compile"]
-# hide = true
-# dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
-# # check for compile errors with the current code
-
 
 # Envs
 ################### Start of Cadence ###################

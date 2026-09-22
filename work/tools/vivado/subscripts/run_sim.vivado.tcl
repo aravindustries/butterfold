@@ -1,4 +1,4 @@
-set dir [file dirname [info script]]; # <WORK_DIR>/tools/vivado/subscripts
+set dir [file dirname [info script]]
 source -notrace [file join $dir init.vivado.tcl]
 
 launch_simulation

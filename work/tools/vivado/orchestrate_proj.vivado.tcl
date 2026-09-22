@@ -9,9 +9,9 @@ remove_files [get_files -quiet -of_objects [get_filesets constrs_1]]
 
 source -notrace $::env(RTL_DIR)/rtl.vivado.tcl
 source -notrace $::env(SIM_DIR)/sim.vivado.tcl
-source -notrace $::env(SYN_DIR)/syn.vivado.tcl
+# source -notrace $::env(SYN_DIR)/syn.vivado.tcl
 
 ######## End  ##########
 
-check_syntax; # to warn of nets used without declarations
+check_syntax; # warn of nets used without declarations
 

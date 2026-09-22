@@ -1,5 +1,6 @@
 namespace eval sim {
     variable dir [file dirname [info script]];
+    puts "=== SOURCING: [info script] ===" 
 
     #################### Begin ##############################
 

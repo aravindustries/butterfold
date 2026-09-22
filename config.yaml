@@ -73,3 +73,59 @@ BOTTOM_MARGIN_MULT: 1
 LEFT_MARGIN_MULT: 6
 RIGHT_MARGIN_MULT: 6
 
+# ---------------------------------------------------------------------------
+# Optional LibreLane knobs -- ALL COMMENTED OUT. Uncomment + edit as needed.
+# ---------------------------------------------------------------------------
+
+# --- clock ---------------------------------------------------------------
+# CLOCK_NET: clk                          # net into the root clock buffer; defaults to CLOCK_PORT
+# CLOCK_UNCERTAINTY_CONSTRAINT: 0.25      # jitter/uncertainty used in timing analysis, ns   (flow: 0.25)
+# CLOCK_TRANSITION_CONSTRAINT: 0.15       # clock slew for timing analysis, ns              (flow: 0.15)
+
+# --- max transition / capacitance / fanout (the "max tran" constraint) ----
+# MAX_TRANSITION_CONSTRAINT: 3            # max cell-input slew for synthesis + CTS, ns.
+#                                         # Unset -> min(10% of CLOCK_PERIOD, PDK DEFAULT_MAX_TRAN). (flow: 3)
+# DEFAULT_MAX_TRAN: 3                     # PDK-scoped default max transition for synthesis/CTS, ns
+# MAX_FANOUT_CONSTRAINT: 10               # max load the outputs can drive, synthesis + CTS      (flow: 10)
+# MAX_CAPACITANCE_CONSTRAINT: 0.2         # max capacitance, pF; unset -> liberty file value    (flow: 0.2)
+
+# --- design-rule repair margins ------------------------------------------
+# DESIGN_REPAIR_MAX_SLEW_PCT: 20          # slew margin used during design repair, %    (default + flow: 20)
+# DESIGN_REPAIR_MAX_CAP_PCT: 20           # capacitance margin during design repair, %  (default + flow: 20)
+# DESIGN_REPAIR_MAX_WIRE_LENGTH: 0        # wire-length cap for buffer insertion, um (0 = off) (flow: 0)
+# PL_RESIZER_SETUP_MAX_UTIL_PCT: 50       # % of core area usable while fixing setup (unset = no cap)
+# PL_RESIZER_HOLD_MAX_UTIL_PCT: 50        # % of core area usable while fixing hold  (unset = no cap)
+
+# --- area / floorplan ----------------------------------------------------
+# FP_SIZING: absolute                    # "relative" or "absolute"                 (flow: absolute)
+# DIE_AREA: [0.0, 0.0, 3000.0, 3000.0]   # x0 y0 x1 y1, um — only with FP_SIZING: absolute
+# FP_CORE_UTIL: 50                       # core utilisation, %                      (default + flow: 50)
+# FP_ASPECT_RATIO: 1                     # core height / width                      (default + flow: 1)
+# PL_TARGET_DENSITY_PCT: 65              # placement density, %; unset -> FP_CORE_UTIL + 5*GPL_CELL_PADDING + 10 (flow: 65)
+
+# --- CTS -----------------------------------------------------------------
+# CTS_CLK_MAX_WIRE_LENGTH: 0             # max wire length on the clock net, um (0 = off)  (flow: 0)
+# CTS_MAX_SLEW: 0.1                      # override the slew CTS uses; unset -> from CTS_CLK_BUFFERS libs
+# CTS_MAX_CAP: 0.1                       # override the cap CTS uses;  unset -> from CTS_CLK_BUFFERS libs
+# CTS_SINK_CLUSTERING_SIZE: 20           # max sinks per CTS cluster               (flow: 20)
+
+# --- routing -------------------------------------------------------------
+# RT_MAX_LAYER: Metal4                   # highest routing layer                   (flow: Metal4)
+# RT_CLOCK_MAX_LAYER: Metal4             # highest layer allowed for the clock net
+# GRT_OVERFLOW_ITERS: 50                 # max global-route iterations waiting for overflow (default + flow: 50)
+
+# --- multi-corner STA / violation checks ---------------------------------
+# STA_CORNERS: [nom_tt_025C_5v00, nom_ss_125C_4v50]  # IPVT corners for multi-corner STA
+# TIMING_VIOLATION_CORNERS: ["*tt*"]     # which corners to check timing violations on (flow: ["*tt*"])
+# SETUP_VIOLATION_CORNERS: ["*"]         # corner wildcards for setup checks
+# HOLD_VIOLATION_CORNERS: ["*"]          # corner wildcards for hold checks         (flow: ["*"])
+# MAX_SLEW_VIOLATION_CORNERS: ["*"]      # corner wildcards for max-slew (max transition) checks
+# MAX_CAP_VIOLATION_CORNERS: ["*"]       # corner wildcards for max-capacitance checks
+
+# --- synthesis + clock gating (the ASIC equivalent of the ICG latch) -----
+# SYNTH_CLOCKGATE_MIN_WIDTH: 4           # gate any FF group >= this size that has an enable (unset = no gating)
+# SYNTH_CLOCKGATE_POSEDGE_ICG: "cell/EN/CK/GCK"  # posedge ICG cell, as <cell>/<enable port>/<clk port>/<gated clk port>
+# SYNTH_CLOCKGATE_NEGEDGE_ICG: "cell/EN/CK/GCK"  # negedge ICG cell, same format
+# SYNTH_SIZING: false                    # abc cell sizing instead of buffering  (default + flow: false)
+# SYNTH_ABC_BUFFERING: false             # abc cell buffering                    (default + flow: false)
+

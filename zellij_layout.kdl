@@ -12,27 +12,42 @@ layout {
         pane size="70%" name="lazygit" {
             command "lazygit"
         }
-        pane focus=true size="30%" name="review git" {
-            edit ".gitignore" ".gitmodules"
+        pane focus=true size="30%" split_direction="vertical" {
+            pane focus=true size="70%" name="review git" {
+                edit ".gitignore" ".gitmodules"
+            }
+            pane size="30%" name="btop" {
+                command "btop"
+            }
         }
     }
     tab name="Docs" cwd="$PROJECT_ROOT_DIR/docs" {
-        pane focus=true size="70%" name="code"
+        pane focus=true size="70%" name="code" {
+            command "$SHELL"
+            args "-ci" "y"
+        }
         pane size="30%" name="execute"
     }
     tab name="AI" cwd="$PROJECT_ROOT_DIR" {
         pane name="hermes" {
             command "hermes"
+            // args "chat" "--query-file" "agents/orchestrator.md"
         }
     }
     tab focus=true name="Dev" {
         pane size="70%" split_direction="vertical" {
-            pane size="50%" name="design" cwd="$RTL_DIR"
-            pane size="50%" name="verif"  cwd="$SIM_DIR"
+            pane size="50%" name="design" cwd="$RTL_DIR" {
+                command "$SHELL"
+                args "-ci" "y"
+            }
+            pane size="50%" name="verif"  cwd="$SIM_DIR" {
+                command "$SHELL"
+                args "-ci" "y"
+            }
         }
         pane focus=true size="30%" name="execute" cwd="$PROJECT_ROOT_DIR" {
             command "$SHELL"
-            args "-c" "sleep 0.1; mise tasks ls; exec $SHELL"
+            args "-c" "sleep 0.1; fastfetch; mise tasks ls; exec $SHELL"
         }
     }
 }
