@@ -110,15 +110,11 @@ if [ -z "$(docker ps -q -f name=^/gf180$)" ]; then
     CONTAINER_NAME=gf180 \
     DOCKER_TAG=chipathon26 \
     DESIGNS=$PROJECT_ROOT_DIR \
-    bash "$WORK_DIR/tools/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
+    bash "$WORK_DIR/tools/librelane/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
     docker exec -u 0 gf180 sh -c 'getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup'
 fi
 
-if [ "$usage_jupyter" = "true" ]; then
-    (cd $PROJECT_ROOT_DIR && jupyter notebook >/dev/null 2>&1 &)
-fi
-
-docker exec -it gf180 bash -lc '
+docker exec -it gf180 bash -cl '
     source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
     librelane --version
     exec bash
@@ -126,8 +122,7 @@ docker exec -it gf180 bash -lc '
 '''
 # # In the docker terminal run
 # librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk # to run the flow
-# # Or create rtl/scripts/ which will contain python scripts to setup env vars & like how the examples show
-
+# # Or create librelane/scripts/ which will contain python scripts to setup env vars & like how the examples show - can script in python for ease of use, but invoke sh commands within python
 
 # [tasks.commit-prepare]
 # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file

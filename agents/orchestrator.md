@@ -48,7 +48,18 @@ cline --provider cline --<act/plan> --model cline-free/deepseek-v4.1-flash --jso
       "Implement <task>. Use verilator for lint/compile and propose test cases." \
       > runs/cline_<task>.ndjson 2> runs/cline_<task>.err
 ```
+- You must record the session id by running:
+```zsh
+# ideally store this in a jsonl or md file
+cline history --json | jq -r '.[0].id'
+```
 - Per invocation, a return of `exit 0` doesn't necessarily mean the task was successful.
+- To close up: run
+```zsh
+cline history delete --session-id <id>
+```
+- Remember to always run this ones the session is considered over.
+
 ### Models
 Ordered based on priority. Switch if you hit token/context limits or if the model is unavailable - `Deepseek-V4-Flash` -> `GLM-5.3-Flash` -> `Laguna S 2.1`.
 ## Kilocode
