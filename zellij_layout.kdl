@@ -5,6 +5,10 @@ layout {
         borderless true
         plugin location="zellij:compact-bar";
     }
+    new_tab_template {
+        pane
+        bar size=1
+    }
 
     tab name="Git" hide_floating_panes=true {
         pane split_direction="horizontal" {
@@ -23,16 +27,16 @@ layout {
         }
         bar size=1
     }
-
-    tab name="Docs" cwd="docs" split_direction="horizontal" {
-        pane focus=true name="code" size="70%" {
-            command "$SHELL"
-            args "-ci" "y"
+    tab name="Docs" cwd="docs" {
+        pane split_direction="horizontal" {
+            pane focus=true name="code" size="70%" {
+                command "$SHELL"
+                args "-ci" "y"
+            }
+            pane size="30%" name="execute"
+            bar size=1
         }
-        pane size="30%" name="execute"
-        bar size=1
     }
-
     tab name="AI" {
         pane name="hermes" {
             command "hermes"
@@ -40,16 +44,17 @@ layout {
         }
         bar size=1
     }
-
-    tab focus=true name="Dev" split_direction="horizontal" {
-        pane split_direction="vertical" {
-            pane size="50%" name="design" cwd="$RTL_DIR" {
-                command "$SHELL"
-                args "-ci" "y"
-            }
-            pane size="50%" name="verif" cwd="$SIM_DIR" {
-                command "$SHELL"
-                args "-ci" "y"
+    tab focus=true name="Dev" {
+        pane split_direction="horizontal" {
+            pane split_direction="vertical" {
+                pane size="50%" name="design" cwd="$RTL_DIR" {
+                    command "$SHELL"
+                    args "-ci" "y"
+                }
+                pane size="50%" name="verif" cwd="$SIM_DIR" {
+                    command "$SHELL"
+                    args "-ci" "y"
+                }
             }
         }
         pane size="25%" name="execute" {
@@ -58,9 +63,5 @@ layout {
         }
         bar size=1
     }
-
-    new_tab_template {
-        pane
-        bar size=1
-    }
 }
+

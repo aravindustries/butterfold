@@ -33,7 +33,6 @@ GOTO_ENV_DIR = '''
 
 [tasks.sync]
 description = "Sync repo state: pull, submodules, tool install, python env"
-dir = "{{ env.PROJECT_ROOT_DIR }}"
 run = """
 git pull
 git submodule update --init --recursive
@@ -45,7 +44,6 @@ uv sync --locked
 hide = true
 description = "Run immediately after clone/branch"
 depends = ["sync"]
-dir = "{{ env.PROJECT_ROOT_DIR }}"
 run = """
 mkdir -p $WORK_DIR/tools/verilator
 vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_project.vivado.tcl"
@@ -53,7 +51,6 @@ vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_pr
 
 [tasks."zellij:dev-session"]
 description = "Launch Zellij workspace & project directory"
-dir = "{{ env.PROJECT_ROOT_DIR }}"
 run = """
 {% if os() in ['linux', 'macos'] -%}
 open $PROJECT_ROOT_DIR
@@ -80,7 +77,7 @@ run = """
 clear
 vivado -mode batch -notrace -source $WORK_DIR/tools/vivado/subscripts/run_sim.vivado.tcl -tclargs "$usage_duration"
 """
-# FUTURE: if time units ARE specified, open in tcl mode to allow for stepping the time, else stick to batch mode
+# FUTURE: if time units ARE specified, open in tcl mode to allow for time stepping, else stick to batch mode
 
 [tasks."vivado:generate-bitstream"]
 hide = true
@@ -88,7 +85,6 @@ hide = true
 
 [tasks."verilator:sim"]
 description = "PoC loop: build & run a Verilator sim — pass the top module first, then any number of files (raw = stream output live, tee keeps the log)"
-dir = "{{ env.PROJECT_ROOT_DIR }}"
 raw = true
 usage = '''
 arg "<top>" help="Top module name, e.g. tb_counter"
@@ -100,30 +96,46 @@ verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Md
 "$WORK_DIR/tools/verilator/sim/sim" +verilator+seed+1 2>&1 | tee "$WORK_DIR/tools/verilator/sim.sim.log"
 """
 
-[tasks."docker:start-container"]
-description = "Start the gf180 Docker container and attach shell"
-dir = "{{ env.PROJECT_ROOT_DIR }}"
+[tasks."docker:librelane"]
+description = "Start the gf180 Docker container, then attach a shell or serve JupyterLab"
 usage = '''
-flag --jupyter help="Launch Jupyter Notebook in the background"
+arg "<target>" help="'shell' attaches a shell (default), 'jupyter' serves JupyterLab" default="shell" {
+  choices "shell" "jupyter"
+}
 '''
+env = { CONTAINER_NAME = "gf180", DOCKER_TAG = "chipathon26", DESIGNS = "{{ env.PROJECT_ROOT_DIR }}" }
 run = '''
-if [ -z "$(docker ps -q -f name=^/gf180$)" ]; then
-    CONTAINER_NAME=gf180 \
-    DOCKER_TAG=chipathon26 \
-    DESIGNS=$PROJECT_ROOT_DIR \
+if [ -z "$(docker ps -q -f name=^/$CONTAINER_NAME$)" ]; then
     bash "$WORK_DIR/tools/librelane/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
-    docker exec -u 0 gf180 sh -c 'getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup'
+    docker exec -u 0 "$CONTAINER_NAME" sh -c '
+        rm -f /etc/group.lock /etc/gshadow.lock
+        getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup' || true
 fi
+case "${usage_target}" in
+shell)
+    docker exec -it "$CONTAINER_NAME" bash -cl '
+        source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
+        librelane --version
+        exec bash'
+    ;;
+jupyter)
+    port=8888
+    nb="librelane.ipynb"  # relative to the repo root (/foss/designs)
+    up() { curl -s -m 2 -o /dev/null "http://localhost:$port/api/status"; }
 
-docker exec -it gf180 bash -cl '
-    source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
-    librelane --version
-    exec bash
-'
+    if ! up; then
+        docker exec "$CONTAINER_NAME" bash -c 'pkill -9 -f "[j]upyter-lab"' >/dev/null 2>&1 || true
+        for _ in $(seq 1 20); do up || break; sleep 0.5; done     # wait for :$port to stop answering
+        docker exec -d "$CONTAINER_NAME" bash -cl "exec jupyter lab --no-browser --port=$port /foss/designs/$nb > /tmp/jupyter.log 2>&1"
+        for _ in $(seq 1 40); do up && break; sleep 0.5; done     # wait for it to come up
+    fi
+
+    xdg-open "http://localhost:$port/lab/tree/$nb" >/dev/null 2>&1 &
+    # stop: docker exec $CONTAINER_NAME pkill -9 -f jupyter-lab
+    # log:  docker exec $CONTAINER_NAME tail -f /tmp/jupyter.log
+    ;;
+esac
 '''
-# # In the docker terminal run
-# librelane config.yaml --pdk gf180mcuD --pdk-root /foss/pdks --manual-pdk # to run the flow
-# # Or create librelane/scripts/ which will contain python scripts to setup env vars & like how the examples show - can script in python for ease of use, but invoke sh commands within python
 
 # [tasks.commit-prepare]
 # run clean, move over IP files to the ip folder & zip files if necessary, summarise progress with AI & writeout chat history to a file
