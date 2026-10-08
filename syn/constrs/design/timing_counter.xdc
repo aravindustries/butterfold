@@ -9,10 +9,9 @@
 # CLOCK_PERIOD: 50). For the board_top design the clock arrives on zynq_fclk at
 # 125 MHz (period 8.000) and boards/Zybo-pinout.xdc + design/debug.xdc already
 # constrain it.
-set CLK_PERIOD 50.000
 
 # ---- 1. Clock ---------------------------------------------------------
-create_clock -name clk -period $CLK_PERIOD -waveform {0.000 25.000} [get_ports clk]
+create_clock -name clk -period 50.000 -waveform {0.000 25.000} [get_ports clk]
 
 # ---- 2. Clock uncertainty (setup + hold) ------------------------------
 # User uncertainty, added on top of the tool's own jitter calculation

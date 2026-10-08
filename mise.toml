@@ -1,3 +1,5 @@
+# Try to get the docker shell working in VSCode
+
 [tools]
 uv = "latest"
 # rust = "latest"
@@ -7,7 +9,6 @@ uv = "latest"
 python.uv_venv_auto = "create|source"
 
 [env]
-# Vivado
 _.source = '''
 {%- if os() == 'linux' -%}
 {{ env.TOOLS_HOME }}/xilinx/2025.1/Vivado/settings64.sh
@@ -51,12 +52,28 @@ vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_pr
 
 [tasks."zellij:dev-session"]
 description = "Launch Zellij workspace & project directory"
+raw = true
+run = [
+    {task = "zellij:exit" },
+    """
+    {% if os() in ['linux', 'macos'] -%}
+    open $PROJECT_ROOT_DIR
+    {% endif %}
+    zellij --layout=$PROJECT_ROOT_DIR/zellij_layout.kdl attach --create $PROJECT_NAME
+    """
+]
+
+[tasks."zellij:attach"]
+description = "Attach or resurrect a dead session"
 run = """
-{% if os() in ['linux', 'macos'] -%}
-open $PROJECT_ROOT_DIR
-{% endif %}
-zellij delete-session $PROJECT_NAME >/dev/null 2>&1 || true
-zellij --layout=$PROJECT_ROOT_DIR/zellij_layout.kdl attach --create $PROJECT_NAME
+zellij attach $PROJECT_NAME
+"""
+
+[tasks."zellij:exit"]
+description = "Delete a session"
+run = """
+# close hermes sessions, editors etc
+zellij delete-session --force $PROJECT_NAME 1>/dev/null || true
 """
 
 [tasks."vivado:launch"]
@@ -97,28 +114,38 @@ verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Md
 """
 
 [tasks."docker:librelane"]
-description = "Start the gf180 Docker container, then attach a shell or serve JupyterLab"
+description = "Start the gf180 Docker container, then attach a shell or serve VSCode"
 usage = '''
-arg "<target>" help="'shell' attaches a shell (default), 'jupyter' serves JupyterLab" default="shell" {
-  choices "shell" "jupyter"
+arg "<target>" help="'shell' attaches a shell (default), 'jupyter' serves jupyterLab, 'code' opens VSCode, 'stop' stops the container" default="shell" {
+    choices "shell" "code" "jupyter" "stop"
+}
+arg "[<action>]" help="Optional action: 'stop' kills the JupyterLab server" {
+  choices "stop"
 }
 '''
 env = { CONTAINER_NAME = "gf180", DOCKER_TAG = "chipathon26", DESIGNS = "{{ env.PROJECT_ROOT_DIR }}" }
 run = '''
-if [ -z "$(docker ps -q -f name=^/$CONTAINER_NAME$)" ]; then
+if [ "${usage_target}" != stop ] && [ -z "$(docker ps -q -f name=^/$CONTAINER_NAME$)" ]; then
     bash "$WORK_DIR/tools/librelane/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
     docker exec -u 0 "$CONTAINER_NAME" sh -c '
         rm -f /etc/group.lock /etc/gshadow.lock
         getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup' || true
 fi
-case "${usage_target}" in
+case "${usage_target}${usage_action:+:$usage_action}" in
 shell)
     docker exec -it "$CONTAINER_NAME" bash -cl '
         source sak-pdk-script.sh gf180mcuD gf180mcu_fd_sc_mcu7t5v0
         librelane --version
         exec bash'
     ;;
+code)
+    HEX_ID=$(printf '%s' "$CONTAINER_NAME" | od -An -tx1 | tr -d ' \n')
+    code --disable-workspace-trust \
+     --folder-uri "vscode-remote://attached-container+${HEX_ID}/foss/designs" \
+     --file-uri   "vscode-remote://attached-container+${HEX_ID}/foss/designs/librelane.ipynb"
+    ;;
 jupyter)
+    # The jupyter script in sscs is pulls in too many dependencies
     port=8888
     nb="librelane.ipynb"  # relative to the repo root (/foss/designs)
     up() { curl -s -m 2 -o /dev/null "http://localhost:$port/api/status"; }
@@ -128,12 +155,19 @@ jupyter)
         for _ in $(seq 1 20); do up || break; sleep 0.5; done     # wait for :$port to stop answering
         docker exec -d "$CONTAINER_NAME" bash -cl "exec jupyter lab --no-browser --port=$port /foss/designs/$nb > /tmp/jupyter.log 2>&1"
         for _ in $(seq 1 40); do up && break; sleep 0.5; done     # wait for it to come up
+        xdg-open "http://localhost:$port/lab/tree/$nb" >/dev/null 2>&1 &
     fi
 
-    xdg-open "http://localhost:$port/lab/tree/$nb" >/dev/null 2>&1 &
-    # stop: docker exec $CONTAINER_NAME pkill -9 -f jupyter-lab
-    # log:  docker exec $CONTAINER_NAME tail -f /tmp/jupyter.log
+    # log: docker exec $CONTAINER_NAME tail -f /tmp/jupyter.log
     ;;
+jupyter:stop)
+    # The container is left running; only the JupyterLab server goes down
+    docker exec "$CONTAINER_NAME" pkill -9 -f "[j]upyter-lab" >/dev/null 2>&1 \
+        && echo "JupyterLab stopped ($CONTAINER_NAME left running)" \
+        || echo "No JupyterLab server was running in $CONTAINER_NAME"
+    ;;
+stop)
+    docker stop $CONTAINER_NAME
 esac
 '''
 
