@@ -2,26 +2,21 @@
 
 Thank you for considering to contribute to this repo!
 
-### Toolchains Used
+### Prerequisite Tools
 | Tool                | Version  | Purpose |
 | :---                | :---     | :---    |
 | zsh                 | ==5.9    | Shell |
 | mise                | >=2026.9 | Tool version manager & command runner |
-| docker              | >=29.8.0 | LibreLane container |
 | Xilinx vivado suite | ==2025.1 | Simulation & FPGA programming |
 | verilator           | >=5.032  | CLI used by AI agents to test code |
-
-### Mise Managed
-| Tool                | Version   | Purpose |
-| :---                | :---      | :---    |
-| uv                  | >=0.12.12 | Python & package management |
+| docker              | >=29.8.0 | LibreLane container |
 
 ### Preferred Tools
 | Tool                | Version                             | Purpose |
 | :---                | :---                                | :---    |
 | zellij              | >=0.45                              | Terminal Multiplexer |
 | goto                | github.com/Eloquencere/zsh-goto-cli | easy `cd` tool |
-| yazi                | -                                   | easy `cd` tool |
+| yazi                | -                                   | Terminal file explorer |
 
 ### Development Setup
 To setup a local development environment, ensure you have all the required tools installed and follow these quick steps:
@@ -37,11 +32,14 @@ mise run setup
 
 # Optional: To run the entire flow & generate bitstream/GDSII file
 mise run <not assigned>
+
+# To list other available tasks
+mise tasks ls
 ```
 
 ## Directory Structure
-This repo uses a non-centralised structure information, meaning every dir gets to choose what is inside it, it is not pre-decided. You must refer to the `README.md` wherever available to get information about a directory's role, contents and the contents below it.
-Use the following command to discover all the relevant `README.md` files in this repository
+This repo uses non-centralised structure, meaning every dir gets to choose what is inside it, it is not pre-set. You must refer to the `README.md` wherever present to get information about a directory's role, contents and the contents beneath it.
+Use the following command to discover all the `README.md` files in this repository
 ```zsh
 fd "README.md" $PROJECT_ROOT_DIR
 ```

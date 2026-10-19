@@ -1,12 +1,15 @@
-# Try to get the docker shell working in VSCode
+[settings]
+python.uv_venv_auto = "create|source"
+cargo.binstall = true
+cargo.binstall_quickinstall = true
+
 
 [tools]
 uv = "latest"
+typst = "latest"
+"cargo:hayagriva" = { version = "latest", features = ["cli"] }
 # rust = "latest"
-# "pipx:fusesoc" = "latest"
 
-[settings]
-python.uv_venv_auto = "create|source"
 
 [env]
 _.source = '''
@@ -24,7 +27,7 @@ PROJECT_NAME     = "{{ config_root | split(pat='/') | last }}"
 RTL_DIR  = "{{ env.PROJECT_ROOT_DIR }}/rtl"
 SIM_DIR  = "{{ env.PROJECT_ROOT_DIR }}/sim"
 SYN_DIR  = "{{ env.PROJECT_ROOT_DIR }}/syn"
-WORK_DIR = "{{ env.PROJECT_ROOT_DIR }}/work"
+TOOLS_DIR = "{{ env.PROJECT_ROOT_DIR }}/tools"
 
 GOTO_ENV_DIR = '''
 {%- if os() in ['linux', 'macos'] -%}
@@ -32,25 +35,30 @@ GOTO_ENV_DIR = '''
 {%- endif -%}
 '''
 
+
+[tasks.setup]
+hide = true
+description = "Run immediately after clone/branch"
+run = [
+    """
+    mkdir -p $TOOLS_DIR/verilator
+    vivado -mode batch -notrace -source "$TOOLS_DIR/vivado/subscripts/create_project.vivado.tcl"
+    rm -rf vivado* # delete log files
+    mise trust && mise install
+    """,
+    { task = "sync" }
+]
+
 [tasks.sync]
 description = "Sync repo state: pull, submodules, tool install, python env"
 run = """
 git pull
 git submodule update --init --recursive
-mise trust && mise install
+mise upgrade && mise cache clear && mise prune -y
 uv sync --locked
 """
 
-[tasks.setup]
-hide = true
-description = "Run immediately after clone/branch"
-depends = ["sync"]
-run = """
-mkdir -p $WORK_DIR/tools/verilator
-vivado -mode batch -notrace -source "$WORK_DIR/tools/vivado/subscripts/create_project.vivado.tcl"
-"""
-
-[tasks."zellij:dev-session"]
+[tasks."zellij"]
 description = "Launch Zellij workspace & project directory"
 raw = true
 run = [
@@ -77,22 +85,22 @@ zellij delete-session --force $PROJECT_NAME 1>/dev/null || true
 """
 
 [tasks."vivado:launch"]
-dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
-run = "nohup vivado -mode gui -notrace -source $WORK_DIR/tools/vivado/subscripts/init.vivado.tcl > /dev/null 2>&1 &"
+dir = "{{ env.TOOLS_DIR }}/vivado/{{ env.PROJECT_NAME }}"
+run = "nohup vivado -mode gui -notrace -source $TOOLS_DIR/vivado/subscripts/init.vivado.tcl > /dev/null 2>&1 &"
 
 [tasks."vivado:lint"]
 hide = true
-dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+dir = "{{ env.TOOLS_DIR }}/vivado/{{ env.PROJECT_NAME }}"
 # run the vivado linter & paste output here
 
 [tasks."vivado:simulate"]
-dir = "{{ env.WORK_DIR }}/tools/vivado/{{ env.PROJECT_NAME }}"
+dir = "{{ env.TOOLS_DIR }}/vivado/{{ env.PROJECT_NAME }}"
 usage = '''
 arg "<duration>" help="Max sim time (e.g. '1ns'); omit or 0 for run-all" default="all"
 '''
 run = """
 clear
-vivado -mode batch -notrace -source $WORK_DIR/tools/vivado/subscripts/run_sim.vivado.tcl -tclargs "$usage_duration"
+vivado -mode batch -notrace -source $TOOLS_DIR/vivado/subscripts/run_sim.vivado.tcl -tclargs "$usage_duration"
 """
 # FUTURE: if time units ARE specified, open in tcl mode to allow for time stepping, else stick to batch mode
 
@@ -109,8 +117,14 @@ arg "<files...>" help="All design/testbench files (full filenames with .sv), e.g
 '''
 run = """
 set -e
-verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Mdir "$WORK_DIR/tools/verilator/sim" $usage_files -o sim 2>&1 | tee "$WORK_DIR/tools/verilator/sim.build.log"
-"$WORK_DIR/tools/verilator/sim/sim" +verilator+seed+1 2>&1 | tee "$WORK_DIR/tools/verilator/sim.sim.log"
+verilator --binary -j 0 -Wall -Wno-fatal --timing --top-module "$usage_top" --Mdir "$TOOLS_DIR/verilator/sim" $usage_files -o sim 2>&1 | tee "$TOOLS_DIR/verilator/sim.build.log"
+"$TOOLS_DIR/verilator/sim/sim" +verilator+seed+1 2>&1 | tee "$TOOLS_DIR/verilator/sim.sim.log"
+"""
+
+[tasks.refs] # NOTE: give a better name
+run = """
+curl -sf "http://localhost:23119/api/users/0/items?tag=$PROJECT_NAME&format=biblatex" \
+  | hayagriva --format biblatex /dev/stdin > docs/refs.candidates.yaml
 """
 
 [tasks."docker:librelane"]
@@ -126,7 +140,7 @@ arg "[<action>]" help="Optional action: 'stop' kills the JupyterLab server" {
 env = { CONTAINER_NAME = "gf180", DOCKER_TAG = "chipathon26", DESIGNS = "{{ env.PROJECT_ROOT_DIR }}" }
 run = '''
 if [ "${usage_target}" != stop ] && [ -z "$(docker ps -q -f name=^/$CONTAINER_NAME$)" ]; then
-    bash "$WORK_DIR/tools/librelane/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
+    bash "$TOOLS_DIR/librelane/sscs-chipathon-2026/resources/IIC-OSIC-TOOLS/start_chipathon_vnc.sh"
     docker exec -u 0 "$CONTAINER_NAME" sh -c '
         rm -f /etc/group.lock /etc/gshadow.lock
         getent group hostgroup >/dev/null 2>&1 || groupadd -g 1000 hostgroup' || true

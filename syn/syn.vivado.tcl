@@ -18,7 +18,10 @@ namespace eval syn {
     if {[get_board_parts -quiet $board_name] eq ""} {
         error "ERROR: Board part '$board_name' not found in Vivado board store. Please install Digilent board files."
     }
-    set_property BOARD_PART $board_name [current_project]
+    # Need to confirm if the below block works
+    # if {[get_property BOARD_PART] not eq $board_name} {
+    #     set_property BOARD_PART $board_name [current_project]
+    # }
     foreach constr $constrs {
         add_files -fileset constrs_1 [file normalize [file join $dir $constr]]
     }
