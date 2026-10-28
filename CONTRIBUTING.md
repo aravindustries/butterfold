@@ -28,6 +28,7 @@ git clone https://github.com/aravindustries/butterfold
 cd butterfold
 
 # Setup environment
+mise trust
 mise run setup
 
 # Optional: To run the entire flow & generate bitstream/GDSII file
